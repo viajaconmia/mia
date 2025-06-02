@@ -42,7 +42,7 @@ export const CallToBackend: React.FC<CallToBackendProps> = ({
 
 /* LLAMADAS A LA API*/
 
-// const URL = "https://mianoktos.vercel.app";
+// const URL = "https://miaback.vercel.app";
 
 const ROUTES = {
   stripe: "/v1/stripe",
@@ -115,7 +115,7 @@ const crearSessionCheckout = async (payment_data: any, bookingData: any) => {
   console.log(payment_data);
   // // const json = await response.json();
   // try{
-  //   const response = await fetch(`https://mianoktos.vercel.app /v1/solicitud/create`, {
+  //   const response = await fetch(`https://miaback.vercel.app /v1/solicitud/create`, {
   //     method: "POST",
   //     headers: {
   //       "Content-Type":  "application/json",

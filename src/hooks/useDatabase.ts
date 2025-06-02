@@ -1,5 +1,5 @@
 /* LLAMADAS A LA API*/
-// const URL2 = "https://mianoktos.vercel.app";
+// const URL2 = "https://miaback.vercel.app";
 // const ROUTES = {
 //   stripe: "/v1/stripe",
 //   solicitud: "/v1/solicitud",
@@ -408,7 +408,7 @@ export const createNewPago = async (
 
 // export const createViajero = async (data: any, id_empresa: string) => {
 //   try {
-//     const response = await fetch(`https://mianoktos.vercel.app/v1/mia/viajeros`, {
+//     const response = await fetch(`https://miaback.vercel.app/v1/mia/viajeros`, {
 //       method: "POST",
 //       headers: {
 //         "Content-Type": "application/json",
