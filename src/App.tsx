@@ -359,16 +359,16 @@ const ResponsiveChat = () => {
                         <br />
                         para Viajes Corporativos.
                       </h2>
-                      {/* <div className="fixed bottom-10 right-10 flex flex-row items-center gap-x-3 text-lg">
+                      <div className="fixed bottom-10 right-10 flex flex-row items-center gap-x-3 text-lg">
                         MIA Ahora en WhatsApp!
                         <a
-                          href="https://wa.me/525520951970?text=Hola,%20necesito%20que%20me%20ayudes%20a%20realizar%20una%20reserva"
+                          href="https://wa.me/525510445254?text=Hola,%20necesito%20que%20me%20ayudes%20a%20realizar%20una%20reserva"
                           target="_blank"
                           className="bg-green-600 p-2 w-12 h-12 justify-center items-center flex rounded-full"
                         >
                           <Phone />
                         </a>
-                      </div> */}
+                      </div>
                       <div className="grid grid-cols-4 gap-3 mb-12">
                         <div className=" rounded-lg p-1 transform hover:scale-105 transition-all duration-300">
                           <div className="flex flex-col items-center space-y-2">
