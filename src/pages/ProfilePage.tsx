@@ -53,7 +53,7 @@ interface ProfilePageProps {
 }
 
 const stripePromise = loadStripe(
-  "pk_test_51R1WOrQttaqZirA7uXoQzqBjIsogB3hbIMWzIimqVnmMR0ZdSGhtl9icQpUkqHhIrWDjvRj2vjV71FEHTcbZjMre005S8gHlDD"
+  "pk_live_51Qye7lA3jkUyZycMUyLCqqbDdSSRGbsd5AYzuGOO5LAqd8LFUhcOTzUOBD06SXQoBcFEgMeDaksHdk7bJuydBSIm003u7EuPFI"
 );
 const API_KEY =
   "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";

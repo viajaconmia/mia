@@ -66,7 +66,7 @@ const cardStyle = {
 };
 
 const stripePromise = loadStripe(
-  "pk_test_51R1WOrQttaqZirA7uXoQzqBjIsogB3hbIMWzIimqVnmMR0ZdSGhtl9icQpUkqHhIrWDjvRj2vjV71FEHTcbZjMre005S8gHlDD"
+  "pk_live_51Qye7lA3jkUyZycMUyLCqqbDdSSRGbsd5AYzuGOO5LAqd8LFUhcOTzUOBD06SXQoBcFEgMeDaksHdk7bJuydBSIm003u7EuPFI"
 );
 
 const formatDate = (dateStr: string | null) => {
