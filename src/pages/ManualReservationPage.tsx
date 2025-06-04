@@ -1210,7 +1210,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                     onClick={() => setCardPayment(true)}
                   >
                     <PaymentIcon className="w-4 h-4" />
-                    <span className="font-medium">Pagar por Stripe</span>
+                    <span className="font-medium">Pagar con tarjeta de Crédito o Débito</span>
                   </button>
 
                   <button
