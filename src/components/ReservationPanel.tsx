@@ -977,14 +977,12 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                     onClick={() => setCardPayment(true)}
                   >
-                    <PaymentIcon className="w-4 h-4" />
-                    <span className="font-medium">Pagar por Stripe</span>
+                    <span className="font-medium">Pagar con tarjeta de Crédito o Débito</span>
                   </button>
                   <button
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                     onClick={() => setCreditoPayment(true)}
                   >
-                    <BanknoteIcon className="w-4 h-4" />
                     <span className="font-medium">Pagar por Crédito</span>
                   </button>
                   {/* <CallToBackend
