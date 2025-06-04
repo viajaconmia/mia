@@ -228,13 +228,15 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
             <ArrowLeft className="w-5 h-5" />
             <span>Volver</span>
           </button>
-          <button
-            onClick={downloadReport}
-            className="flex items-center space-x-2 bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
-          >
-            <Download className="w-5 h-5" />
-            <span>Descargar Reporte</span>
-          </button>
+            <button
+                onClick={downloadReport}
+                className="flex items-center space-x-2 bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
+                disabled={filteredBookings.length === 0}
+                style={filteredBookings.length === 0 ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+              >
+                <Download className="w-5 h-5" />
+                <span>Descargar Reporte</span>
+    </button>
         </div>
 
         <div className="bg-white rounded-lg p-4 mb-6">
