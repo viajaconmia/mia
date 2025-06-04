@@ -319,8 +319,18 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         // Formatear la fecha en el formato requerido: "YYYY-MM-DDTHH:mm:ss"
         const formattedDate = now.toISOString().split(".")[0];
 
-        console.log(formattedDate);
-        // Ejemplo: "2025-04-06T12:10:00"
+        console.log({
+          cfdi: {
+            ...cfdi,
+            Currency: "MXN", // Add the required currency
+            OrderNumber: Math.round(Math.random() * 999999), // Add a placeholder or dynamic order number
+            Date: formattedDate, // Ensure the date is within the 72-hour limit
+          },
+          info_user: {
+            id_user: authState?.user?.id,
+            id_solicitud: params?.id,
+          },
+        });
 
         const response = await crearCfdi({
           cfdi: {

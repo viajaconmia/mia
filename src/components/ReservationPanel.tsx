@@ -365,7 +365,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       };
     }
     setBookingData(currentBookingData);
-    if (currentBookingData.room.pricePerNight <= 0 && currentBooking.room) {
+    if (currentBookingData.room.pricePerNight <= 0 && currentBookingData.room) {
       setError(
         "Las reservaciones con un precio menor o igual a $0 seran canceladas, puedes cambiar eso pidiendo un cambio de hotel"
       );
