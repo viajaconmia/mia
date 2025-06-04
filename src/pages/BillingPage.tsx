@@ -152,10 +152,6 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         console.log(data_solicitud);
         setSolicitud(data_solicitud);
 
-        const total = Number(data_solicitud.total || 0);
-        const subtotal = Number((total / 1.16).toFixed(2));
-        const iva = Number((total - subtotal).toFixed(2));
-
         const jsonfiscal = await responsefiscal.json();
         const data_fiscal = jsonfiscal[0];
         console.log(data_fiscal);
@@ -205,6 +201,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           });
           return;
         }
+        // Suponiendo que data_solicitud.total ya incluye el IVA
+        const total = Number(data_solicitud.total);
+        const subtotal = +(total / 1.16).toFixed(2); // antes de IVA
+        const iva = +(total - subtotal).toFixed(2); // solo el IVA
+
         setCfdi({
           Receiver: {
             Name: data_fiscal.razon_social,
@@ -241,14 +242,14 @@ export const BillingPage: React.FC<BillingPageProps> = ({
               Taxes: [
                 {
                   Name: "IVA",
-                  Rate: "0.16",
+                  Rate: "0.16", // sin comillas
                   Total: iva.toFixed(2),
-                  Base: data_solicitud.total,
+                  Base: subtotal.toFixed(2),
                   IsRetention: "false",
                   IsFederalTax: "true",
                 },
               ],
-              Total: data_solicitud.total,
+              Total: total.toFixed(2),
             },
           ],
         });
