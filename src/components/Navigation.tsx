@@ -164,7 +164,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         className="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
       >
         <MessageSquare className="w-4 h-4" />
-        <span>Habla con Mía</span>
+        <span>Habla con MIA</span>
       </button>
       <button
         onClick={onFAQClick}
@@ -264,7 +264,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>Habla con Mía</span>
+                  <span>Habla con MIA</span>
                 </button>
                 <button
                   onClick={onBookingsClick}
@@ -316,7 +316,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>Habla con Mía</span>
+                  <span>Habla con MIA</span>
                 </button>
                 <button
                   onClick={onFAQClick}

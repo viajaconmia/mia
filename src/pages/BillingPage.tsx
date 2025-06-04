@@ -28,7 +28,6 @@ const cfdiUseOptions = [
   { value: "G01", label: "Adquisición de mercancías" },
   { value: "G02", label: "Devoluciones, descuentos o bonificaciones" },
   { value: "G03", label: "Gastos en general" },
-  { value: "P01", label: "Por definir" },
 ];
 
 const paymentFormOptions = [
@@ -152,6 +151,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         );
         console.log(data_solicitud);
         setSolicitud(data_solicitud);
+
+        const total = Number(data_solicitud.total || 0);
+        const subtotal = Number((total / 1.16).toFixed(2));
+        const iva = Number((total - subtotal).toFixed(2));
+
         const jsonfiscal = await responsefiscal.json();
         const data_fiscal = jsonfiscal[0];
         console.log(data_fiscal);
@@ -214,7 +218,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           },
           CfdiType: "I",
           NameId: "1",
-          ExpeditionPlace: "42501",
+          ExpeditionPlace: "11570",
           Serie: null,
           Folio: Math.round(Math.random() * 999999999),
           PaymentForm: selectedPaymentForm,
@@ -231,14 +235,14 @@ export const BillingPage: React.FC<BillingPageProps> = ({
               Unit: "Unidad de servicio",
               Description: "Servicio de administración y Gestión de Reservas",
               IdentificationNumber: "EDL",
-              UnitPrice: (data_solicitud.total * 0.84).toFixed(2),
-              Subtotal: (data_solicitud.total * 0.84).toFixed(2),
+              UnitPrice: subtotal.toFixed(2),
+              Subtotal: subtotal.toFixed(2),
               TaxObject: "02",
               Taxes: [
                 {
                   Name: "IVA",
                   Rate: "0.16",
-                  Total: (data_solicitud.total * 0.16).toFixed(2),
+                  Total: iva.toFixed(2),
                   Base: data_solicitud.total,
                   IsRetention: "false",
                   IsFederalTax: "true",
@@ -322,7 +326,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           cfdi: {
             ...cfdi,
             Currency: "MXN", // Add the required currency
-            OrderNumber: "12345", // Add a placeholder or dynamic order number
+            OrderNumber: Math.round(Math.random() * 999999), // Add a placeholder or dynamic order number
             Date: formattedDate, // Ensure the date is within the 72-hour limit
           },
           info_user: {
