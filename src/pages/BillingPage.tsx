@@ -149,7 +149,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             headers: HEADERS_API,
           }
         );
-        console.log(data_solicitud);
+        console.log(responsefiscal);
         setSolicitud(data_solicitud);
 
         const jsonfiscal = await responsefiscal.json();
@@ -208,7 +208,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
 
         setCfdi({
           Receiver: {
-            Name: data_fiscal.razon_social,
+            Name: data_fiscal.razon_social_df,
             CfdiUse: selectedCfdiUse,
             Rfc: data_fiscal.rfc,
             FiscalRegime: data_fiscal.regimen_fiscal || "612",
