@@ -839,3 +839,26 @@ export const deleteCompany = async (id_empresa: string) => {
     };
   }
 };
+
+export const getFacturasConsultasAgente = async (agent_id: string) => {
+  try {
+    console.log("En proceso de obtener facturas");
+    const response = await fetch(
+      `${URL}/v1/mia/factura/consultas?user_id=${encodeURIComponent(
+        agent_id
+      )}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...AUTH,
+        },
+      }
+    );
+    const json = await response.json();
+    console.log(json);
+    return json;
+  } catch (error) {
+    throw error;
+  }
+};
