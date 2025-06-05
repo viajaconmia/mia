@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../services/supabaseClient";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../services/supabaseClient';
 import html2pdf from "html2pdf.js";
-import ReservationDetailsModal from "../components/ReservationDetailsModal";
-import PaymentDeatailsModal from "../components/PaymentDetailsModal";
-import CsvDownload from "react-csv-downloader";
+import ReservationDetailsModal from '../components/ReservationDetailsModal';
+import { PaymentDeatailsModal } from '../components/PaymentDetailsModal';
+import { FacturaDetailsModal } from '../components/PaymentDetailsModal';
+import CsvDownload from 'react-csv-downloader';
 import {
   Users,
   Hotel,
@@ -41,14 +42,14 @@ import {
   CheckCircle2,
   AlertTriangle,
   Eye,
-} from "lucide-react";
-import { fetchPagosAgent, fetchViajerosCompanies } from "../hooks/useFetch";
+  Notebook,
+  DownloadCloud,
+} from 'lucide-react';
+import { fetchPagosAgent, fetchViajerosCompanies } from '../hooks/useFetch';
 import { useSolicitud } from "../hooks/useSolicitud";
-import type { UserPreferences, PaymentHistory } from "../types";
-import {
-  getReservasConsultasAgente,
-  getPagosConsultasAgente,
-} from "../hooks/useDatabase";
+//import type { UserPreferences, PaymentHistory } from '../types';
+import { getReservasConsultasAgente, getPagosConsultasAgente, getFacturasConsultasAgente } from '../hooks/useDatabase';
+import useApi from '../hooks/useApi';
 
 interface DashboardStats {
   totalUsers: number;
@@ -61,6 +62,12 @@ interface DashboardStats {
   recentBookings: any[];
   recentPayments: any[];
   monthlyRevenue: any[];
+}
+interface InvoiceData {
+  ContentEncoding: string;
+  ContentType: string;
+  ContentLength: number;
+  Content: string;
 }
 
 interface Booking {
@@ -129,7 +136,7 @@ interface Payment {
   updated_at: string;
   bookings?: {
     hotel_name: string;
-  };
+  }
 }
 
 interface Factura {
@@ -152,16 +159,14 @@ export const Admin = () => {
     recentUsers: [],
     recentBookings: [],
     recentPayments: [],
-    monthlyRevenue: [],
+    monthlyRevenue: []
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [activeView, setActiveView] = useState<
-    "overview" | "users" | "bookings" | "payments" | "facturas" | "rewards"
-  >("users");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchTermUser, setSearchTermUser] = useState("");
-  const [dateStart, setDateStart] = useState("");
-  const [dateEnd, setDateEnd] = useState("");
+  const [activeView, setActiveView] = useState<'overview' | 'users' | 'bookings' | 'payments' | 'facturas' | 'rewards'>('users');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTermUser, setSearchTermUser] = useState('')
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
@@ -171,7 +176,9 @@ export const Admin = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
   const [filteredPaymets, setFilteredPayments] = useState<Payment[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { mandarCorreo, descargarFactura } = useApi();
+  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   //columnas reservaciones
   const [activeColUsersBookings, setActiveColUsersBookings] = useState(true);
   const [activeColCodeBookings, setActiveColCodeBookings] = useState(true);
@@ -179,8 +186,7 @@ export const Admin = () => {
   const [activeColDateBookings, setActiveColDateBookings] = useState(true);
   const [activeColPriceBookings, setActiveColPriceBookings] = useState(true);
   const [activeColStatusBookings, setActiveColStatusBookings] = useState(true);
-  const [activeColActionsBookings, setActiveColActionsBookings] =
-    useState(false);
+  const [activeColActionsBookings, setActiveColActionsBookings] = useState(false);
   //columnas Usuarios
   const [activeColCompUsers, setActiveColCompUsers] = useState(true);
   const [activeColDateUsers, setActiveColDateUsers] = useState(true);
@@ -194,10 +200,10 @@ export const Admin = () => {
   const [exportUsers, setExportUsers] = useState(false);
   const [exportBookings, setExportBookings] = useState(false);
 
-  const [selectedReservation, setSelectedReservation] =
-    useState<Booking | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpenPay, setIsModalOpenPay] = useState(false);
+  const [isModalOpenFac, setIsModalOpenFac] = useState(false);
 
   const { obtenerSolicitudesWithViajero } = useSolicitud();
 
@@ -206,31 +212,31 @@ export const Admin = () => {
   }, []);
 
   useEffect(() => {
-    if (activeView === "bookings") {
+    if (activeView === 'bookings') {
       fetchBookings();
     }
   }, [activeView]);
 
   useEffect(() => {
-    if (activeView === "users") {
+    if (activeView === 'users') {
       fetchUsers();
     }
   }, [activeView]);
 
   useEffect(() => {
-    if (activeView === "payments") {
+    if (activeView === 'payments') {
       fetchPayments();
     }
   }, [activeView]);
 
   useEffect(() => {
-    if (activeView === "facturas") {
+    if (activeView === 'facturas') {
       fetchFacturas();
     }
   }, [activeView]);
 
   useEffect(() => {
-    if (activeView === "rewards") {
+    if (activeView === 'rewards') {
       fetchPoints();
     }
   }, [activeView]);
@@ -249,24 +255,19 @@ export const Admin = () => {
     // Filter by search term
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (booking) =>
-          booking.hotel_name.toLowerCase().includes(searchLower) ||
-          booking.confirmation_code.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(booking =>
+        booking.hotel_name.toLowerCase().includes(searchLower) ||
+        booking.confirmation_code.toLowerCase().includes(searchLower)
       );
     }
 
     // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((booking) => booking.status === statusFilter);
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
     if (dateEnd != "" && dateStart != "") {
-      filtered = filtered.filter(
-        (booking) =>
-          Date.parse(booking.check_in) >= Date.parse(dateStart) &&
-          Date.parse(booking.check_out) <= Date.parse(dateEnd)
-      );
+      filtered = filtered.filter(booking => Date.parse(booking.check_in) >= Date.parse(dateStart) && Date.parse(booking.check_out) <= Date.parse(dateEnd));
     }
 
     setFilteredBookings(filtered);
@@ -278,11 +279,11 @@ export const Admin = () => {
     // Filter by search term
     if (searchTermUser) {
       const searchLower = searchTermUser.toLowerCase();
-      filtered = filtered.filter(
-        (user) =>
-          user.primer_nombre?.toLowerCase().includes(searchLower) ||
-          //user.empresas?.toLowerCase().includes(searchLower) ||
-          user.correo?.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(user =>
+
+        user.primer_nombre?.toLowerCase().includes(searchLower) ||
+        //user.empresas?.toLowerCase().includes(searchLower) ||
+        user.correo?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -305,7 +306,7 @@ export const Admin = () => {
       if (error) throw error;
       console.log(points);
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      console.error('Error fetching bookings:', error);
     }
   };
 
@@ -321,37 +322,32 @@ export const Admin = () => {
       }
       const data = await getReservasConsultasAgente(user.user.id);
       setBookings(data || []);
-      setFilteredBookings(data || []);
+      setFilteredBookings(data || [])
       // obtenerSolicitudesWithViajero((json) => {
       //   setBookings([...json]);
       //   setFilteredBookings([...json]);
       // }, user.user.id);
+
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      console.error('Error fetching bookings:', error);
     }
   };
 
   const fetchFacturas = async () => {
     try {
       const { data: user, error: userError } = await supabase.auth.getUser();
-
       if (userError) {
         throw userError;
       }
       if (!user) {
-        throw new Error("No hay usuario autenticado.");
+        throw new Error("No hay usuario autenticado");
       }
-      const { data: facturasData, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("user_id", user.user.id);
-
-      if (error) throw error;
-
-      setFacturas(facturasData || []);
-      setFilteredFactura(facturasData || []);
+      const invoiceData = await getFacturasConsultasAgente(user.user.id);
+      console.log(invoiceData);
+      setFacturas(invoiceData || []);
+      setFilteredFactura(invoiceData || []);
     } catch (error) {
-      console.error("Error fetching facturas", error);
+      console.error("Error fetching invoices:", error);
     }
   };
 
@@ -364,7 +360,7 @@ export const Admin = () => {
     } catch (error) {
       console.error("Error fetching users:", error);
     }
-  };
+  }
 
   const fetchPayments = async () => {
     try {
@@ -381,7 +377,7 @@ export const Admin = () => {
     } catch (error) {
       console.error("Error fetching users:", error);
     }
-  };
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -398,49 +394,40 @@ export const Admin = () => {
 
       // Fetch total travelers
       const { count: userCount } = await supabase
-        .from("viajeros")
-        .select("*", { count: "exact" })
-        .eq("id_empresa", user.user.id);
+        .from('viajeros')
+        .select('*', { count: 'exact' }).eq('id_empresa', user.user.id);
 
       // Fetch bookings statistics
       const { data: bookings } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("user_id", user.user.id);
+        .from('bookings')
+        .select('*').eq("user_id", user.user.id);
 
-      const activeBookings =
-        bookings?.filter((b) => b.status === "pending").length || 0;
-      const completedBookings =
-        bookings?.filter((b) => b.status === "completed").length || 0;
-      const cancelledBookings =
-        bookings?.filter((b) => b.status === "cancelled").length || 0;
+      const activeBookings = bookings?.filter(b => b.status === 'pending').length || 0;
+      const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0;
+      const cancelledBookings = bookings?.filter(b => b.status === 'cancelled').length || 0;
 
       // Fetch recent payments with booking details
       const { data: payments } = await supabase
-        .from("payments")
-        .select("*, bookings(hotel_name)")
-        .eq("user_id", user.user.id)
-        .order("created_at", { ascending: false })
+        .from('payments')
+        .select('*, bookings(hotel_name)').eq("user_id", user.user.id)
+        .order('created_at', { ascending: false })
         .limit(5);
 
       // Calculate total revenue
-      const totalRevenue =
-        payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+      const totalRevenue = payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
 
       // Fetch recent users with company profiles
       const { data: recentUsers } = await supabase
-        .from("viajeros")
-        .select("*")
-        .eq("id_empresa", user.user.id)
-        .order("created_at", { ascending: false })
+        .from('viajeros')
+        .select('*').eq("id_empresa", user.user.id)
+        .order('created_at', { ascending: false })
         .limit(5);
 
       // Fetch recent bookings
       const { data: recentBookings } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("user_id", user.user.id)
-        .order("created_at", { ascending: false })
+        .from('bookings')
+        .select('*').eq("user_id", user.user.id)
+        .order('created_at', { ascending: false })
         .limit(5);
 
       setStats({
@@ -453,54 +440,82 @@ export const Admin = () => {
         recentUsers: recentUsers || [],
         recentBookings: recentBookings || [],
         recentPayments: payments || [],
-        monthlyRevenue: [],
+        monthlyRevenue: []
       });
+
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN'
     }).format(amount);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("es-MX", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    return new Date(dateStr).toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
+  };
+  const handleDownloadPDF = (obj:any) => {
+    if (!obj) return;
+
+    const linkSource = `data:application/pdf;base64,${obj.Content}`;
+    const downloadLink = document.createElement("a");
+    downloadLink.href = linkSource;
+    downloadLink.download = "factura.pdf";
+    downloadLink.click();
+  };
+
+  const handleDescargarFactura = async (id: string) => {
+    try {
+      const obj = await descargarFactura(id);
+      handleDownloadPDF(obj);
+    } catch (error) {
+      alert("Ha ocurrido un error al descargar la factura");
+    }
   };
 
   const exportPDF = async () => {
     const element = document.querySelector("#bookings");
     html2pdf(element);
-  };
+  }
 
   const exportPDFUsers = async () => {
     const element = document.querySelector("#users");
     html2pdf(element);
-  };
+  }
 
   const procesarDatos = async (data) => {
-    return Promise.resolve(data);
-  };
+    return Promise.resolve(data)
+  }
 
   const getPaymentStatusIcon = (status: number) => {
-    if (status == 0) return <CheckCircle2 className="w-4 h-4" />;
-    else if (status != 0) return <Clock className="w-4 h-4" />;
-    else return <AlertTriangle className="w-4 h-4" />;
+    if (status == 0)
+      return <CheckCircle2 className="w-4 h-4" />;
+    else if (status != 0)
+      return <Clock className="w-4 h-4" />;
+    else
+      return <AlertTriangle className="w-4 h-4" />;
   };
 
   const handleViewDetails = (reservation: any) => {
     setSelectedReservation(reservation);
     setIsModalOpen(true);
+  };
+
+  const handleViewDetailsFactura = (reservation: any) => {
+    setSelectedReservation(reservation);
+    setIsModalOpenFac(true);
   };
 
   const handleViewDetailsPayment = (reservation: any) => {
@@ -513,16 +528,15 @@ export const Admin = () => {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-lg text-gray-700">
-            Cargando panel de administración...
-          </span>
+          <span className="text-lg text-gray-700">Cargando panel de administración...</span>
         </div>
       </div>
     );
   }
 
+
   return (
-    <div className="min-h-screen bg-gray-100 mt-14">
+    <div className="min-h-screen bg-gray-100 pt-14">
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -537,9 +551,7 @@ export const Admin = () => {
               onClick={fetchDashboardData}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
             >
-              <RefreshCw
-                className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>Actualizar</span>
             </button>
           </div>
@@ -560,39 +572,36 @@ export const Admin = () => {
             <span>Vista General</span>
           </button> */}
           <button
-            onClick={() => setActiveView("users")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "users"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+            onClick={() => setActiveView('users')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === 'users'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
           >
             <Users className="w-5 h-5" />
             <span>Viajeros</span>
           </button>
-          <button
-            onClick={() => setActiveView("bookings")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "bookings"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+          {/* <button
+            onClick={() => setActiveView('bookings')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === 'bookings'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
           >
             <Hotel className="w-5 h-5" />
             <span>Reservaciones</span>
-          </button>
+          </button> */}
           <button
-            onClick={() => setActiveView("payments")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "payments"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+            onClick={() => setActiveView('payments')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === 'payments'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
           >
             <CreditCard className="w-5 h-5" />
             <span>Pagos</span>
           </button>
-          {/* <button
+          <button
             onClick={() => setActiveView('facturas')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === 'facturas'
               ? 'bg-blue-600 text-white'
@@ -601,7 +610,7 @@ export const Admin = () => {
           >
             <WalletCards className="w-5 h-5" />
             <span>Facturas</span>
-          </button> */}
+          </button>
           {/* <button
             onClick={() => setActiveView('rewards')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === 'rewards'
@@ -615,7 +624,7 @@ export const Admin = () => {
         </div>
 
         {/* Overview */}
-        {activeView === "overview" && (
+        {activeView === 'overview' && (
           <div className="space-y-8">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -701,21 +710,15 @@ export const Admin = () => {
               {/* Recent Users */}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Usuarios Recientes
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Usuarios Recientes</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {stats.recentUsers.map((user: any) => (
                     <div key={user.id} className="px-6 py-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-gray-900">
-                            {user.company_name}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {user.industry}
-                          </p>
+                          <p className="font-medium text-gray-900">{user.company_name}</p>
+                          <p className="text-sm text-gray-500">{user.industry}</p>
                         </div>
                         <span className="text-sm text-gray-500">
                           {formatDate(user.created_at)}
@@ -729,35 +732,28 @@ export const Admin = () => {
               {/* Recent Bookings */}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Reservas Recientes
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Reservas Recientes</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {stats.recentBookings.map((booking: any) => (
                     <div key={booking.id} className="px-6 py-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-gray-900">
-                            {booking.hotel_name}
-                          </p>
+                          <p className="font-medium text-gray-900">{booking.hotel_name}</p>
                           <p className="text-sm text-gray-500">
                             {booking.confirmation_code}
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              booking.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : booking.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {booking.status === "completed" ? (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : booking.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                            }`}>
+                            {booking.status === 'completed' ? (
                               <CheckCircle className="w-4 h-4 mr-1" />
-                            ) : booking.status === "pending" ? (
+                            ) : booking.status === 'pending' ? (
                               <Clock className="w-4 h-4 mr-1" />
                             ) : (
                               <XCircle className="w-4 h-4 mr-1" />
@@ -778,9 +774,7 @@ export const Admin = () => {
             {/* Recent Payments */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Pagos Recientes
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Pagos Recientes</h3>
               </div>
               <div className="divide-y divide-gray-100">
                 {stats.recentPayments.map((payment: any) => (
@@ -788,22 +782,19 @@ export const Admin = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {payment.bookings?.hotel_name || "Hotel"}
+                          {payment.bookings?.hotel_name || 'Hotel'}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {payment.bookings?.confirmation_code || "N/A"}
+                          {payment.bookings?.confirmation_code || 'N/A'}
                         </p>
                       </div>
                       <div className="flex items-center space-x-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            payment.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : payment.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : payment.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                          }`}>
                           {payment.status}
                         </span>
                         <span className="font-medium text-gray-900">
@@ -819,55 +810,35 @@ export const Admin = () => {
         )}
 
         {/* Users View */}
-        {activeView === "users" && (
+        {activeView === 'users' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between mb-6">
-                <div className="flex items">
-                  <button
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    onClick={() =>
-                      setActivateFiltersUsers(!activateFiltersUsers)
-                    }
-                  >
+                <div className='flex items'>
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onClick={() => setActivateFiltersUsers(!activateFiltersUsers)}>
                     <SlidersHorizontal className="w-5 h-5" />
                     <span>Filtrar</span>
                   </button>
                 </div>
                 <div className="relative flex items-center space-x-4">
-                  <button
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    onClick={() => setExportUsers(!exportUsers)}
-                  >
+                  {/* <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onClick={() => setExportUsers(!exportUsers)}>
                     <Download className="w-5 h-5" />
                     <span>Exportar</span>
-                  </button>
-                  {exportUsers && (
+                  </button> */}
+                  {exportUsers &&
                     <div className="absolute font-semibold top-full  mt-2 z-20 bg-slate-100 shadow-lg rounded-lg w-24 flex flex-col p-2">
-                      <button
-                        className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200"
-                        onClick={exportPDFUsers}
-                      >
-                        PDF
-                      </button>
-                      <CsvDownload
-                        datas={procesarDatos(filteredUsers)}
-                        filename="datosUsuarios"
-                      >
-                        <button className="w-full text-left px-2 py-1 hover:bg-gray-200">
-                          CSV
-                        </button>
+                      <button className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200" onClick={exportPDFUsers}>PDF</button>
+                      <CsvDownload datas={procesarDatos(filteredUsers)} filename='datosUsuarios'>
+                        <button className="w-full text-left px-2 py-1 hover:bg-gray-200">CSV</button>
                       </CsvDownload>
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </div>
               {/* Filtering columns */}
-              {activateFiltersUsers && (
+              {activateFiltersUsers &&
                 <>
                   <div className="relative">
                     <input
-                      pattern="^[^<>]*$"
                       type="text"
                       placeholder="Buscar compañias, ciudades, industria, RFC..."
                       value={searchTermUser}
@@ -876,216 +847,153 @@ export const Admin = () => {
                     />
                     <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                   </div>
-                  <p className="text-xl leading-relaxed mb-4">
-                    Filtra por columnas
-                  </p>
-                  <div className="flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap">
+                  {/* <p className='text-xl leading-relaxed mb-4'>Filtra por columnas</p>
+                  <div className='flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap'>
                     <button
                       onClick={() => setActiveColCompUsers(!activeColCompUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColCompUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCompUsers
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <User className="w-5 h-5" />
                       <span>Nombres</span>
                     </button>
                     <button
                       onClick={() => setActiveColDateUsers(!activeColDateUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColDateUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColDateUsers
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Building2 className="w-5 h-5" />
                       <span>Compañia</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveColIndustryUsers(!activeColIndustryUsers)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColIndustryUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColIndustryUsers(!activeColIndustryUsers)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColIndustryUsers
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Calendar className="w-5 h-5" />
                       <span>Fecha de Nacimiento</span>
                     </button>
                     <button
                       onClick={() => setActiveColRFCUsers(!activeColRFCUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColRFCUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColRFCUsers
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Mail className="w-5 h-5" />
                       <span>Correo</span>
                     </button>
                     <button
                       onClick={() => setActiveColCityUsers(!activeColCityUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColCityUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCityUsers
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <UserCircle className="w-5 h-5" />
                       <span>Genero</span>
                     </button>
-                  </div>
+                  </div> */}
                 </>
-              )}
+              }
+
 
               {/* User list would go here */}
               <div className="overflow-x-auto">
-                <table className="w-full" id="users">
+                <table className="w-full" id='users'>
                   <thead>
                     <tr className="text-left border-b border-gray-200">
-                      {activeColCompUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Nombre
-                        </th>
-                      )}
-                      {activeColDateUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Compañia
-                        </th>
-                      )}
-                      {activeColIndustryUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Fecha de nacimiento
-                        </th>
-                      )}
-                      {activeColRFCUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Correo
-                        </th>
-                      )}
-                      {activeColCityUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Genero
-                        </th>
-                      )}
+
+                      {activeColCompUsers && <th className="pb-3 font-semibold text-gray-600">Nombre</th>}
+                      {activeColDateUsers && <th className="pb-3 font-semibold text-gray-600">Compañia</th>}
+                      {activeColIndustryUsers && <th className="pb-3 font-semibold text-gray-600">Fecha de nacimiento</th>}
+                      {activeColRFCUsers && <th className="pb-3 font-semibold text-gray-600">Correo</th>}
+                      {activeColCityUsers && <th className="pb-3 font-semibold text-gray-600">Genero</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredUsers.map((user) => (
                       <tr key={user.id_viajero} className="hover:bg-gray-50">
-                        {activeColCompUsers && (
+                        {activeColCompUsers &&
                           <td className="py-4 px-1">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium">
-                                {user.primer_nombre} {user.segundo_nombre}{" "}
-                                {user.apellido_paterno} {user.apellido_materno}
-                              </span>
+                              <span className="font-medium">{user.primer_nombre} {user.segundo_nombre} {user.apellido_paterno} {user.apellido_materno}</span>
                             </div>
-                          </td>
-                        )}
-                        {activeColDateUsers && (
+                          </td>}
+                        {activeColDateUsers &&
                           <td className="py-4 px-1">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium">
-                                {user.empresas
-                                  ?.map((emp) => emp.razon_social)
-                                  .join(", ")}
-                              </span>
+                              <span className="font-medium">{user.empresas?.map(emp => emp.razon_social).join(', ')}</span>
                             </div>
-                          </td>
-                        )}
-                        {activeColIndustryUsers && (
+                          </td>}
+                        {activeColIndustryUsers &&
                           <td className="py-4 px-1">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium">
-                                {user.fecha_nacimiento
-                                  ? new Date(
-                                      user.fecha_nacimiento
-                                    ).toLocaleDateString()
-                                  : ""}
-                              </span>
+                              <span className="font-medium">{user.fecha_nacimiento ? new Date(user.fecha_nacimiento).toLocaleDateString() : ""}</span>
                             </div>
-                          </td>
-                        )}
-                        {activeColRFCUsers && (
+                          </td>}
+                        {activeColRFCUsers &&
                           <td className="py-4 px-1">
                             <div className="flex items-center space-x-2">
                               <span className="font-medium">{user.correo}</span>
                             </div>
-                          </td>
-                        )}
-                        {activeColCityUsers && (
-                          <td className="py-4 px-1">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-medium">{user.genero}</span>
-                            </div>
-                          </td>
-                        )}
+                          </td>}
+                        {activeColCityUsers && <td className="py-4 px-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">{user.genero}</span>
+                          </div>
+                        </td>}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
+
           </div>
         )}
 
         {/* Bookings View */}
-        {activeView === "bookings" && (
+        {activeView === 'bookings' && (
           <div className="space-y-6">
             {/* Filters and Actions */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-6 flex-wrap space-y-2">
-                <div className="flex items">
-                  <button
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    onClick={() => setActivateFilters(!activateFilters)}
-                  >
+                <div className='flex items'>
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onClick={() => setActivateFilters(!activateFilters)}>
                     <SlidersHorizontal className="w-5 h-5" />
                     <span>Filtrar</span>
                   </button>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="relative flex items-center space-x-4">
-                    <button
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      onClick={() => setExportBookings(!exportBookings)}
-                    >
+                    {/* <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onClick={() => setExportBookings(!exportBookings)}>
                       <Download className="w-5 h-5" />
                       <span>Exportar</span>
-                    </button>
-                    {exportBookings && (
+                    </button> */}
+                    {exportBookings &&
                       <div className="absolute font-semibold top-full  mt-2 z-20 bg-slate-100 shadow-lg rounded-lg w-24 flex flex-col p-2">
-                        <button
-                          className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200"
-                          onClick={exportPDF}
-                        >
-                          PDF
-                        </button>
-                        <CsvDownload
-                          datas={procesarDatos(filteredBookings)}
-                          filename="datosReservas"
-                        >
-                          <button className="w-full text-left px-2 py-1 hover:bg-gray-200">
-                            CSV
-                          </button>
+                        <button className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200" onClick={exportPDF}>PDF</button>
+                        <CsvDownload datas={procesarDatos(filteredBookings)} filename='datosReservas'>
+                          <button className="w-full text-left px-2 py-1 hover:bg-gray-200">CSV</button>
                         </CsvDownload>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                 </div>
               </div>
 
               {/* Filtering columns */}
-              {activateFilters && (
-                <div className="duration-500 transition-all ease-in-out">
+              {activateFilters &&
+                <div className='duration-500 transition-all ease-in-out'>
                   <div className="flex items-center gap-x-4 gap-y-3 flex-wrap">
                     <div className="relative">
                       <input
-                        pattern="^[^<>]*$"
                         type="text"
                         placeholder="Buscar por hotel, código o email..."
                         value={searchTerm}
@@ -1097,7 +1005,6 @@ export const Admin = () => {
                     <div className="flex-row flex justify-center items-center relative gap-x-3">
                       <p>Fecha de inicio</p>
                       <input
-                        pattern="^[^<>]*$"
                         type="date"
                         placeholder="Ingresa fecha de fin"
                         value={dateStart}
@@ -1108,7 +1015,6 @@ export const Admin = () => {
                     <div className="flex-row flex justify-center items-center relative gap-x-3">
                       <p>Fecha de fin</p>
                       <input
-                        pattern="^[^<>]*$"
                         type="date"
                         placeholder="Ingresa fecha de fin"
                         value={dateEnd}
@@ -1126,224 +1032,152 @@ export const Admin = () => {
                       <option value="canceled">Canceladas</option>
                     </select>
                   </div>
-                  <p className="text-xl leading-relaxed mb-4">
-                    Filtra por columnas
-                  </p>
-                  <div className="flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap">
+                  <p className='text-xl leading-relaxed mb-4'>Filtra por columnas</p>
+                  {/* <div className='flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap'>
                     <button
-                      onClick={() =>
-                        setActiveColCodeBookings(!activeColCodeBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColCodeBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColCodeBookings(!activeColCodeBookings)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCodeBookings
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Tag className="w-5 h-5" />
                       <span>Código</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveColHotelsBookings(!activeColHotelBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColHotelBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColHotelsBookings(!activeColHotelBookings)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColHotelBookings
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Hotel className="w-5 h-5" />
                       <span>Hotel</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveColUsersBookings(!activeColUsersBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColUsersBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColUsersBookings(!activeColUsersBookings)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColUsersBookings
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Users className="w-5 h-5" />
                       <span>Usuario</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveColDateBookings(!activeColDateBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColDateBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColDateBookings(!activeColDateBookings)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColDateBookings
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Calendar className="w-5 h-5" />
                       <span>Fechas</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveColPriceBookings(!activeColPriceBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColPriceBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColPriceBookings(!activeColPriceBookings)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColPriceBookings
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <DollarSign className="w-5 h-5" />
                       <span>Precio</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveColStatusBookings(!activeColStatusBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColStatusBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      onClick={() => setActiveColStatusBookings(!activeColStatusBookings)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColStatusBookings
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
                     >
                       <Clock className="w-5 h-5" />
                       <span>Estado</span>
                     </button>
-                  </div>
-                </div>
-              )}
+                  </div> */}
+                </div>}
 
               {/* Bookings Table */}
               <div className="overflow-x-auto">
                 <table className="w-full" id="bookings">
                   <thead>
                     <tr className="text-left border-b border-gray-200">
-                      {activeColCodeBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Código
-                        </th>
-                      )}
-                      {activeColHotelBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Hotel
-                        </th>
-                      )}
-                      {activeColUsersBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Usuario
-                        </th>
-                      )}
-                      {activeColDateBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Fechas
-                        </th>
-                      )}
-                      {activeColPriceBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Precio
-                        </th>
-                      )}
-                      {activeColStatusBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Estado
-                        </th>
-                      )}
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Acciones
-                      </th>
+                      {activeColCodeBookings && <th className="pb-3 font-semibold text-gray-600">Código</th>}
+                      {activeColHotelBookings && <th className="pb-3 font-semibold text-gray-600">Hotel</th>}
+                      {activeColUsersBookings && <th className="pb-3 font-semibold text-gray-600">Usuario</th>}
+                      {activeColDateBookings && <th className="pb-3 font-semibold text-gray-600">Fechas</th>}
+                      {activeColPriceBookings && <th className="pb-3 font-semibold text-gray-600">Precio</th>}
+                      {activeColStatusBookings && <th className="pb-3 font-semibold text-gray-600">Estado</th>}
+                      <th className="pb-3 font-semibold text-gray-600">Detalles</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredBookings.map(
-                      (booking) =>
-                        booking.pagos && (
-                          <tr key={booking.id} className="hover:bg-gray-50">
-                            {activeColCodeBookings && (
-                              <td className="py-4">
-                                <div className="flex items-center space-x-2">
-                                  <span className="font-medium">
-                                    {booking.codigo_reservacion_hotel}
-                                  </span>
-                                </div>
-                              </td>
+                    {filteredBookings.map((booking) => (
+                      booking.pagos &&
+                      (<tr key={booking.id} className="hover:bg-gray-50">
+                        {activeColCodeBookings &&
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">{booking.codigo_reservacion_hotel}</span>
+                            </div>
+                          </td>}
+                        {activeColHotelBookings &&
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <span>{booking.hotel}</span>
+                            </div>
+                          </td>}
+                        {activeColUsersBookings &&
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <span>{booking.nombre_viajero ? booking.nombre_viajero : booking.primer_nombre + " " + booking.apellido_paterno}</span>
+                            </div>
+                          </td>}
+                        {activeColDateBookings &&
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <span>
+                                {new Date(booking.check_in).toLocaleDateString()} -
+                                {new Date(booking.check_out).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </td>}
+                        {activeColPriceBookings &&
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">
+                                ${booking.solicitud_total}
+                              </span>
+                            </div>
+                          </td>}
+                        {activeColStatusBookings && <td className="py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === 'complete'
+                            ? 'bg-green-100 text-green-800'
+                            : booking.status === 'pending'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                            }`}>
+                            {booking.status === 'complete' ? (
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                            ) : booking.status === 'pending' ? (
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                            ) : (
+                              <XCircle className="w-4 h-4 mr-1" />
                             )}
-                            {activeColHotelBookings && (
-                              <td className="py-4">
-                                <div className="flex items-center space-x-2">
-                                  <span>{booking.hotel}</span>
-                                </div>
-                              </td>
-                            )}
-                            {activeColUsersBookings && (
-                              <td className="py-4">
-                                <div className="flex items-center space-x-2">
-                                  <span>
-                                    {booking.nombre_viajero
-                                      ? booking.nombre_viajero
-                                      : booking.primer_nombre +
-                                        " " +
-                                        booking.apellido_paterno}
-                                  </span>
-                                </div>
-                              </td>
-                            )}
-                            {activeColDateBookings && (
-                              <td className="py-4">
-                                <div className="flex items-center space-x-2">
-                                  <span>
-                                    {new Date(
-                                      booking.check_in
-                                    ).toLocaleDateString()}{" "}
-                                    -
-                                    {new Date(
-                                      booking.check_out
-                                    ).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </td>
-                            )}
-                            {activeColPriceBookings && (
-                              <td className="py-4">
-                                <div className="flex items-center space-x-2">
-                                  <span className="font-medium">
-                                    ${booking.solicitud_total}
-                                  </span>
-                                </div>
-                              </td>
-                            )}
-                            {activeColStatusBookings && (
-                              <td className="py-4">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    booking.status === "complete"
-                                      ? "bg-green-100 text-green-800"
-                                      : booking.status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {booking.status === "complete" ? (
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                  ) : booking.status === "pending" ? (
-                                    <Clock className="w-4 h-4 mr-1" />
-                                  ) : (
-                                    <XCircle className="w-4 h-4 mr-1" />
-                                  )}
-                                  {booking.status}
-                                </span>
-                              </td>
-                            )}
-                            <td className="py-4">
-                              <button
-                                onClick={() => handleViewDetails(booking)}
-                                className="text-blue-600 hover:text-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 rounded-md p-1"
-                                aria-label="View Details"
-                              >
-                                <Eye className="h-5 w-5" />
-                              </button>
-                            </td>
-                          </tr>
-                        )
-                    )}
+                            {booking.status === "complete" ? "Completado" : booking.status === "pending" ? "Completado" : "Cancelado"}
+                          </span>
+                        </td>}
+                        <td className="py-4">
+                          <button
+                            onClick={() => handleViewDetails(booking)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 rounded-md p-1"
+                            aria-label="View Details"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>)
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1352,17 +1186,14 @@ export const Admin = () => {
         )}
 
         {/* Payments View */}
-        {activeView === "payments" && (
+        {activeView === 'payments' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Gestión de Pagos
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Gestión de Pagos</h3>
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     <input
-                      pattern="^[^<>]*$"
                       type="text"
                       placeholder="Buscar pagos..."
                       value={searchTerm}
@@ -1376,24 +1207,12 @@ export const Admin = () => {
                 <table className="w-full" id="bookings">
                   <thead>
                     <tr className="text-left border-b border-gray-200">
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Monto
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Fecha de creación
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Metodo
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Detalles
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Referencia
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Acciones
-                      </th>
+                      <th className="pb-3 font-semibold text-gray-600">Monto</th>
+                      <th className="pb-3 font-semibold text-gray-600">Fecha de creación</th>
+                      <th className="pb-3 font-semibold text-gray-600">Metodo</th>
+                      <th className="pb-3 font-semibold text-gray-600">Detalles Pago</th>
+                      <th className="pb-3 font-semibold text-gray-600">Referencia</th>
+                      <th className="pb-3 font-semibold text-gray-600">Detalles</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1401,20 +1220,17 @@ export const Admin = () => {
                       <tr key={payment.id} className="hover:bg-gray-50">
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium">
-                              ${payment.total}
-                            </span>
+                            <span className="font-medium">${payment.total}</span>
                           </div>
                         </td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium">
-                              {payment.fecha_creacion}
-                            </span>
+                            <span className="font-medium">{payment.fecha_creacion}</span>
                           </div>
                         </td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
+
                             <CreditCard className="mr-2 h-4 w-4 text-gray-400" />
                             <span className="capitalize">
                               {payment.tipo_de_pago}
@@ -1426,21 +1242,17 @@ export const Admin = () => {
                             <span className="font-medium">
                               {payment.banco ? (
                                 <>
-                                  {payment.banco}{" "}
-                                  {payment.last_digits &&
-                                    `(${payment.last_digits})`}
+                                  {payment.banco} {payment.last_digits && `(${payment.last_digits})`}
                                 </>
                               ) : (
-                                "-"
+                                '-'
                               )}
                             </span>
                           </div>
                         </td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium">
-                              {payment.concepto}
-                            </span>
+                            <span className="font-medium">{payment.concepto}</span>
                           </div>
                         </td>
                         <td className="py-4">
@@ -1453,26 +1265,24 @@ export const Admin = () => {
                           </button>
                         </td>
                       </tr>
+
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-          </div>
-        )}
+          </div>)}
+
 
         {/* Facturas View */}
-        {activeView === "facturas" && (
+        {activeView === 'facturas' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Gestión de Facturas
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Gestión de Facturas</h3>
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     <input
-                      pattern="^[^<>]*$"
                       type="text"
                       placeholder="Buscar pagos..."
                       value={searchTerm}
@@ -1486,108 +1296,103 @@ export const Admin = () => {
                 <table className="w-full" id="bookings">
                   <thead>
                     <tr className="text-left border-b border-gray-200">
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Monto
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">Tipo</th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Porcentaje de impuesto
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Fecha Generado
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Estatus
-                      </th>
+                      <th className="pb-3 font-semibold text-gray-600">Folio</th>
+                      {/* <th className="pb-3 font-semibold text-gray-600">RFC</th>
+                      <th className="pb-3 font-semibold text-gray-600">Razón social</th> */}
+                      <th className="pb-3 font-semibold text-gray-600">Fecha Generado</th>
+                      <th className="pb-3 font-semibold text-gray-600">Monto</th>
+                      <th className="pb-3 font-semibold text-gray-600">Acciones</th>
+                      <th className="pb-3 font-semibold text-gray-600">Detalles</th>
+
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredFactura.map((factura) => (
-                      <tr key={factura.id} className="hover:bg-gray-50">
+                      <tr key={factura.id_facturama} className="hover:bg-gray-50">
+                        <td className="py-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">{factura.id_facturama}</span>
+                          </div>
+                        </td>
+                        {/* <td className="py-4">
+                          <div className="flex items-center space-x-2">
+                            <Notebook className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium">{factura.rfc}</span>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium">{factura.razon_social}</span>
+                          </div>
+                        </td> */}
+                        <td className="py-4">
+                          <div className="flex items-center space-x-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium">{factura.fecha_emision}</span>
+                          </div>
+                        </td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
                             <DollarSign className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {factura.amount}
-                            </span>
+                            <span className="font-medium">{factura.total_factura}</span>
                           </div>
                         </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {factura.invoice_type}
-                            </span>
-                          </div>
+                        <td>
+                          <button
+                            onClick={() => {
+                              handleDescargarFactura(factura.id_facturama || "");
+                            }}
+                            className="flex border p-2 rounded-lg border-sky-200 items-center gap-1 bg-sky-600 text-blue-50 font-semibold hover:text-blue-700"
+                          >
+                            <DownloadCloud className="w-4 h-4" /> Descargar
+                            factura
+                          </button>
                         </td>
                         <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {factura.tax_percentage}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {factura.created_at}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {factura.status}
-                            </span>
-                          </div>
+                          <button
+                            onClick={() => handleViewDetailsFactura(factura)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 rounded-md p-1"
+                            aria-label="View Details"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </button>
                         </td>
                       </tr>
+
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-          </div>
-        )}
+          </div>)
+        }
         {/* Mia rewards View */}
-        {activeView === "rewards" && (
+        {activeView === 'rewards' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="container mx-auto w-full">
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 {/* Header */}
                 <div className="flex items-center justify-center mb-8">
                   <Gift className="w-12 h-12 text-purple-600" />
-                  <h1 className="text-3xl font-bold text-gray-800 ml-3">
-                    Mia Rewards
-                  </h1>
+                  <h1 className="text-3xl font-bold text-gray-800 ml-3">Mia Rewards</h1>
                 </div>
 
                 {/* Points Card */}
                 <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl p-6 mb-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 font-medium">
-                        Puntos Actuales
-                      </p>
+                      <p className="text-gray-600 font-medium">Puntos Actuales</p>
                       <div className="flex items-center mt-1">
                         <Coins className="w-6 h-6 text-purple-600 mr-2" />
-                        <span className="text-4xl font-bold text-gray-800">
-                          puntos
-                        </span>
+                        <span className="text-4xl font-bold text-gray-800">puntos</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-gray-600 font-medium">
-                        Nivel de Membresía
-                      </p>
+                      <p className="text-gray-600 font-medium">Nivel de Membresía</p>
                       <div className="flex items-center justify-end mt-1">
                         <Trophy className="w-6 h-6 text-yellow-600 mr-2" />
-                        <span className="text-xl font-bold text-yellow-600">
-                          Gold
-                        </span>
+                        <span className="text-xl font-bold text-yellow-600">Gold</span>
                       </div>
                     </div>
                   </div>
@@ -1595,30 +1400,20 @@ export const Admin = () => {
 
                 {/* Points Conversion */}
                 <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-3">
-                    Equivalencia en Pesos
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Equivalencia en Pesos</h2>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <span className="text-2xl font-bold text-purple-600">
-                        100 pts
-                      </span>
+                      <span className="text-2xl font-bold text-purple-600">100 pts</span>
                       <ArrowRight className="mx-4 text-gray-400" />
-                      <span className="text-2xl font-bold text-green-600">
-                        $equivalente
-                      </span>
+                      <span className="text-2xl font-bold text-green-600">$equivalente</span>
                     </div>
                   </div>
-                  <p className="text-gray-500 text-sm mt-2">
-                    1,000 puntos = $1 MXN
-                  </p>
+                  <p className="text-gray-500 text-sm mt-2">1,000 puntos = $1 MXN</p>
                 </div>
 
                 {/* Benefits Section */}
                 <div className="mb-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-3">
-                    Beneficios Disponibles
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Beneficios Disponibles</h2>
                   <div className="space-y-3">
                     {/* {benefits.map((benefit) => (
                       <div key={benefit.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
@@ -1637,9 +1432,7 @@ export const Admin = () => {
 
                 {/* Recent Transactions */}
                 <div className="mb-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-3">
-                    Transacciones Recientes
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Transacciones Recientes</h2>
                   <div className="space-y-3">
                     {/*transactions.map((transaction) => (
                       <div key={transaction.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
@@ -1661,14 +1454,15 @@ export const Admin = () => {
 
                 {/* Simulation Button */}
                 <div className="mt-6 text-center">
-                  <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                  <button
+                    className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
                     + Simular Puntos
                   </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          </div>)}
       </div>
       <ReservationDetailsModal
         isOpen={isModalOpen}
@@ -1681,6 +1475,13 @@ export const Admin = () => {
         onClose={() => setIsModalOpenPay(false)}
         reservation={selectedReservation}
       />
+
+      <FacturaDetailsModal
+        isOpen={isModalOpenFac}
+        onClose={() => setIsModalOpenFac(false)}
+        reservation={selectedReservation}
+      />
+
     </div>
-  );
-};
+  )
+}
