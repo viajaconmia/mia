@@ -188,8 +188,10 @@ const GraphContainer = ({
           }
         );
         const json = await response.json();
-        console.log(json);
-        setData(json);
+        //console.log("xd")
+        //console.log(json);
+        setData(json.filter((obj: any) =>
+          (obj.id_pago != null || obj.id_credito != null)));
       } catch (error) {
         console.error("Error al obtener estadísticas mensuales:", error);
       }
@@ -305,7 +307,8 @@ const DashboardGrid: React.FC<{
           }
         );
         const json = await response.json();
-        setMonthlyStats(json.data);
+        setMonthlyStats(json.data.filter((obj: any) =>
+          (obj.id_pago != null || obj.id_credito != null)));
       } catch (error) {
         console.error("Error al obtener estadísticas mensuales:", error);
       }
