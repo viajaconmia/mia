@@ -82,6 +82,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   const [selectedPaymentForm, setSelectedPaymentForm] = useState("03");
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [descarga, setDescarga] = useState<DescargaFactura | null>(null);
+  const [descargaxml, setDescargaxml] = useState<DescargaFactura | null>(null);
   const [isInvoiceGenerated, setIsInvoiceGenerated] = useState<Root | null>(
     null
   );
@@ -352,6 +353,9 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         descargarFactura(response.data.Id)
           .then((factura) => setDescarga(factura))
           .catch((err) => console.error(err));
+        descargarFactura(response.data.Id, "xml")
+          .then((factura) => setDescargaxml(factura))
+          .catch((err) => console.error(err));
         setIsInvoiceGenerated(response.data);
       } catch (error) {
         alert("Ocurrio un error, intenta mas tarde");
@@ -528,6 +532,14 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     >
                       <Download className="w-4 h-4" />
                       <span className="text-sm">Descargar PDF</span>
+                    </a>
+                    <a
+                      href={`data:application/xml;base64,${descargaxml?.Content}`}
+                      download="factura.pdf"
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors border border-blue-200"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="text-sm">Descargar XML</span>
                     </a>
                   </>
                 ) : (
