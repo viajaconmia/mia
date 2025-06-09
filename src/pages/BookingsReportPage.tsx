@@ -74,6 +74,9 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const [selectedStage, setSelectedStage] = useState("all");
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
+  const [invoiceDataxml, setInvoiceDataxml] = useState<InvoiceData | null>(
+    null
+  );
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -108,8 +111,8 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
 
   const handleDescargarFactura = async (id: string) => {
     try {
-      const obj = await descargarFactura(id);
-      setInvoiceData(obj);
+      descargarFactura(id).then((data) => setInvoiceData(data));
+      descargarFactura(id, "xml").then((data) => setInvoiceDataxml(data));
     } catch (error) {
       alert("Ha ocurrido un error al descargar la factura");
     }
@@ -119,37 +122,51 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
     if (!filteredBookings || filteredBookings.length === 0) return;
 
     // Mapeamos los datos para seleccionar solo los campos que necesitamos
-    const csvData = filteredBookings.map(booking => {
+    const csvData = filteredBookings.map((booking) => {
       // Transformar el tipo de habitación con valor por defecto
-      const roomType = booking.room_type === 'single' ? 'Sencillo' :
-        booking.room_type === 'double' ? 'Double' :
-          booking.room_type || 'No especificado';
+      const roomType =
+        booking.room_type === "single"
+          ? "Sencillo"
+          : booking.room_type === "double"
+          ? "Double"
+          : booking.room_type || "No especificado";
 
       // Formatear las fechas
-      const checkIn = booking.check_in ? new Date(booking.check_in).toLocaleDateString('es-MX') : 'N/A';
-      const checkOut = booking.check_out ? new Date(booking.check_out).toLocaleDateString('es-MX') : 'N/A';
+      const checkIn = booking.check_in
+        ? new Date(booking.check_in).toLocaleDateString("es-MX")
+        : "N/A";
+      const checkOut = booking.check_out
+        ? new Date(booking.check_out).toLocaleDateString("es-MX")
+        : "N/A";
 
       return {
-        'Hotel': booking.hotel_name || 'N/A',
-        'Nombre del Viajero': booking.traveler_name || 'N/A',
-        'Tipo de Habitación': roomType,
-        'Check-in': checkIn,
-        'Check-out': checkOut,
-        'Código Reservación': booking.confirmation_code || 'N/A',
-        'Total': booking.total_price ? `$${parseFloat(booking.total_price).toFixed(2)}` : '$0.00'
+        Hotel: booking.hotel_name || "N/A",
+        "Nombre del Viajero": booking.traveler_name || "N/A",
+        "Tipo de Habitación": roomType,
+        "Check-in": checkIn,
+        "Check-out": checkOut,
+        "Código Reservación": booking.confirmation_code || "N/A",
+        Total: booking.total_price
+          ? `$${parseFloat(booking.total_price).toFixed(2)}`
+          : "$0.00",
       };
     });
 
     // Crear el contenido CSV
-    const headers = Object.keys(csvData[0]).join(',');
+    const headers = Object.keys(csvData[0]).join(",");
 
-    const rows = csvData.map(obj =>
-      Object.values(obj).map(value => {
-        // Manejo seguro para valores null/undefined
-        const safeValue = value === null || value === undefined ? '' : value;
-        return `"${String(safeValue).replace(/"/g, '""')}"`;
-      }).join(',')
-    ).join('\n');
+    const rows = csvData
+      .map((obj) =>
+        Object.values(obj)
+          .map((value) => {
+            // Manejo seguro para valores null/undefined
+            const safeValue =
+              value === null || value === undefined ? "" : value;
+            return `"${String(safeValue).replace(/"/g, '""')}"`;
+          })
+          .join(",")
+      )
+      .join("\n");
 
     const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
 
@@ -177,6 +194,15 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
     const downloadLink = document.createElement("a");
     downloadLink.href = linkSource;
     downloadLink.download = "factura.pdf";
+    downloadLink.click();
+  };
+  const handleDownloadxml = () => {
+    if (!invoiceData) return;
+
+    const linkSource = `data:application/xml;base64,${invoiceDataxml?.Content}`;
+    const downloadLink = document.createElement("a");
+    downloadLink.href = linkSource;
+    downloadLink.download = "factura.xml";
     downloadLink.click();
   };
 
@@ -264,13 +290,22 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
               Tu factura está lista para descargar. Haz clic en el botón para
               comenzar la descarga.
             </p>
-            <button
-              onClick={handleDownloadPDF}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-            >
-              <DownloadCloud className="w-5 h-5" />
-              Descargar PDF
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDownloadPDF}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <DownloadCloud className="w-5 h-5" />
+                Descargar PDF
+              </button>
+              <button
+                onClick={handleDownloadxml}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <DownloadCloud className="w-5 h-5" />
+                Descargar XML
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -288,7 +323,11 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
             onClick={() => setIsOpen(!isOpen)}
             className="flex items-center space-x-2 bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
             disabled={filteredBookings.length === 0}
-            style={filteredBookings.length === 0 ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+            style={
+              filteredBookings.length === 0
+                ? { opacity: 0.5, cursor: "not-allowed" }
+                : {}
+            }
           >
             <Download className="w-5 h-5" />
             <span>Descargar Reporte</span>
@@ -320,12 +359,13 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
               <input
                 pattern="^[^<>]*$"
                 type="text"
-                placeholder={`Buscar por ${filterType === "hotel"
-                  ? "nombre de hotel"
-                  : filterType === "traveler"
+                placeholder={`Buscar por ${
+                  filterType === "hotel"
+                    ? "nombre de hotel"
+                    : filterType === "traveler"
                     ? "nombre o ID de viajero"
                     : "fecha"
-                  }...`}
+                }...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 pl-10"
@@ -341,8 +381,9 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                 <Filter className="w-4 h-4" />
                 <span>Filtros</span>
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""
-                    }`}
+                  className={`w-4 h-4 transition-transform ${
+                    showFilters ? "rotate-180" : ""
+                  }`}
                 />
               </button>
 
@@ -356,20 +397,22 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => setFilterType("hotel")}
-                          className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${filterType === "hotel"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100"
-                            }`}
+                          className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${
+                            filterType === "hotel"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100"
+                          }`}
                         >
                           <Hotel className="w-4 h-4" />
                           <span>Hotel</span>
                         </button>
                         <button
                           onClick={() => setFilterType("traveler")}
-                          className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${filterType === "traveler"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100"
-                            }`}
+                          className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${
+                            filterType === "traveler"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100"
+                          }`}
                         >
                           <User className="w-4 h-4" />
                           <span>Viajero</span>
