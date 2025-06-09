@@ -88,8 +88,8 @@ export const useApi = () => {
   const obtenerlistaCfdisPorCliente = async (rfc: string) =>
     await getFactura(ENDPOINTS.facturas.getCfdi.endpoint, `?rfc=${rfc}`);
 
-  const descargarFactura = async (cfdi_id: string) =>
-    postFactura(ENDPOINTS.facturas.downloadCfdi.endpoint, { cfdi_id });
+  const descargarFactura = async (cfdi_id: string, type: string = "pdf") =>
+    postFactura(ENDPOINTS.facturas.downloadCfdi.endpoint, { cfdi_id, type });
 
   const mandarCorreo = async (id_cfdi: string, email: string) =>
     postFactura(ENDPOINTS.facturas.sendEmail.endpoint, { id_cfdi, email });
@@ -113,6 +113,7 @@ export const useApi = () => {
 
 interface DataToDownload {
   cfdi_id: string;
+  type: string;
 }
 
 interface DataToSendEmail {
