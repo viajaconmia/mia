@@ -268,6 +268,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const [isBookingSaved, setIsBookingSaved] = useState(false);
   const [cardPayment, setCardPayment] = useState(false);
   const [creditoPayment, setCreditoPayment] = useState(false);
@@ -726,6 +727,15 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
             Detalles de la Reservación
           </h2>
 
+          {error && (
+            <div
+              className="mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg"
+              role="alert"
+            >
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Dates Section */}
             <div className="space-y-6">
@@ -743,9 +753,20 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       pattern="^[^<>]*$"
                       type="date"
                       value={reservationData.checkIn}
-                      onChange={(e) =>
-                        handleDateChange("checkIn", e.target.value)
-                      }
+                      onChange={(e) => {
+                        if (
+                          e.target.value <
+                            new Date().toISOString().split("T")[0] &&
+                          Number(e.target.value.split("-")[0]) > 999
+                        ) {
+                          setError(
+                            "No se pueden poner fechas menores al dia de hoy"
+                          );
+                        } else {
+                          setError("");
+                          handleDateChange("checkIn", e.target.value);
+                        }
+                      }}
                       min={new Date().toISOString().split("T")[0]}
                       className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
@@ -762,9 +783,20 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       pattern="^[^<>]*$"
                       type="date"
                       value={reservationData.checkOut}
-                      onChange={(e) =>
-                        handleDateChange("checkOut", e.target.value)
-                      }
+                      onChange={(e) => {
+                        if (
+                          e.target.value <
+                            new Date().toISOString().split("T")[0] &&
+                          Number(e.target.value.split("-")[0]) > 999
+                        ) {
+                          setError(
+                            "No se pueden poner fechas menores al dia de hoy"
+                          );
+                        } else {
+                          setError("");
+                          handleDateChange("checkOut", e.target.value);
+                        }
+                      }}
                       min={
                         reservationData.checkIn ||
                         new Date().toISOString().split("T")[0]
@@ -1210,7 +1242,9 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                     onClick={() => setCardPayment(true)}
                   >
                     <PaymentIcon className="w-4 h-4" />
-                    <span className="font-medium">Pagar con tarjeta de Crédito o Débito</span>
+                    <span className="font-medium">
+                      Pagar con tarjeta de Crédito o Débito
+                    </span>
                   </button>
 
                   <button
