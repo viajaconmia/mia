@@ -82,27 +82,66 @@ const formatDate = (dateStr: string | null) => {
 
 interface Hotel {
   id_hotel: string;
-  hotel: string;
-  direccion?: string;
-  latitud?: string;
-  longitud?: string;
-  estado: string;
-  ciudad: string;
-  menores_de_edad?: string;
-  precio_persona_extra?: string;
-  desayuno_incluido?: string;
-  desayuno_comentarios?: string;
-  transportacion?: string;
-  URLImagenHotel?: string;
-  URLImagenHotelQ?: string;
-  URLImagenHotelQQ?: string;
-  activo?: number;
-  codigo_postal?: string;
-  Colonia?: string;
-  precio_sencillo?: number;
-  precio_doble?: number;
-  precio_triple?: number;
-  precio_cuadruple?: number;
+  nombre: string;
+  id_cadena: number;
+  correo: string;
+  telefono: string;
+  rfc: string;
+  razon_social: string;
+  direccion: string;
+  latitud: string;
+  longitud: string;
+  convenio: string;
+  descripcion: string;
+  calificacion: number | null;
+  tipo_hospedaje: string;
+  cuenta_de_deposito: string;
+  Estado: string;
+  Ciudad_Zona: string;
+  NoktosQ: number | null;
+  NoktosQQ: number | null;
+  MenoresEdad: string;
+  PaxExtraPersona: string;
+  DesayunoIncluido: string;
+  DesayunoComentarios: string;
+  DesayunoPrecioPorPersona: string;
+  tiene_transportacion: string;
+  Transportacion: string;
+  TransportacionComentarios: string;
+  acepta_mascotas: string;
+  mascotas: string;
+  salones: string;
+  URLImagenHotel: string;
+  URLImagenHotelQ: string;
+  URLImagenHotelQQ: string;
+  Activo: number;
+  Comentarios: string;
+  Id_Sepomex: number | null;
+  CodigoPostal: string;
+  Id_hotel_excel: number;
+  Colonia: string;
+  tipo_negociacion: string;
+  vigencia_convenio: string; // ISO date string
+  hay_convenio: string;
+  comentario_vigencia: string;
+  tipo_pago: string;
+  disponibilidad_precio: string;
+  contacto_convenio: string;
+  contacto_recepcion: string;
+  iva: string;
+  ish: string;
+  otros_impuestos: string;
+  otros_impuestos_porcentaje: string;
+  comentario_pago: string;
+  precio_sencilla: string;
+  costo_sencilla: string;
+  desayuno_sencilla: number;
+  precio_doble: string;
+  costo_doble: string;
+  precio_persona_extra: string;
+  desayuno_doble: number;
+  pais: string;
+  score_operaciones: number | null;
 }
 
 interface ReservationData {
@@ -209,7 +248,7 @@ const CheckOutForm = ({
 
 const getPaymentData = (hotel: Hotel, reservationData: ReservationData) => {
   const payment_metadata = {
-    hotel_name: hotel.hotel,
+    hotel_name: hotel.nombre,
     check_in: reservationData.checkIn,
     check_out: reservationData.checkOut,
     room_type: reservationData.roomType,
@@ -224,8 +263,8 @@ const getPaymentData = (hotel: Hotel, reservationData: ReservationData) => {
         price_data: {
           currency: "mxn",
           product_data: {
-            name: hotel.hotel,
-            description: `Reservación en ${hotel.hotel} - ${
+            name: hotel.nombre,
+            description: `Reservación en ${hotel.nombre} - ${
               reservationData.roomType === "single"
                 ? "Habitación Sencilla"
                 : "Habitación Doble"
@@ -350,8 +389,9 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const pricePerNight =
-      roomType === "single" ? hotel.precio_sencillo : hotel.precio_doble;
+    const pricePerNightRaw =
+      roomType === "single" ? hotel.precio_sencilla : hotel.precio_doble;
+    const pricePerNight = Number(pricePerNightRaw) || 0;
 
     return {
       nights,
@@ -400,7 +440,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       const responseSolicitud = await crearSolicitud(
         {
           confirmation_code: `RES-${numerosAleatorios}`,
-          hotel_name: hotel?.hotel,
+          hotel_name: hotel?.nombre,
           dates: {
             checkIn: reservationData.checkIn,
             checkOut: reservationData.checkOut,
@@ -513,7 +553,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
         method?.card.last4,
         method?.card?.funding || "xddd",
         "tarjeta",
-        "Reservacion en " + hotel?.hotel,
+        "Reservacion en " + hotel?.nombre,
         responsePayment.paymentIntent.client_secret,
         responsePayment.paymentIntent.currency
       );
@@ -557,7 +597,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
           total: reservationData.totalPrice,
           subtotal: reservationData.totalPrice * 0.84,
           impuestos: reservationData.totalPrice * 0.16,
-          concepto: "Reservacion en " + hotel?.hotel,
+          concepto: "Reservacion en " + hotel?.nombre,
           // Campos adicionales según la tabla
           currency: "mxn",
           tipo_de_pago: "credito",
@@ -622,14 +662,14 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                 hotel.URLImagenHotel ||
                 "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80"
               }
-              alt={hotel.hotel}
+              alt={hotel.nombre}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <h1 className="text-3xl font-bold mb-2">{hotel.hotel}</h1>
+              <h1 className="text-3xl font-bold mb-2">{hotel.nombre}</h1>
               <p className="text-white/90">
-                {hotel.ciudad}, {hotel.estado}
+                {hotel.Ciudad_Zona}, {hotel.Estado}
               </p>
             </div>
           </div>
@@ -647,10 +687,10 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-start space-x-3">
                     <Hotel className="w-5 h-5 text-blue-600 mt-1" />
-                    {/* <div>
-                      <p className="font-medium text-gray-900">Tipo de Negociación</p>
-                      <p className="text-gray-600">{hotel["TIPO DE NEGOCIACION"]}</p>
-                    </div> */}
+                    <div>
+                      <p className="font-medium text-gray-900">Hotel</p>
+                      <p className="text-gray-600">{hotel.nombre}</p>
+                    </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <Users className="w-5 h-5 text-blue-600 mt-1" />
@@ -658,7 +698,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       <p className="font-medium text-gray-900">
                         Menores de Edad
                       </p>
-                      <p className="text-gray-600">{hotel.menores_de_edad}</p>
+                      <p className="text-gray-600">{hotel.MenoresEdad}</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
@@ -666,7 +706,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                     <div>
                       <p className="font-medium text-gray-900">Desayuno</p>
                       <p className="text-gray-600">
-                        {hotel.desayuno_incluido === "SI"
+                        {Boolean(hotel.desayuno_sencilla)
                           ? "Incluido"
                           : "No incluido"}
                       </p>
@@ -690,7 +730,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                         </span>
                       </div>
                       <span className="text-lg font-bold text-blue-600">
-                        {formatPrice(hotel.precio_sencillo)}
+                        {formatPrice(Number(hotel.precio_sencilla))}
                       </span>
                     </div>
                     <p className="text-sm text-blue-600">
@@ -707,7 +747,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                         </span>
                       </div>
                       <span className="text-lg font-bold text-indigo-600">
-                        {formatPrice(hotel.precio_doble)}
+                        {formatPrice(Number(hotel.precio_doble))}
                       </span>
                     </div>
                     <p className="text-sm text-indigo-600">
