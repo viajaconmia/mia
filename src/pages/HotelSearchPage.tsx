@@ -136,9 +136,9 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
         ),
       ];
 
-      setStates(uniqueStates.sort());
-      setCities(uniqueCities.sort());
-      setBrands(uniqueBrands.sort());
+      setStates(uniqueStates.sort() as string[]);
+      setCities(uniqueCities.sort() as string[]);
+      setBrands(uniqueBrands.sort() as string[]);
     } catch (error) {
       console.error("Error fetching hotels:", error);
     } finally {
@@ -161,9 +161,9 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
 
       filtered = filtered.filter(
         (hotel) =>
-          hotel?.hotel?.toLowerCase().includes(searchLower) ||
-          hotel?.ciudad?.toLowerCase().includes(searchLower) ||
-          hotel?.estado?.toLowerCase().includes(searchLower)
+          hotel?.nombre?.toLowerCase().includes(searchLower) ||
+          hotel?.Ciudad_Zona?.toLowerCase().includes(searchLower) ||
+          hotel?.Estado?.toLowerCase().includes(searchLower)
       );
     }
 
