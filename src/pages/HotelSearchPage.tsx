@@ -1,45 +1,78 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../services/supabaseClient";
 import {
   Search,
-  MapPin,
   Hotel,
-  Coffee,
-  Users,
   ArrowLeft,
   Filter,
-  CreditCard,
   ChevronDown,
   ChevronUp,
-  Bed,
   Shield as Child,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { fetchHoteles } from "../hooks/useFetch";
+import HotelCard from "../components/HotelComponent";
 
 interface Hotel {
   id_hotel: string;
-  hotel: string;
-  direccion?: string;
-  latitud?: string;
-  longitud?: string;
-  estado: string;
-  ciudad: string;
-  menores_de_edad?: string;
-  precio_persona_extra?: string;
-  desayuno_incluido?: string;
-  desayuno_comentarios?: string;
-  transportacion?: string;
-  URLImagenHotel?: string;
-  URLImagenHotelQ?: string;
-  URLImagenHotelQQ?: string;
-  activo?: number;
-  codigo_postal?: string;
-  Colonia?: string;
-  precio_sencillo?: number;
-  precio_doble?: number;
-  precio_triple?: number;
-  precio_cuadruple?: number;
+  nombre: string;
+  id_cadena: number;
+  correo: string;
+  telefono: string;
+  rfc: string;
+  razon_social: string;
+  direccion: string;
+  latitud: string;
+  longitud: string;
+  convenio: string;
+  descripcion: string;
+  calificacion: number | null;
+  tipo_hospedaje: string;
+  cuenta_de_deposito: string;
+  Estado: string;
+  Ciudad_Zona: string;
+  NoktosQ: number | null;
+  NoktosQQ: number | null;
+  MenoresEdad: string;
+  PaxExtraPersona: string;
+  DesayunoIncluido: string;
+  DesayunoComentarios: string;
+  DesayunoPrecioPorPersona: string;
+  tiene_transportacion: string;
+  Transportacion: string;
+  TransportacionComentarios: string;
+  acepta_mascotas: string;
+  mascotas: string;
+  salones: string;
+  URLImagenHotel: string;
+  URLImagenHotelQ: string;
+  URLImagenHotelQQ: string;
+  Activo: number;
+  Comentarios: string;
+  Id_Sepomex: number | null;
+  CodigoPostal: string;
+  Id_hotel_excel: number;
+  Colonia: string;
+  tipo_negociacion: string;
+  vigencia_convenio: string; // ISO date string
+  hay_convenio: string;
+  comentario_vigencia: string;
+  tipo_pago: string;
+  disponibilidad_precio: string;
+  contacto_convenio: string;
+  contacto_recepcion: string;
+  iva: string;
+  ish: string;
+  otros_impuestos: string;
+  otros_impuestos_porcentaje: string;
+  comentario_pago: string;
+  precio_sencilla: string;
+  costo_sencilla: string;
+  desayuno_sencilla: number;
+  precio_doble: string;
+  costo_doble: string;
+  precio_persona_extra: string;
+  desayuno_doble: number;
+  pais: string;
+  score_operaciones: number | null;
 }
 
 interface HotelSearchPageProps {
@@ -88,13 +121,19 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
 
       // Extract unique values for filters
       const uniqueStates = [
-        ...new Set(data?.map((hotel) => hotel.estado) || []),
+        ...new Set(
+          data?.map((hotel: Hotel) => hotel.Estado.toUpperCase()) || []
+        ),
       ];
       const uniqueCities = [
-        ...new Set(data?.map((hotel) => hotel.ciudad) || []),
+        ...new Set(
+          data?.map((hotel: Hotel) => hotel.Ciudad_Zona.toUpperCase()) || []
+        ),
       ];
       const uniqueBrands = [
-        ...new Set(data?.map((hotel) => hotel.hotel) || []),
+        ...new Set(
+          data?.map((hotel: Hotel) => hotel.nombre.toUpperCase()) || []
+        ),
       ];
 
       setStates(uniqueStates.sort());
@@ -130,17 +169,17 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
 
     // State filter
     if (selectedState) {
-      filtered = filtered.filter((hotel) => hotel.estado === selectedState);
+      filtered = filtered.filter((hotel) => hotel.Estado === selectedState);
     }
 
     // City filter
     if (selectedCity) {
-      filtered = filtered.filter((hotel) => hotel.ciudad === selectedCity);
+      filtered = filtered.filter((hotel) => hotel.Ciudad_Zona === selectedCity);
     }
 
     // Brand filter
     if (selectedBrand) {
-      filtered = filtered.filter((hotel) => hotel.hotel === selectedBrand);
+      filtered = filtered.filter((hotel) => hotel.nombre === selectedBrand);
     }
 
     setDisplayedHotels(filtered);
@@ -307,87 +346,10 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedHotels.map((hotel) => (
-                <div
-                  key={hotel.id_hotel}
-                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-                >
-                  {/* Hotel Image */}
-                  <div className="relative h-48">
-                    <img
-                      src={
-                        hotel.URLImagenHotel ||
-                        "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80"
-                      }
-                      alt={hotel.hotel}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 right-4">
-                      <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-medium">
-                        {hotel["TIPO DE NEGOCIACION"]}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hotel Info */}
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {hotel.hotel}
-                    </h3>
-                    <div className="flex items-center text-gray-500 mb-4">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      <span>
-                        {hotel.ciudad}, {hotel.estado}
-                      </span>
-                    </div>
-
-                    {/* Amenities */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="flex items-center text-gray-600">
-                        <Coffee className="w-4 h-4 mr-2" />
-                        <span>
-                          {hotel.desayuno_incluido === "SI"
-                            ? "Incluye desayuno"
-                            : "Sin desayuno"}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <Child className="w-4 h-4 mr-2" />
-                        <span>{hotel.menores_de_edad}</span>
-                      </div>
-                    </div>
-
-                    {/* Prices */}
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center text-gray-600">
-                          <Bed className="w-4 h-4 mr-2" />
-                          <span>Habitación Sencilla</span>
-                        </div>
-                        <span className="font-bold text-gray-900">
-                          {formatPrice(hotel.precio_sencillo)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center text-gray-600">
-                          <Users className="w-4 h-4 mr-2" />
-                          <span>Habitación Doble</span>
-                        </div>
-                        <span className="font-bold text-gray-900">
-                          {formatPrice(hotel.precio_doble)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Book Button */}
-                    <button
-                      onClick={() => handleReserveClick(hotel)}
-                      className="w-full mt-6 flex items-center justify-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <CreditCard className="w-5 h-5" />
-                      <span>Reservar Ahora</span>
-                    </button>
-                  </div>
-                </div>
+                <HotelCard
+                  hotel={hotel}
+                  onReserve={() => handleReserveClick(hotel)}
+                />
               ))}
             </div>
           </>
