@@ -739,9 +739,7 @@ export const getPagosConsultasAgente = async (agent_id: string) => {
   try {
     console.log("En proceso de obtener metodos de pago");
     const response = await fetch(
-      `${URL}/v1/mia/pagos/consultas?user_id=${encodeURIComponent(
-        agent_id
-      )}`,
+      `${URL}/v1/mia/pagos/consultas?user_id=${encodeURIComponent(agent_id)}`,
       {
         method: "GET",
         headers: {
@@ -758,16 +756,20 @@ export const getPagosConsultasAgente = async (agent_id: string) => {
   }
 };
 
+//ESTE SE USA PARA EL CHIDO DE ACA JSJSJS
 export const getHoteles = async () => {
   try {
     console.log("En proceso de obtener hoteles");
-    const response = await fetch(`${URL}/v1/mia/hoteles/hotelesWithTarifa`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...AUTH,
-      },
-    });
+    const response = await fetch(
+      `${URL}/v1/mia/hoteles/hotelesWithTarifaClient`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...AUTH,
+        },
+      }
+    );
     const json = await response.json();
     console.log(json);
     return json;
@@ -778,13 +780,16 @@ export const getHoteles = async () => {
 
 export const deleteTraveler = async (id_viajero: string) => {
   try {
-    const response = await fetch(`${URL}/v1/mia/viajeros?id_viajero=${id_viajero}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        ...AUTH,
-      },
-    });
+    const response = await fetch(
+      `${URL}/v1/mia/viajeros?id_viajero=${id_viajero}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...AUTH,
+        },
+      }
+    );
 
     const json = await response.json();
     console.log(json);
@@ -810,13 +815,16 @@ export const deleteTraveler = async (id_viajero: string) => {
 
 export const deleteCompany = async (id_empresa: string) => {
   try {
-    const response = await fetch(`${URL}/v1/mia/empresas?id_empresa=${id_empresa}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        ...AUTH,
-      },
-    });
+    const response = await fetch(
+      `${URL}/v1/mia/empresas?id_empresa=${id_empresa}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...AUTH,
+        },
+      }
+    );
 
     const json = await response.json();
     console.log(json);
@@ -844,9 +852,7 @@ export const getFacturasConsultasAgente = async (agent_id: string) => {
   try {
     console.log("En proceso de obtener facturas");
     const response = await fetch(
-      `${URL}/v1/mia/factura/consultas?user_id=${encodeURIComponent(
-        agent_id
-      )}`,
+      `${URL}/v1/mia/factura/consultas?user_id=${encodeURIComponent(agent_id)}`,
       {
         method: "GET",
         headers: {
