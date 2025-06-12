@@ -167,6 +167,7 @@ const YearSelector: React.FC<{
     </div>
   );
 };
+
 const GraphContainer = ({
   selectedMonth,
   selectedYear,
@@ -189,9 +190,9 @@ const GraphContainer = ({
         );
         const json = await response.json();
         //console.log("xd")
-        //console.log(json);
-        setData(json.filter((obj: any) =>
-          (obj.id_pago != null || obj.id_credito != null)));
+        console.log("THIS IS JSON", json);
+        console.log("THIS IS JSON", selectedYear, authState?.user?.id);
+        setData(json);
       } catch (error) {
         console.error("Error al obtener estadísticas mensuales:", error);
       }
@@ -229,21 +230,17 @@ const GraphContainer = ({
 
   return (
     <div className="col-span-4 flex gap-4">
-      {data.length > 0 && (
-        <Donut
-          summary={summary}
-          titulo="Grafica por gasto"
-          subtitulo="Aqui veras cuanto es tu gasto por mes"
-          simbol="$"
-        ></Donut>
-      )}
-      {data.length > 0 && (
-        <Donut
-          summary={summary1}
-          titulo="Grafica por noches"
-          subtitulo="Aqui veras cuantas noches por mes reservaron"
-        ></Donut>
-      )}
+      <Donut
+        summary={summary}
+        titulo="Grafica por gasto"
+        subtitulo="Aqui veras cuanto es tu gasto por mes"
+        simbol="$"
+      ></Donut>
+      <Donut
+        summary={summary1}
+        titulo="Grafica por noches"
+        subtitulo="Aqui veras cuantas noches por mes reservaron"
+      ></Donut>
     </div>
   );
 };
@@ -307,8 +304,11 @@ const DashboardGrid: React.FC<{
           }
         );
         const json = await response.json();
-        setMonthlyStats(json.data.filter((obj: any) =>
-          (obj.id_pago != null || obj.id_credito != null)));
+        setMonthlyStats(
+          json.data.filter(
+            (obj: any) => obj.id_pago != null || obj.id_credito != null
+          )
+        );
       } catch (error) {
         console.error("Error al obtener estadísticas mensuales:", error);
       }
