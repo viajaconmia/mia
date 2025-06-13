@@ -26,24 +26,25 @@ import useApi from "../hooks/useApi";
 import ShareButton from "../components/ShareButton";
 
 interface Booking {
-  id: string;
-  confirmation_code: string;
-  hotel_name: string;
+  id_solicitud: string;
+  codigo_reservacion_hotel: string | null;
+  nombre: string | null;
+  hotel: string;
   check_in: string;
   check_out: string;
-  room_type: string;
-  total_price: number;
+  room: string;
+  total: string;
   status: string;
+  nombre_viajero_completo: string | null;
+  nombre_viajero: string | null;
   created_at: string;
-  image_url?: string;
-  traveler_name?: string;
-  traveler_id?: string;
-  payment_method?: string;
-  booking_stage?: string;
-  id_pago: string;
-  pendiente_por_cobrar: number;
-  is_booking?: boolean;
-  factura: string | null;
+  URLImagenHotel: string | null;
+  is_booking: number | null;
+  id_pago: string | null;
+  id_facturama: string | null;
+  id_credito: string | null;
+  pendiente_por_cobrar: string | null;
+  viajero: string;
 }
 
 interface InvoiceData {
@@ -61,7 +62,7 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
   onBack,
 }) => {
   const { mandarCorreo, descargarFactura } = useApi();
-  const { obtenerSolicitudesWithViajero } = useSolicitud();
+  const { obtenerSolicitudesClient } = useSolicitud();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"hotel" | "traveler" | "date">(
@@ -81,8 +82,8 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
 
   useEffect(() => {
     if (authState?.user) {
-      obtenerSolicitudesWithViajero((json) => {
-        setBookings([...json, ...bookings]);
+      obtenerSolicitudesClient((json) => {
+        setBookings(json);
       }, authState?.user?.id);
     }
   }, []);
@@ -125,11 +126,11 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
     const csvData = filteredBookings.map((booking) => {
       // Transformar el tipo de habitación con valor por defecto
       const roomType =
-        booking.room_type === "single"
+        booking.room === "single"
           ? "Sencillo"
-          : booking.room_type === "double"
+          : booking.room === "double"
           ? "Double"
-          : booking.room_type || "No especificado";
+          : booking.room || "No especificado";
 
       // Formatear las fechas
       const checkIn = booking.check_in
@@ -140,15 +141,13 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
         : "N/A";
 
       return {
-        Hotel: booking.hotel_name || "N/A",
-        "Nombre del Viajero": booking.traveler_name || "N/A",
+        Hotel: booking.hotel || "N/A",
+        "Nombre del Viajero": booking.viajero || "N/A",
         "Tipo de Habitación": roomType,
         "Check-in": checkIn,
         "Check-out": checkOut,
-        "Código Reservación": booking.confirmation_code || "N/A",
-        Total: booking.total_price
-          ? `$${parseFloat(booking.total_price).toFixed(2)}`
-          : "$0.00",
+        "Código Reservación": booking.codigo_reservacion_hotel || "N/A",
+        Total: booking.total ? `$${parseFloat(booking.total).toFixed(2)}` : "",
       };
     });
 
@@ -212,50 +211,47 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
       : "bg-red-100 text-red-800";
   };
 
-  const filteredBookings = bookings
-    .filter((booking) => {
-      const searchLower = searchTerm.toLowerCase();
-      let matches = true;
+  const filteredBookings = bookings.filter((booking) => {
+    const searchLower = searchTerm.toLowerCase();
+    let matches = true;
 
-      switch (filterType) {
-        case "hotel":
-          matches =
-            matches && booking.hotel_name.toLowerCase().includes(searchLower);
-          break;
-        case "traveler":
-          matches =
-            matches &&
-            (booking.traveler_name?.toLowerCase().includes(searchLower) ||
-              false ||
-              booking.traveler_id?.toLowerCase().includes(searchLower) ||
-              false);
-          break;
-        case "date":
-          matches =
-            matches &&
-            (booking.check_in.includes(searchLower) ||
-              booking.check_out.includes(searchLower));
-          break;
-      }
+    switch (filterType) {
+      case "hotel":
+        matches = matches && booking.hotel.toLowerCase().includes(searchLower);
+        break;
+      case "traveler":
+        matches =
+          matches &&
+          (booking.viajero?.toLowerCase().includes(searchLower) ||
+            false ||
+            booking.viajero?.toLowerCase().includes(searchLower) ||
+            false);
+        break;
+      case "date":
+        matches =
+          matches &&
+          (booking.check_in.includes(searchLower) ||
+            booking.check_out.includes(searchLower));
+        break;
+    }
 
-      if (selectedPaymentMethod !== "all") {
-        matches = matches && booking.payment_method === selectedPaymentMethod;
-      }
+    // if (selectedPaymentMethod !== "all") {
+    //   matches = matches && booking.payment_method === selectedPaymentMethod;
+    // }
 
-      if (selectedStage !== "all") {
-        matches = matches && booking.booking_stage === selectedStage;
-      }
+    // if (selectedStage !== "all") {
+    //   matches = matches && booking.booking_stage === selectedStage;
+    // }
 
-      if (startDate && endDate) {
-        const bookingDate = new Date(booking.check_in);
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        matches = matches && bookingDate >= start && bookingDate <= end;
-      }
+    if (startDate && endDate) {
+      const bookingDate = new Date(booking.check_in);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      matches = matches && bookingDate >= start && bookingDate <= end;
+    }
 
-      return matches;
-    })
-    .filter((item) => !!item.id_pago || !!item.id_credito);
+    return matches;
+  });
 
   const downloadReport = () => {
     const element = document.getElementById("bookings-report");
@@ -489,35 +485,37 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
             <div className="divide-y divide-gray-200">
               {filteredBookings.map((booking) => (
                 <>
-                  <div key={booking.id} className="p-4 hover:bg-gray-50">
+                  <div
+                    key={booking.id_solicitud}
+                    className="p-4 hover:bg-gray-50"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-4">
                           <div className="flex-shrink-0">
                             <img
                               src={
-                                booking.image_url ||
-                                "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80"
+                                booking.URLImagenHotel ||
+                                "https://d29fhpw069ctt2.cloudfront.net/icon/image/73389/preview.svg"
                               }
-                              alt={booking.hotel_name}
+                              alt={booking.hotel}
                               className="w-16 h-16 rounded-lg object-cover"
                             />
                           </div>
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold">
-                              {booking.hotel_name}
+                              {booking.hotel}
                             </h3>
                             <div className="flex items-center gap-2 text-sm text-gray-500">
                               <span>
                                 ID Viajero:{" "}
-                                {booking.traveler_name?.toUpperCase() ||
-                                  booking.traveler_id}
+                                {booking.viajero.toUpperCase() || ""}
                               </span>
-                              {booking.confirmation_code && (
+                              {booking.codigo_reservacion_hotel && (
                                 <>
                                   <span>•</span>
                                   <span>
-                                    Código: {booking.confirmation_code}
+                                    Código: {booking.codigo_reservacion_hotel}
                                   </span>
                                 </>
                               )}
@@ -533,11 +531,11 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {booking.factura ? (
+                        {booking.id_facturama ? (
                           <>
                             <button
                               onClick={() => {
-                                handleSendFactura(booking.factura || "");
+                                handleSendFactura(booking.id_facturama || "");
                               }}
                               className="flex border p-2 rounded-lg border-sky-200 items-center gap-1 bg-sky-600 text-blue-50 font-semibold hover:text-blue-700"
                             >
@@ -545,7 +543,9 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                             </button>
                             <button
                               onClick={() => {
-                                handleDescargarFactura(booking.factura || "");
+                                handleDescargarFactura(
+                                  booking.id_facturama || ""
+                                );
                               }}
                               className="flex border p-2 rounded-lg border-sky-200 items-center gap-1 bg-sky-600 text-blue-50 font-semibold hover:text-blue-700"
                             >
@@ -555,9 +555,10 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                           </>
                         ) : (
                           <>
-                            {booking.pendiente_por_cobrar <= 0 ? (
+                            {!!booking.pendiente_por_cobrar ||
+                            Number(booking.pendiente_por_cobrar) <= 0 ? (
                               <Link
-                                href={`/factura/${booking.id}`}
+                                href={`/factura/${booking.id_solicitud}`}
                                 className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
                               >
                                 <Receipt className="w-4 h-4" /> Facturar
@@ -573,14 +574,14 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                         {/* {booking.is_booking && } */}
 
                         <Link
-                          to={`/reserva/${booking.id}`}
+                          to={`/reserva/${booking.id_solicitud}`}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
                         >
                           <ListCollapse className="w-4 h-4" />
                           <span>Detalles</span>
                         </Link>
                         <ShareButton
-                          id={booking.id}
+                          id={booking.id_solicitud}
                           title="hola"
                           description="hloa"
                         >
