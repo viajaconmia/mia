@@ -907,8 +907,8 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                       <h3 className="text-xl font-semibold text-gray-800 mb-6">
                         Pago con credito
                       </h3>
-                      {creditoValue[0]?.monto_credito_agente -
-                        bookingData.room?.totalPrice >
+                      {Number(creditoValue[0]?.monto_credito_agente) -
+                        Number(bookingData.room?.totalPrice) >
                         0 && creditoValue[0]?.tiene_credito_consolidado == 1 ? (
                         <div className="space-y-4">
                           <p className="text-xl font-medium text-gray-700">

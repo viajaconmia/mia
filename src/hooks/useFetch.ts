@@ -74,6 +74,7 @@ export const fetchCreditAgent = async () => {
     if (!user) throw new Error("No hay usuario autenticado");
 
     const creditData = await getCreditAgent(user.user.id);
+    console.log(creditData);
     return creditData || [];
   } catch (error) {
     console.error("Error fetching credit:", error);

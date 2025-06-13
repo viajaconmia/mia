@@ -496,7 +496,7 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                             <img
                               src={
                                 booking.URLImagenHotel ||
-                                "https://d29fhpw069ctt2.cloudfront.net/icon/image/73389/preview.svg"
+                                "https://d1nhio0ox7pgb.cloudfront.net/_img/g_collection_png/standard/256x256/hotel.png"
                               }
                               alt={booking.hotel}
                               className="w-16 h-16 rounded-lg object-cover"
@@ -509,7 +509,7 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                             <div className="flex items-center gap-2 text-sm text-gray-500">
                               <span>
                                 ID Viajero:{" "}
-                                {booking.viajero.toUpperCase() || ""}
+                                {booking.viajero?.toUpperCase() || ""}
                               </span>
                               {booking.codigo_reservacion_hotel && (
                                 <>
@@ -555,8 +555,7 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                           </>
                         ) : (
                           <>
-                            {!!booking.pendiente_por_cobrar ||
-                            Number(booking.pendiente_por_cobrar) <= 0 ? (
+                            {Number(booking.pendiente_por_cobrar) <= 0 ? (
                               <Link
                                 href={`/factura/${booking.id_solicitud}`}
                                 className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
