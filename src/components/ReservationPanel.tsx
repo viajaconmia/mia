@@ -977,7 +977,9 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                     onClick={() => setCardPayment(true)}
                   >
-                    <span className="font-medium">Pagar con tarjeta de Crédito o Débito</span>
+                    <span className="font-medium">
+                      Pagar con tarjeta de Crédito o Débito
+                    </span>
                   </button>
                   <button
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
@@ -1014,14 +1016,14 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       )}
 
       <div id="reservation-content" className="space-y-8">
-        {error && (
+        {/* {error && (
           <>
             <div className="mt-6 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-lg">
               <p className="font-medium">Ocurrió un error</p>
               <p className="text-xs mt-1">{error}</p>
             </div>
           </>
-        )}
+        )} */}
         {bookingData.hotel?.name && (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">

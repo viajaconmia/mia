@@ -12,6 +12,11 @@ export const useSolicitud = () => {
     user
   ) => getSolicitud(callback, user);
 
+  const obtenerSolicitudesClient = async (
+    callback: (json: Booking) => void,
+    user: string
+  ) => getSolicitudClient(callback, user);
+
   const obtenerSolicitudesWithViajero = async (
     callback: (json: PostBodyParams) => any,
     user
@@ -19,11 +24,31 @@ export const useSolicitud = () => {
   return {
     crearSolicitud,
     obtenerSolicitudes,
+    obtenerSolicitudesClient,
     obtenerSolicitudesWithViajero,
     crearSolicitudChat,
   };
 };
 
+async function getSolicitudClient(
+  callback: (json: Booking) => void,
+  user: string
+) {
+  try {
+    const response = await fetch(
+      `${URL}/v1/mia/solicitud/forclient?id=${user}`,
+      {
+        method: "GET",
+        headers: HEADERS_API,
+      }
+    );
+    const json = await response.json();
+    console.log(json);
+    callback(json);
+  } catch (error) {
+    console.log(error);
+  }
+}
 async function getSolicitudViajero(
   callback: (json: PostBodyParams) => void,
   user: string
@@ -49,19 +74,19 @@ async function getSolicitudViajero(
         check_out: reservaDB.check_out,
         room_type: reservaDB.room,
         total_price: reservaDB.total,
+        solicitud_total: reservaDB.total,
         status: reservaDB.status,
         traveler_id: [reservaDB.primer_nombre, reservaDB.apellido_paterno]
           .filter((obj) => !!obj)
           .join(" "),
+        traveler_name: reservaDB.nombre_viajero,
         created_at: reservaDB.created_at,
         image_url: "",
         is_booking: !!reservaDB.id_booking,
+        id_pago: reservaDB.id_pago,
         factura: reservaDB.id_facturama,
         pendiente_por_cobrar: reservaDB.pendiente_por_cobrar,
-        id_pago: reservaDB.id_pago,
         id_credito: reservaDB.id_credito,
-        solicitud_total: reservaDB.total,
-        traveler_name: reservaDB.nombre_viajero,
       };
     });
     callback(data);
@@ -90,7 +115,7 @@ async function getSolicitud(
         room_type: reservaDB.room,
         total_price: reservaDB.total,
         status: "completed",
-        traveler_id: "Angel Castañeda",
+        traveler_id: "xxxxxxxxxxxxx",
         created_at: new Date().toLocaleDateString(),
         image_url: "",
       };
@@ -208,3 +233,25 @@ type PostBodyParams = {
   total_price: number;
   status: string;
 };
+
+interface Booking {
+  id_solicitud: string;
+  codigo_reservacion_hotel: string | null;
+  nombre: string | null;
+  hotel: string;
+  check_in: string;
+  check_out: string;
+  room: string;
+  total: string;
+  status: string;
+  nombre_viajero_completo: string | null;
+  nombre_viajero: string | null;
+  created_at: string;
+  URLImagenHotel: string | null;
+  is_booking: number | null;
+  id_pago: string | null;
+  id_facturama: string | null;
+  id_credito: string | null;
+  pendiente_por_cobrar: string | null;
+  viajero: string;
+}
