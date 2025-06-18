@@ -46,6 +46,7 @@ export function FiscalDataModal({
   const regimes = {
     "601": "Persona Moral - General de Ley Personas Morales",
     "603": "Persona Moral - Personas Morales con Fines no Lucrativos",
+    "604": "Persona Física - Servicios Profesionales (Honorarios)",
     "605":
       "Persona Física - Sueldos y Salarios e Ingresos Asimilados a Salarios",
     "606": "Persona Física - Arrendamiento",
@@ -56,6 +57,8 @@ export function FiscalDataModal({
       "Persona Física - Residentes en el Extranjero sin Establecimiento Permanente en México",
     "611": "Persona Física - Ingresos por Dividendos (socios y accionistas)",
     "612": "Persona Física - Actividades Empresariales y Profesionales",
+    "613":
+      "Persona Física - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras",
     "614": "Persona Física - Ingresos por intereses",
     "615": "Persona Física - Régimen de los ingresos por obtención de premios",
     "616": "Persona Física - Sin obligaciones fiscales",
@@ -69,6 +72,7 @@ export function FiscalDataModal({
     "625":
       "Persona Física - Actividades Empresariales a través de Plataformas Tecnológicas",
     "626": "Persona Física - Régimen Simplificado de Confianza (RESICO)",
+    "627": "Persona Moral - Régimen Simplificado de Confianza (RESICO)",
     "628": "Persona Moral - Hidrocarburos",
     "629":
       "Persona Moral - Regímenes Fiscales Preferentes y Empresas Multinacionales",
