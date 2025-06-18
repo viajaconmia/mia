@@ -322,9 +322,16 @@ export function FiscalDataModal({
                   <option value="601">
                     601 - Persona Moral - General de Ley Personas Morales
                   </option>
+                  <option value="602">
+                    602 - Persona Moral - Personas Morales con Fines no
+                    Lucrativos (No vigente)
+                  </option>
                   <option value="603">
                     603 - Persona Moral - Personas Morales con Fines no
                     Lucrativos
+                  </option>
+                  <option value="604">
+                    604 - Persona Física - Servicios Profesionales (Honorarios)
                   </option>
                   <option value="605">
                     605 - Persona Física - Sueldos y Salarios e Ingresos
@@ -355,6 +362,10 @@ export function FiscalDataModal({
                     612 - Persona Física - Actividades Empresariales y
                     Profesionales
                   </option>
+                  <option value="613">
+                    613 - Persona Física - Actividades Agrícolas, Ganaderas,
+                    Silvícolas y Pesqueras
+                  </option>
                   <option value="614">
                     614 - Persona Física - Ingresos por intereses
                   </option>
@@ -364,6 +375,16 @@ export function FiscalDataModal({
                   </option>
                   <option value="616">
                     616 - Persona Física - Sin obligaciones fiscales
+                  </option>
+                  <option value="617">
+                    617 - Persona Moral - Sociedades Cooperativas de Producción
+                  </option>
+                  <option value="618">
+                    618 - Persona Moral - Sociedades Cooperativas de Consumo
+                  </option>
+                  <option value="619">
+                    619 - Persona Moral - Sociedades Cooperativas de Ahorro y
+                    Préstamo
                   </option>
                   <option value="620">
                     620 - Persona Moral - Sociedades Cooperativas de Producción
@@ -386,6 +407,10 @@ export function FiscalDataModal({
                   </option>
                   <option value="626">
                     626 - Persona Física - Régimen Simplificado de Confianza
+                    (RESICO)
+                  </option>
+                  <option value="627">
+                    627 - Persona Moral - Régimen Simplificado de Confianza
                     (RESICO)
                   </option>
                   <option value="628">
