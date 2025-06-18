@@ -34,6 +34,7 @@ import {
 import { URL } from "../constants/apiConstant";
 import type { BookingData, Employee, PaymentMethod } from "../types";
 import { SupportModal } from "../components/SupportModal";
+import { currentDate } from "../utils/helpers";
 
 const { obtenerSolicitudes, crearSolicitud } = useSolicitud();
 const API_KEY =
@@ -796,7 +797,9 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       onChange={(e) => {
                         if (
                           e.target.value <
-                            new Date().toISOString().split("T")[0] &&
+                            new Date(currentDate())
+                              .toISOString()
+                              .split("T")[0] &&
                           Number(e.target.value.split("-")[0]) > 999
                         ) {
                           setError(
@@ -807,7 +810,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                           handleDateChange("checkIn", e.target.value);
                         }
                       }}
-                      min={new Date().toISOString().split("T")[0]}
+                      min={new Date(currentDate()).toISOString().split("T")[0]}
                       className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
                   </div>
@@ -826,7 +829,9 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       onChange={(e) => {
                         if (
                           e.target.value <
-                            new Date().toISOString().split("T")[0] &&
+                            new Date(currentDate())
+                              .toISOString()
+                              .split("T")[0] &&
                           Number(e.target.value.split("-")[0]) > 999
                         ) {
                           setError(
@@ -839,7 +844,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       }}
                       min={
                         reservationData.checkIn ||
-                        new Date().toISOString().split("T")[0]
+                        new Date(currentDate()).toISOString().split("T")[0]
                       }
                       className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
