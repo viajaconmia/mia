@@ -44,39 +44,34 @@ export function FiscalDataModal({
     }
   );
   const regimes = {
-    "601": "Persona Moral - General de Ley Personas Morales",
-    "603": "Persona Moral - Personas Morales con Fines no Lucrativos",
-    "604": "Persona Física - Servicios Profesionales (Honorarios)",
-    "605":
-      "Persona Física - Sueldos y Salarios e Ingresos Asimilados a Salarios",
-    "606": "Persona Física - Arrendamiento",
-    "607": "Persona Física - Régimen de Enajenación o Adquisición de Bienes",
-    "608": "Persona Física - Demás ingresos",
-    "609": "Persona Moral - Consolidación",
+    "601": "General de Ley Personas Morales",
+    "602": "Personas Morales con fines no lucrativos (no vigente)",
+    "603": "Personas Morales con Fines no Lucrativos",
+    "604": "Servicios Profesionales (Honorarios)",
+    "605": "Sueldos y Salarios e Ingresos Asimilados a Salarios",
+    "606": "Arrendamiento",
+    "607": "Régimen de Enajenación o Adquisición de Bienes",
+    "608": "Demás ingresos",
+    "609": "Consolidación",
     "610":
-      "Persona Física - Residentes en el Extranjero sin Establecimiento Permanente en México",
-    "611": "Persona Física - Ingresos por Dividendos (socios y accionistas)",
-    "612": "Persona Física - Actividades Empresariales y Profesionales",
-    "613":
-      "Persona Física - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras",
-    "614": "Persona Física - Ingresos por intereses",
-    "615": "Persona Física - Régimen de los ingresos por obtención de premios",
-    "616": "Persona Física - Sin obligaciones fiscales",
+      "Residentes en el Extranjero sin Establecimiento Permanente en México",
+    "611": "Ingresos por Dividendos (socios y accionistas)",
+    "612": "Actividades Empresariales y Profesionales",
+    "613": "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF)",
+    "614": "Ingresos por intereses",
+    "615": "Régimen de los ingresos por obtención de premios",
+    "616": "Sin obligaciones fiscales",
+    "617": "Sociedades Cooperativas de Producción",
+    "618": "Sociedades Cooperativas de Consumo",
+    "619": "Sociedades Cooperativas de Ahorro y Préstamo",
     "620":
-      "Persona Moral - Sociedades Cooperativas de Producción que optan por diferir sus ingresos",
-    "621": "Persona Física - Incorporación Fiscal",
-    "622":
-      "Persona Física y Moral - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras",
-    "623": "Persona Moral - Opcional para Grupos de Sociedades",
-    "624": "Persona Moral - Coordinados",
-    "625":
-      "Persona Física - Actividades Empresariales a través de Plataformas Tecnológicas",
-    "626": "Persona Física - Régimen Simplificado de Confianza (RESICO)",
-    "627": "Persona Moral - Régimen Simplificado de Confianza (RESICO)",
-    "628": "Persona Moral - Hidrocarburos",
-    "629":
-      "Persona Moral - Regímenes Fiscales Preferentes y Empresas Multinacionales",
-    "630": "Persona Física - Enajenación de acciones en bolsa de valores",
+      "Sociedades Cooperativas de Producción que optan por diferir sus ingresos",
+    "621": "Incorporación Fiscal",
+    "622": "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF y PM)",
+    "623": "Opcional para Grupos de Sociedades",
+    "624": "Coordinados",
+    "625": "Actividades Empresariales a través de Plataformas Tecnológicas",
+    "626": "Régimen Simplificado de Confianza (RESICO) - Personas Físicas",
   };
 
   useEffect(() => {
