@@ -556,12 +556,16 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                         ) : (
                           <>
                             {Number(booking.pendiente_por_cobrar) <= 0 ? (
+                              <>
+                                {/*
                               <Link
                                 href={`/factura/${booking.id_solicitud}`}
                                 className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
                               >
-                                <Receipt className="w-4 h-4" /> Facturar
-                              </Link>
+                                  <Receipt className="w-4 h-4" /> Facturar
+                                    </Link>
+                                 */}
+                              </>
                             ) : (
                               <button className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
                                 <CreditCard className="w-4 h-4" />
