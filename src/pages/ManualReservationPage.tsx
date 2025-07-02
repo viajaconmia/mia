@@ -911,7 +911,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                     para ayudarte con cualquier modificación
                   </p>
                 </div>
-{/*   
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número de Personas
@@ -922,7 +922,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       pattern="^[^<>]*$"
                       type="number"
                       min="1"
-                      max={reservationData.roomType === "single" ? 2 : 4}
+                      max={2}
                       value={reservationData.guests}
                       onChange={(e) =>
                         setReservationData((prev) => ({
@@ -938,7 +938,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                     {reservationData.roomType === "single" ? "2" : "4"} personas
                   </p>
                 </div>
-                  */}
+                  
               </div>
             </div>
           </div>
