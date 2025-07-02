@@ -6,6 +6,7 @@ import {
   Bed,
   ArrowRight,
   MessageCircle,
+  Users,
 } from "lucide-react";
 import { useRoute } from "wouter";
 import { SupportModal } from "../components/SupportModal";
@@ -22,11 +23,21 @@ export function Reserva() {
     if (params?.id) {
       fetchReservation(params.id, (data) => {
         console.log(data);
-        setReservation(data);
+        setReservation({
+          ...data,
+          viajeros_adicionales: data.viajeros_adicionales || [],
+        });
         setLoading(false);
       });
     }
   }, []);
+
+  const getAcompanantesValue = (viajeros: string) => {
+    if (viajeros && Array.isArray(viajeros) && viajeros.length > 0) {
+      return viajeros.join(", ");
+    }
+    return "No hay acompañantes"; // Esta línea no se verá si la sección no se renderiza
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50">
@@ -69,6 +80,18 @@ export function Reserva() {
                       subValue={reservation.direccion || ""}
                     />
                   </div>
+                  {reservation.viajeros_adicionales &&
+                    reservation.viajeros_adicionales.length > 0 && (
+                      <div className="">
+                        <InfoCard
+                          icon={Users}
+                          label="Acompañantes"
+                          value={getAcompanantesValue(
+                            reservation.viajeros_adicionales
+                          )}
+                        />
+                      </div>
+                    )}
 
                   {/* Dates */}
                   <DateCard

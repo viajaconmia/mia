@@ -35,6 +35,7 @@ import { URL } from "../constants/apiConstant";
 import type { BookingData, Employee, PaymentMethod } from "../types";
 import { SupportModal } from "../components/SupportModal";
 import { currentDate } from "../utils/helpers";
+import { Admin } from "./Admin";
 
 const { obtenerSolicitudes, crearSolicitud } = useSolicitud();
 const API_KEY =
@@ -326,7 +327,22 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
     console.log("Payment methods data:", data);
     setPaymentMethods(data);
   };
-
+  useEffect(() => {
+    console.log({
+      confirmation_code: `RES-`,
+      hotel_name: hotel?.nombre,
+      dates: {
+        checkIn: reservationData.checkIn,
+        checkOut: reservationData.checkOut,
+      },
+      room: {
+        type: reservationData.roomType,
+        totalPrice: reservationData.totalPrice,
+      },
+      id_viajero: reservationData.mainGuest,
+      viajeros_adicionales: reservationData.additionalGuests,
+    });
+  }, [reservationData]);
   const fetchCredit = async () => {
     const data = await fetchCreditAgent();
     console.log("Credito del agente", data);
@@ -451,6 +467,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
             totalPrice: reservationData.totalPrice,
           },
           id_viajero: reservationData.mainGuest,
+          viajeros_adicionales: reservationData.additionalGuests,
         },
         user.id
       );
@@ -916,7 +933,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número de Personas
                   </label>
-                <div className="relative">
+                  <div className="relative">
                     <Users className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <input
                       pattern="^[^<>]*$"
@@ -932,13 +949,12 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       }
                       className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
-                  </div> 
+                  </div>
                   <p className="mt-1 text-sm text-gray-500">
                     Capacidad máxima:{" "}
                     {reservationData.roomType === "single" ? "2" : "4"} personas
                   </p>
                 </div>
-                  
               </div>
             </div>
           </div>
@@ -990,9 +1006,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                   (_, index) => (
                     <div key={index} className="relative">
                       <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      <input
-                        pattern="^[^<>]*$"
-                        type="text"
+                      <select
                         value={reservationData.additionalGuests[index] || ""}
                         onChange={(e) => {
                           const newGuests = [
@@ -1004,16 +1018,26 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                             additionalGuests: newGuests,
                           }));
                         }}
-                        placeholder={`Nombre del huésped ${index + 2}`}
                         className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                      />
+                      >
+                        <option value="">Selecciona un huésped</option>
+                        {employees.map((empleado) => (
+                          <option
+                            key={empleado.id_viajero}
+                            value={empleado.id_viajero}
+                          >
+                            {empleado.primer_nombre} {empleado.segundo_nombre}{" "}
+                            {empleado.apellido_paterno}{" "}
+                            {empleado.apellido_materno}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )
                 )}
               </div>
             )}
           </div>
-
           {/* Reservation Summary */}
           {reservationData.totalNights > 0 &&
             reservationData.mainGuest != "" &&
