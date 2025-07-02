@@ -911,12 +911,12 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                     para ayudarte con cualquier modificación
                   </p>
                 </div>
-
+{/*   
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número de Personas
                   </label>
-                  <div className="relative">
+                <div className="relative">
                     <Users className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <input
                       pattern="^[^<>]*$"
@@ -932,12 +932,13 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       }
                       className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
-                  </div>
+                  </div> 
                   <p className="mt-1 text-sm text-gray-500">
                     Capacidad máxima:{" "}
                     {reservationData.roomType === "single" ? "2" : "4"} personas
                   </p>
                 </div>
+                  */}
               </div>
             </div>
           </div>
