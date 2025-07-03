@@ -7,6 +7,7 @@ import {
   ArrowRight,
   MessageCircle,
   Users,
+  CupSoda,
 } from "lucide-react";
 import { useRoute } from "wouter";
 import { SupportModal } from "../components/SupportModal";
@@ -21,13 +22,13 @@ export function Reserva() {
 
   useEffect(() => {
     if (params?.id) {
-fetchReservation(params.id, (data) => {
-  console.log(data);
-  setReservation({
-    ...data
-  } as Reservation);
-  setLoading(false);
-});
+      fetchReservation(params.id, (data) => {
+        console.log(data);
+        setReservation({
+          ...data,
+        } as Reservation);
+        setLoading(false);
+      });
     }
   }, []);
 
@@ -35,7 +36,7 @@ fetchReservation(params.id, (data) => {
     if (viajeros) {
       return viajeros;
     }
-    return "No hay acompañantes"; // Esta línea no se verá si la sección no se renderiza
+    return "No hay acompañantes";
   };
 
   return (
@@ -79,18 +80,41 @@ fetchReservation(params.id, (data) => {
                       subValue={reservation.direccion || ""}
                     />
                   </div>
-                  {reservation.nombres_viajeros_adicionales &&
-                    reservation.nombres_viajeros_adicionales.length > 0 && (
-                      <div className="">
-                        <InfoCard
-                          icon={Users}
-                          label="Acompañantes"
-                          value={getAcompanantesValue(
-                            reservation.nombres_viajeros_adicionales
-                          )}
-                        />
-                      </div>
-                    )}
+                  <div>
+                    {reservation.nombres_viajeros_adicionales &&
+                      reservation.nombres_viajeros_adicionales.length > 0 && (
+                        <div className="">
+                          <InfoCard
+                            icon={Users}
+                            label="Acompañantes"
+                            value={getAcompanantesValue(
+                              reservation.nombres_viajeros_adicionales
+                            )}
+                          />
+                        </div>
+                      )}
+                    <div className="">
+                      <InfoCard
+                        icon={CupSoda}
+                        label="Desayuno incluido"
+                        value={
+                          Boolean(
+                            {
+                              sencillo: reservation.desayuno_sencilla,
+                              doble: reservation.desayuno_doble,
+                            }[
+                              reservation.room == "single" ||
+                              reservation.room == "SENCILLO"
+                                ? "sencillo"
+                                : "doble"
+                            ]
+                          )
+                            ? "Desayuno incluido"
+                            : "No incluye desayuno"
+                        }
+                      />
+                    </div>
+                  </div>
 
                   {/* Dates */}
                   <DateCard
