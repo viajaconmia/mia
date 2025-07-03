@@ -90,6 +90,7 @@ export const Configuration = () => {
       if (data && Array.isArray(data)) {
         const formattedCompanies: CompanyWithTaxInfo[] = data.map(
           (company) => ({
+            ...company,
             id_empresa: company.id_empresa,
             razon_social: company.razon_social,
             nombre_comercial: company.nombre_comercial,
@@ -694,14 +695,16 @@ export const Configuration = () => {
                               >
                                 <Pencil className="h-5 w-5" />
                               </button>
-                              <button
-                                onClick={() =>
-                                  handleDelete("company", company.id_empresa)
-                                }
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
+                              {company.rn != 1 && (
+                                <button
+                                  onClick={() =>
+                                    handleDelete("company", company.id_empresa)
+                                  }
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -761,14 +764,19 @@ export const Configuration = () => {
                               >
                                 <Pencil className="h-5 w-5" />
                               </button>
-                              <button
-                                onClick={() =>
-                                  handleDelete("employee", employee.id_viajero)
-                                }
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
+                              {employee.rn != 1 && (
+                                <button
+                                  onClick={() =>
+                                    handleDelete(
+                                      "employee",
+                                      employee.id_viajero
+                                    )
+                                  }
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}

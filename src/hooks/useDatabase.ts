@@ -618,6 +618,7 @@ export const getEmpresasDatosFiscales = async (agent_id: string) => {
     console.log(json);
     return json;
   } catch (error) {
+    console.log(error);
     throw error;
   }
 };

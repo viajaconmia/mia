@@ -565,10 +565,18 @@ export const BookingsReportPage: React.FC<BookingsReportPageProps> = ({
                                 </Link>
                               </>
                             ) : (
-                              <button className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
-                                <CreditCard className="w-4 h-4" />
-                                <span>Pagar</span>
-                              </button>
+                              <>
+                                {/* <Link
+                                  href={`/factura/${booking.id_solicitud}`}
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                                >
+                                  <Receipt className="w-4 h-4" /> Facturar
+                                </Link>
+                                <button className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
+                                  <CreditCard className="w-4 h-4" />
+                                  <span>Pagar</span>
+                                </button> */}
+                              </>
                             )}
                           </>
                         )}
