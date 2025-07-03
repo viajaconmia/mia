@@ -917,7 +917,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       pattern="^[^<>]*$"
                       type="number"
                       min="1"
-                      max={reservationData.roomType === "single" ? 2 : 4}
+                      max="2"
                       value={reservationData.guests}
                       onChange={(e) =>
                         setReservationData((prev) => ({
