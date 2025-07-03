@@ -21,20 +21,19 @@ export function Reserva() {
 
   useEffect(() => {
     if (params?.id) {
-      fetchReservation(params.id, (data) => {
-        console.log(data);
-        setReservation({
-          ...data,
-          viajeros_adicionales: data.viajeros_adicionales || [],
-        });
-        setLoading(false);
-      });
+fetchReservation(params.id, (data) => {
+  console.log(data);
+  setReservation({
+    ...data
+  } as Reservation);
+  setLoading(false);
+});
     }
   }, []);
 
   const getAcompanantesValue = (viajeros: string) => {
-    if (viajeros && Array.isArray(viajeros) && viajeros.length > 0) {
-      return viajeros.join(", ");
+    if (viajeros) {
+      return viajeros;
     }
     return "No hay acompañantes"; // Esta línea no se verá si la sección no se renderiza
   };
@@ -80,14 +79,14 @@ export function Reserva() {
                       subValue={reservation.direccion || ""}
                     />
                   </div>
-                  {reservation.viajeros_adicionales &&
-                    reservation.viajeros_adicionales.length > 0 && (
+                  {reservation.nombres_viajeros_adicionales &&
+                    reservation.nombres_viajeros_adicionales.length > 0 && (
                       <div className="">
                         <InfoCard
                           icon={Users}
                           label="Acompañantes"
                           value={getAcompanantesValue(
-                            reservation.viajeros_adicionales
+                            reservation.nombres_viajeros_adicionales
                           )}
                         />
                       </div>

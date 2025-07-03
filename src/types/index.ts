@@ -107,4 +107,5 @@ export interface Reservation {
   direccion: string | null;
   id_factura: string | null;
   nombre_viajero_completo: string;
+  nombres_viajeros_adicionales: string; // Array of strings for additional travelers
 }
