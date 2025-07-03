@@ -1029,16 +1029,21 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                         className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
                         <option value="">Selecciona un huésped</option>
-                        {employees.map((empleado) => (
-                          <option
-                            key={empleado.id_viajero}
-                            value={empleado.id_viajero}
-                          >
-                            {empleado.primer_nombre} {empleado.segundo_nombre}{" "}
-                            {empleado.apellido_paterno}{" "}
-                            {empleado.apellido_materno}
-                          </option>
-                        ))}
+                        {employees
+                          .filter(
+                            (empleado) =>
+                              empleado.id_viajero !== reservationData.mainGuest
+                          )
+                          .map((empleado) => (
+                            <option
+                              key={empleado.id_viajero}
+                              value={empleado.id_viajero}
+                            >
+                              {empleado.primer_nombre} {empleado.segundo_nombre}{" "}
+                              {empleado.apellido_paterno}{" "}
+                              {empleado.apellido_materno}
+                            </option>
+                          ))}
                       </select>
                     </div>
                   )
