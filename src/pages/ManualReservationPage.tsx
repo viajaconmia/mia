@@ -941,18 +941,26 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       min="1"
                       max="2"
                       value={reservationData.guests}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        if (
+                          parseInt(e.target.value) < 1 ||
+                          parseInt(e.target.value) > 2
+                        ) {
+                          return setError(
+                            "El número de personas debe ser entre 1 y 2"
+                          );
+                        }
+
                         setReservationData((prev) => ({
                           ...prev,
                           guests: parseInt(e.target.value),
-                        }))
-                      }
+                        }));
+                      }}
                       className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
                   </div>
                   <p className="mt-1 text-sm text-gray-500">
-                    Capacidad máxima:{" "}
-                    {reservationData.roomType === "single" ? "2" : "4"} personas
+                    Capacidad máxima: 2 personas
                   </p>
                 </div>
               </div>
