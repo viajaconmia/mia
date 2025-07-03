@@ -204,6 +204,7 @@ async function postSolicitud(solicitud: any, id_usuario: string) {
         status: "pending",
         id_agente: id_usuario,
         nombre_viajero: null,
+        viajeros_adicionales : solicitud.viajeros_adicionales || [], // Aseguramos que este campo sea un array, aunque esté vacío
       },
     ], // Establecemos el estado por defecto como "pending"
   };
