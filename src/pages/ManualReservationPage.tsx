@@ -939,7 +939,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       pattern="^[^<>]*$"
                       type="number"
                       min="1"
-                      max={2}
+                      max="2"
                       value={reservationData.guests}
                       onChange={(e) =>
                         setReservationData((prev) => ({
