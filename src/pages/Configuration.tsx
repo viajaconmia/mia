@@ -754,28 +754,30 @@ export const Configuration = () => {
                               {employee.telefono}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={() => {
-                                  setFormMode("edit");
-                                  setSelectedItem(employee);
-                                  setShowForm(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-900 mr-4"
-                              >
-                                <Pencil className="h-5 w-5" />
-                              </button>
                               {employee.rn != 1 && (
-                                <button
-                                  onClick={() =>
-                                    handleDelete(
-                                      "employee",
-                                      employee.id_viajero
-                                    )
-                                  }
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setFormMode("edit");
+                                      setSelectedItem(employee);
+                                      setShowForm(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-900 mr-4"
+                                  >
+                                    <Pencil className="h-5 w-5" />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleDelete(
+                                        "employee",
+                                        employee.id_viajero
+                                      )
+                                    }
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </button>
+                                </>
                               )}
                             </td>
                           </tr>
