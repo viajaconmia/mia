@@ -290,11 +290,23 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       totalNights: null,
     };
     if (currentBooking?.check_in && currentBooking?.check_out) {
+      const checkIn = new Date(currentBooking?.check_in);
+      const checkOut = new Date(currentBooking?.check_out);
+      const currentYear = new Date().getFullYear();
       const totalNights = Math.ceil(
-        (new Date(currentBooking.check_out).getTime() -
-          new Date(currentBooking.check_in).getTime()) /
-          (1000 * 3600 * 24)
+        (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24)
       );
+
+      if (
+        checkIn.getFullYear() <= currentYear ||
+        checkOut.getFullYear() <= currentYear
+      ) {
+        setError(
+          "Verifica las fechas de tu reservación, no pueden ser del pasado."
+        );
+      } else {
+        setError(null);
+      }
       currentBookingData = {
         ...currentBookingData,
         dates: {
@@ -365,13 +377,6 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       };
     }
     setBookingData(currentBookingData);
-    if (currentBookingData.room.pricePerNight <= 0 && currentBookingData.room) {
-      setError(
-        "Las reservaciones con un precio menor o igual a $0 seran canceladas, puedes cambiar eso pidiendo un cambio de hotel"
-      );
-    } else {
-      setError(null);
-    }
   }, [booking, dataHotel]);
 
   const fetchData = async () => {
@@ -1016,14 +1021,14 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       )}
 
       <div id="reservation-content" className="space-y-8">
-        {/* {error && (
+        {error && (
           <>
             <div className="mt-6 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-lg">
               <p className="font-medium">Ocurrió un error</p>
               <p className="text-xs mt-1">{error}</p>
             </div>
           </>
-        )} */}
+        )}
         {bookingData.hotel?.name && (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
@@ -1093,7 +1098,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                       </p>
                       <div>
                         <p className="text-lg capitalize text-[#10244c]">
-                          {checkInDate.month}
+                          {checkInDate.month} - {checkInDate.year}
                         </p>
                         <p className="text-sm text-[#10244c]/80 capitalize">
                           {checkInDate.weekday}
@@ -1129,7 +1134,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                       </p>
                       <div>
                         <p className="text-lg capitalize text-[#10244c]">
-                          {checkOutDate.month}
+                          {checkOutDate.month} - {checkOutDate.year}
                         </p>
                         <p className="text-sm text-[#10244c]/80 capitalize">
                           {checkOutDate.weekday}
