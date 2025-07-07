@@ -599,6 +599,25 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       const { data } = await supabase.auth.getUser();
       const id_agente = data.user?.id;
 
+      // console.log({
+      //   id_servicio: idServicio,
+      //   monto_a_credito: reservationData.totalPrice,
+      //   responsable_pago_agente: id_agente,
+      //   fecha_creacion: new Date().toISOString().split("T")[0],
+      //   pago_por_credito: reservationData.totalPrice,
+      //   pendiente_por_cobrar: reservationData.totalPrice,
+      //   total: reservationData.totalPrice,
+      //   subtotal: reservationData.totalPrice * 0.84,
+      //   impuestos: reservationData.totalPrice * 0.16,
+      //   concepto: "Reservacion en " + hotel?.nombre,
+      //   // Campos adicionales según la tabla
+      //   currency: "mxn",
+      //   tipo_de_pago: "credito",
+      //   // Para actualizar el crédito del agente
+      //   credito_restante:
+      //     creditoValue[0]?.monto_credito_agente - reservationData.totalPrice,
+      // });
+
       const response = await fetch(`${URL}/v1/mia/pagos/credito`, {
         method: "POST",
         headers: {
@@ -624,8 +643,8 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
             creditoValue[0]?.monto_credito_agente - reservationData.totalPrice,
         }),
       });
-
-      console.log(response);
+      const json = await response.json();
+      console.log(json);
       if (!response.ok) {
         throw new Error("Error al procesar el pago por credito");
       }
