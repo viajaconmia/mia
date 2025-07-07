@@ -36,7 +36,7 @@ export const ENDPOINTS = {
     },
   },
 };
-export const URL = "https://miaback.vercel.app";
+export const URL = "httzps://miaback.vercel.app";
 // export const URL = "http://localhost:3001";
 
 export const ROUTES = {
