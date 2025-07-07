@@ -1237,7 +1237,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
                       Pago con credito
                     </h3>
                     {Number(creditoValue[0]?.monto_credito_agente) -
-                      Number(reservationData.totalPrice) >
+                      Number(reservationData.totalPrice) >=
                       0 && creditoValue[0]?.tiene_credito_consolidado == 1 ? (
                       <div className="space-y-4">
                         <p className="text-xl font-medium text-gray-700">
