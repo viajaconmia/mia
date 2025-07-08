@@ -109,3 +109,16 @@ export interface Reservation {
   nombre_viajero_completo: string;
   nombres_viajeros_adicionales: string; // Array of strings for additional travelers
 }
+export interface ReservationDetails {
+  id_solicitud: string;
+  huesped: string;
+  codigo_confirmacion: string;
+  hotel: string;
+  direccion: string;
+  acompañantes :string;
+  incluye_desayuno: number;
+  check_in: string; // ISO date string
+  check_out: string; // ISO date string
+  room: string;
+  comentarios: string;
+}
