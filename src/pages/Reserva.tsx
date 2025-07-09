@@ -11,26 +11,26 @@ import {
 } from "lucide-react";
 import { useRoute } from "wouter";
 import { SupportModal } from "../components/SupportModal";
-import { Reservation } from "../types/index";
+import { ReservationDetails2} from "../types/index";
 import { fetchReservation } from "../services/reservas";
 
 export function Reserva() {
-  const [_, params] = useRoute("/reserva/:id");
+  const [, params] = useRoute("/reserva/:id");
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [reservationDetails, setReservationDetails] = useState<ReservationDetails2 | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (params?.id) {
       fetchReservation(params.id, (data) => {
         console.log(data);
-        setReservation({
+        setReservationDetails({
           ...data,
-        } as Reservation);
+        } as ReservationDetails2);
         setLoading(false);
       });
     }
-  }, []);
+  }, [params?.id]);
 
   const getAcompanantesValue = (viajeros: string) => {
     if (viajeros) {
@@ -84,15 +84,15 @@ export function Reserva() {
             isOpen={isSupportModalOpen}
             onClose={() => setIsSupportModalOpen(false)}
           />
-          {reservation ? (
+          {reservationDetails ? (
             <>
               <div className="text-center mb-12">
                 <h1 className="text-3xl font-bold text-blue-900">
                   Detalles de la Reservación
                 </h1>
-                {reservation.codigo_reservacion_hotel && (
+                {reservationDetails.codigo_confirmacion && (
                   <p className="text-blue-600 mt-2">
-                    Confirmación #{reservation.codigo_reservacion_hotel}
+                    Confirmación #{reservationDetails.codigo_confirmacion}
                   </p>
                 )}
               </div>
@@ -106,26 +106,25 @@ export function Reserva() {
                       icon={User}
                       label="Huésped"
                       value={
-                        reservation.nombre_viajero ||
-                        reservation.nombre_viajero_completo
+                        reservationDetails.huesped || ""
                       }
                     />
                     <InfoCard
                       icon={Hotel}
                       label="Hotel"
-                      value={reservation.hotel || ""}
-                      subValue={reservation.direccion || ""}
+                      value={reservationDetails.hotel || ""}
+                      subValue={reservationDetails.direccion || ""}
                     />
                   </div>
-                  <div>
-                    {reservation.nombres_viajeros_adicionales &&
-                      reservation.nombres_viajeros_adicionales.length > 0 && (
+                  <div className="space-y-4">
+                    {reservationDetails.acompañantes &&
+                      reservationDetails.acompañantes.length > 0 && (
                         <div className="">
                           <InfoCard
                             icon={Users}
                             label="Acompañantes"
                             value={getAcompanantesValue(
-                              reservation.nombres_viajeros_adicionales
+                              reservationDetails.acompañantes
                             )}
                           />
                         </div>
@@ -135,17 +134,7 @@ export function Reserva() {
                         icon={CupSoda}
                         label="Desayuno incluido"
                         value={
-                          Boolean(
-                            {
-                              sencillo: reservation.desayuno_sencilla,
-                              doble: reservation.desayuno_doble,
-                            }[
-                              reservation.room == "single" ||
-                              reservation.room == "SENCILLO"
-                                ? "sencillo"
-                                : "doble"
-                            ]
-                          )
+                          reservationDetails.incluye_desayuno === 1
                             ? "Desayuno incluido"
                             : "No incluye desayuno"
                         }
@@ -155,20 +144,20 @@ export function Reserva() {
 
                   {/* Dates */}
                   <DateCard
-                    check_in={reservation.check_in}
-                    check_out={reservation.check_out}
+                    check_in={reservationDetails.check_in}
+                    check_out={reservationDetails.check_out}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Room Type */}
                     <InfoCard
                       icon={Bed}
                       label="Tipo de Habitación"
-                      value={cambiarLenguaje(reservation.room || "")}
+                      value={cambiarLenguaje(reservationDetails.room || "")}
                     />
                     <InfoCard
                       icon={MessageCircle}
                       label="Comentarios"
-                      value={reservation.comments || "No hay comentarios"}
+                      value={reservationDetails.comentarios || "No hay comentarios"}
                     />
                   </div>
                 </div>
