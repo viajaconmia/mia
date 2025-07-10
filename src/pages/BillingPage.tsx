@@ -141,7 +141,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           }
         );
         const json = await response.json();
-        const data_solicitud = json[0];
+        console.log("😊", json);
+        const data_solicitud = json.data[0];
         console.log(data_solicitud);
         const responsefiscal = await fetch(
           `${URL}/v1/mia/datosFiscales/id?id=${idCompany}`,
@@ -203,7 +204,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           return;
         }
         // Suponiendo que data_solicitud.total ya incluye el IVA
-        const total = Number(data_solicitud.total);
+        const total = Number(data_solicitud.total_solicitud);
         const subtotal = +(total / 1.16).toFixed(2); // antes de IVA
         const iva = +(total - subtotal).toFixed(2); // solo el IVA
 
