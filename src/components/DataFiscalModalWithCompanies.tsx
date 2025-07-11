@@ -72,7 +72,7 @@ export function DataFiscalModalWithCompanies({
 
   const handleSelectCompany = (company: CompanyWithTaxInfo) => {
     if (company.taxInfo?.id_datos_fiscales) {
-      actualizarCompany(company.taxInfo.id_datos_fiscales);
+      actualizarCompany(company);
     } else {
       setCompany(company);
     }
