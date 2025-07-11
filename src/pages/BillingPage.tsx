@@ -83,6 +83,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [descarga, setDescarga] = useState<DescargaFactura | null>(null);
   const [descargaxml, setDescargaxml] = useState<DescargaFactura | null>(null);
+  const [isEmpresaSelected, setIsEmpresaSelected] = useState("");
   const [isInvoiceGenerated, setIsInvoiceGenerated] = useState<Root | null>(
     null
   );
@@ -222,6 +223,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           CfdiType: "I",
           NameId: "1",
           ExpeditionPlace: "11570",
+          // ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
           Serie: null,
           Folio: Math.round(Math.random() * 999999999),
           PaymentForm: selectedPaymentForm,
@@ -264,8 +266,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
     }
   }, [idCompany, selectedCfdiUse, selectedPaymentForm]);
 
-  const handleUpdateCompany = (idCompany: string) => {
-    setIdCompany(idCompany);
+  const handleUpdateCompany = (idCompany: any) => {
+    console.log("ID Company updated:", idCompany);
+    setIsEmpresaSelected(idCompany.id_empresa);
+    setIdCompany(idCompany.taxInfo.id_datos_fiscales);
   };
 
   useEffect(() => {
@@ -333,6 +337,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             id_user: authState?.user?.id,
             id_solicitud: params?.id,
           },
+          datos_empresa: {
+            rfc: cfdi.Receiver.Rfc,
+            id_empresa: isEmpresaSelected,
+          },
         });
 
         const response = await crearCfdi({
@@ -345,6 +353,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           info_user: {
             id_user: authState?.user?.id,
             id_solicitud: params?.id,
+          },
+          datos_empresa: {
+            rfc: cfdi.Receiver.Rfc,
+            id_empresa: isEmpresaSelected,
           },
         });
         if (response.error) {
