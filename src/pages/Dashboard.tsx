@@ -182,7 +182,7 @@ const GraphContainer = ({
     const fetchMonthlyStats = async () => {
       try {
         const response = await fetch(
-          `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${authState?.user?.id}`,
+          `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${authState?.user?.id}&mes=${selectedMonth}`,
           {
             method: "GET",
             headers: HEADERS_API,
@@ -191,7 +191,7 @@ const GraphContainer = ({
         const json = await response.json();
         //console.log("xd")
         console.log("THIS IS JSON", json);
-        console.log("THIS IS JSON", selectedYear, authState?.user?.id);
+        // console.log("THIS IS JSON", selectedYear, authState?.user?.id);
         setData(json);
       } catch (error) {
         console.error("Error al obtener estadísticas mensuales:", error);
@@ -296,6 +296,7 @@ const DashboardGrid: React.FC<{
   useEffect(() => {
     const fetchMonthlyStats = async () => {
       try {
+        console.log(selectedMonth, selectedYear, id_user);
         const response = await fetch(
           `${URL}/v1/mia/stats/monthly?month=${selectedMonth}&year=${selectedYear}&id_user=${id_user}`,
           {
