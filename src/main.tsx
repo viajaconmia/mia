@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Switch, Route, Router } from "wouter";
+import { Switch, Route } from "wouter";
 import App from "./App.tsx";
 import "./index.css";
 import { Dashboard } from "./pages/Dashboard.tsx";
