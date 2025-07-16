@@ -7,6 +7,8 @@ export const Facturacion = () => {
   const [showModal, setShowModal] = useState(false);
   console.log("IAN WAS HERE 😎✌️✌️✌️");
 
+  console.log("SUBIENDO SEGUNDO CAMBIO 😒👌✌️")
+
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
       <h1 className="text-2xl font-bold mb-4">Facturación</h1>
