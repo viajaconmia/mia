@@ -28,9 +28,9 @@ createRoot(document.getElementById("root")!).render(
     )}
     <UserProvider>
       <Switch>
-        <Route path={"/inicio"}>
+        {/* <Route path={"/inicio"}>
           <Inicio />
-        </Route>
+        </Route> */}
         <Route path={"/facturacion"}>
           <Facturacion />
         </Route>
