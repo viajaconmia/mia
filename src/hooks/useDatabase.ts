@@ -1,13 +1,3 @@
-/* LLAMADAS A LA API*/
-// const URL2 = "https://miaback.vercel.app";
-// const ROUTES = {
-//   stripe: "/v1/stripe",
-//   solicitud: "/v1/solicitud",
-//   agentes: "/v1/agentes"
-// };
-// const ENDPOINTS = {
-//   createAgente: "/create",
-// };
 import { URL } from "../constants/apiConstant";
 
 const API_KEY =
@@ -406,45 +396,6 @@ export const createNewPago = async (
     throw error;
   }
 };
-
-// export const createViajero = async (data: any, id_empresa: string) => {
-//   try {
-//     const response = await fetch(`https://miaback.vercel.app/v1/mia/viajeros`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         ...AUTH,
-//       },
-//       body: JSON.stringify({
-//         id_empresa: id_empresa,
-//         primer_nombre: data.primer_nombre,
-//         segundo_nombre: data.segundo_nombre,
-//         apellido_paterno: data.apellido_paterno,
-//         apellido_materno: data.apellido_materno,
-//         correo: data.correo,
-//         telefono: data.telefono,
-//         genero: "masculino",
-//         fecha_nacimiento: "2001-09-25 00:00:00",
-//       }),
-//     });
-
-//     const json = await response.json();
-//     console.log(json);
-//     if (json.message === "Viajero creado correctamente") {
-//       return ({
-//         success: true
-//       })
-//     }
-//     else {
-//       return ({
-//         success: false
-//       })
-//     }
-//   }
-//   catch (error) {
-//     throw error;
-//   }
-// }
 
 export const createNewViajero = async (data: any, id_empresa: string[]) => {
   let fechaFormateada = "";
