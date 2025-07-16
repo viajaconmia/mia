@@ -21,7 +21,7 @@ import {
 import html2pdf from "html2pdf.js";
 import { useSolicitud } from "../hooks/useSolicitud";
 import { Link } from "wouter";
-import { useUser } from "../context/authContext";
+import { useUser } from "../context/userContext";
 import useApi from "../hooks/useApi";
 import ShareButton from "../components/ShareButton";
 

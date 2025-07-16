@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { AuthModal } from "./components/AuthModal";
-import { ChatMessagesController } from "./components/ChatMessage";
-import { Navigation } from "./components/Navigation";
-import { sendMessageToN8N } from "./services/n8nService";
-import { supabase } from "./services/supabaseClient";
-import { useUser } from "./context/userContext";
-import type { User, Message, AuthState, BookingData } from "./types";
+import { useState, useEffect, useRef } from "react";
+import { AuthModal } from "../AuthModal";
+import { ChatMessagesController } from "../ChatMessage";
+import { supabase } from "../../services/supabaseClient";
+import { useUser } from "../../context/userContext";
 import {
-  Menu,
-  X,
   MessageSquare,
   Lock,
   Plane,
@@ -19,22 +14,24 @@ import {
   ArrowRight,
   Phone,
 } from "lucide-react";
-import { ReservationPanel } from "./components/ReservationPanel";
-import { NewRegistrationPage } from "./pages/NewRegistrationPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { BookingsReportPage } from "./pages/BookingsReportPage";
-import { FAQPage } from "./pages/FAQPage";
-import { HotelSearchPage } from "./pages/HotelSearchPage";
-import { ManualReservationPage } from "./pages/ManualReservationPage";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { Admin } from "./pages/Admin";
-import { Configuration } from "./pages/Configuration";
-import { SupportModal } from "./components/SupportModal";
-import { Loader } from "./components/Loader";
-import { ChatContent, Reservation, UserMessage } from "./types/chat";
-import { sendMessage } from "./services/chatService";
+import { ReservationPanel } from "../ReservationPanel";
+import { NewRegistrationPage } from "../../pages/NewRegistrationPage";
+import { ProfilePage } from "../../pages/ProfilePage";
+import { BookingsReportPage } from "../../pages/BookingsReportPage";
+import { FAQPage } from "../../pages/FAQPage";
+import { HotelSearchPage } from "../../pages/HotelSearchPage";
+import { ManualReservationPage } from "../../pages/ManualReservationPage";
+import { AdminDashboard } from "../../pages/AdminDashboard";
+import { Admin } from "../../pages/Admin";
+import { Configuration } from "../../pages/Configuration";
+import { SupportModal } from "../SupportModal";
+import { Loader } from "../Loader";
+import { ChatContent, Reservation, UserMessage } from "../../types/chat";
+import { sendMessage } from "../../services/chatService";
+import { Navigation2 } from "../organism/Navigation2";
+import { SoporteModal } from "../SoporteModal";
 
-const ResponsiveChat = () => {
+const Inicio = () => {
   const [currentPage, setCurrentPage] = useState<
     | "chat"
     | "profile"
@@ -291,7 +288,8 @@ const ResponsiveChat = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-400 to-blue-300">
       <div className="fixed top-0 left-0 right-0 z-50">
-        <Navigation
+        {/* <SoporteModal isOpen={true}></SoporteModal> */}
+        <Navigation2
           user={authState.user}
           onLogout={handleLogout}
           onRegister={handleRegisterClick}
@@ -434,13 +432,6 @@ const ResponsiveChat = () => {
                             <MapPin className="text-sky-950/80 absolute right-6 top-1/2 transform -translate-y-1/2 w-6 h-6" />
                           )}
                         </div>
-                        {/* <button
-                          onClick={handleSendMessage}
-                          className="w-full flex items-center justify-center space-x-3 bg-white text-blue-600 px-8 py-6 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 text-lg shadow-lg transform hover:-translate-y-1 hover:shadow-xl"
-                        >
-                          <span>Comenzar mi Viaje</span>
-                          <ArrowRight className="w-6 h-6" />
-                        </button> */}
                       </div>
                     </div>
 
@@ -586,4 +577,4 @@ const ResponsiveChat = () => {
   );
 };
 
-export default ResponsiveChat;
+export default Inicio;

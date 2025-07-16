@@ -16,14 +16,14 @@ import { loginUser } from "../services/authService";
 
 interface SoporteModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onLogin: (email: string, password: string) => void;
-  onRegister: (email: string, password: string, name: string) => void;
-  onNavigateToRegister: () => void;
+  onClose?: () => void;
+  onLogin?: (email: string, password: string) => void;
+  onRegister?: (email: string, password: string, name: string) => void;
+  onNavigateToRegister?: () => void;
 }
 
 export const SoporteModal: React.FC<SoporteModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   onLogin,
   onRegister,
@@ -84,11 +84,9 @@ export const SoporteModal: React.FC<SoporteModalProps> = ({
         >
           <X className="w-6 h-6" />
         </button>
-
-        {/* Content */}
+        {/* 
         {page === "inicio" && (
           <div className="p-8">
-            {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Bienvenido de nuevo
@@ -98,7 +96,6 @@ export const SoporteModal: React.FC<SoporteModalProps> = ({
               </p>
             </div>
 
-            {/* Form */}
             <form id="auth-form" onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
@@ -157,7 +154,7 @@ export const SoporteModal: React.FC<SoporteModalProps> = ({
                     )}
                   </button>
                 </div>
-              </div>
+              </div> 
 
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center">
@@ -199,6 +196,7 @@ export const SoporteModal: React.FC<SoporteModalProps> = ({
             </form>
           </div>
         )}
+                  */}
 
         {/* Decorative elements */}
         <div className="absolute inset-0 pointer-events-none">
