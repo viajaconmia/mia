@@ -7,7 +7,7 @@ import { Dashboard } from "./pages/Dashboard.tsx";
 import { BillingPage } from "./pages/BillingPage.tsx";
 import { Reserva } from "./pages/Reserva.tsx";
 import { ResetPassword } from "./pages/ResetPassword.tsx";
-import { UserProvider } from "./context/userContext.tsx";
+import { UserProvider } from "./context/authContext.tsx";
 import { Facturacion } from "./components/page/Facturacion.tsx";
 import Inicio from "./components/page/Inicio.tsx";
 
