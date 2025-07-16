@@ -11,19 +11,13 @@ import { UserProvider } from "./context/authContext.tsx";
 import { Facturacion } from "./components/page/Facturacion.tsx";
 // import Inicio from "./components/page/Inicio.tsx";
 
-const environment = import.meta.env.VITE_ENVIRONMENT;
-console.log("😊😊😊😊😊");
-console.log(environment);
+const environment: string = import.meta.env.VITE_ENVIRONMENT;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {environment == "pruebas" && (
-      <div
-        className="fixed top-0 w-[20vw] left-0 text-center text-xl font-bold text-white bg-red-700"
-        style={{
-          zIndex: 9999,
-        }}
-      >
-        PRUEBAS
+    {!!environment && (
+      <div className="fixed top-0 w-[20vw] left-0 text-center text-xl font-bold text-white bg-red-700 z-[900]">
+        {environment.toUpperCase()}
       </div>
     )}
     <UserProvider>
