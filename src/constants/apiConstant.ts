@@ -36,8 +36,7 @@ export const ENDPOINTS = {
     },
   },
 };
-export const URL = "https://miaback.vercel.app";
-// export const URL = "http://localhost:3001";
+export const URL = import.meta.env.VITE_URL;
 
 export const ROUTES = {
   stripe: "/v1/stripe",
