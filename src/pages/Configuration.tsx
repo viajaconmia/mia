@@ -45,8 +45,11 @@ import {
   FileEdit,
 } from "lucide-react";
 import { supabase } from "../services/supabaseClient";
+import Button from "../components/atom/Button";
+import Modal from "../components/molecule/Modal";
 
 export const Configuration = () => {
+  const [selectedViajero, setSelectedViajero] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState<
     | "companies"
     | "employees"
@@ -753,7 +756,7 @@ export const Configuration = () => {
                               <br />
                               {employee.telefono}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium grid grid-cols-2 gap-2 place-items-center">
                               {employee.rn != 1 && (
                                 <>
                                   <button
@@ -777,6 +780,12 @@ export const Configuration = () => {
                                   >
                                     <Trash2 className="h-5 w-5" />
                                   </button>
+                                  {/* <Button
+                                    onClick={() => setSelectedViajero(employee)}
+                                    className="col-span-2"
+                                  >
+                                    Editar rol
+                                  </Button> */}
                                 </>
                               )}
                             </td>
@@ -977,6 +986,16 @@ export const Configuration = () => {
           onSave={handleSaveFiscalData}
         />
       )}
+      <Modal
+        open={!!selectedViajero}
+        title={`Manejo rol del usuario: ${selectedViajero?.primer_nombre}`}
+        subtitle="Cuando crees el rol del usuario se creara una cuenta con este rol para que pueda acceder"
+        onClose={function (): void {
+          setSelectedViajero(null);
+        }}
+      >
+        <h1>{JSON.stringify(selectedViajero)}</h1>
+      </Modal>
     </div>
   );
 };
