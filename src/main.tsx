@@ -12,8 +12,7 @@ import { Facturacion } from "./components/page/Facturacion.tsx";
 // import Inicio from "./components/page/Inicio.tsx";
 
 const environment = import.meta.env.VITE_ENVIRONMENT;
-console.log("😊😊😊😊😊");
-console.log(environment);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {environment == "pruebas" && (
