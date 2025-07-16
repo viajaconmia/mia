@@ -37,9 +37,8 @@ const Button: React.FC<ButtonProps> = ({
 }) => {
   // Clases base para todos los botones
   const baseClasses = `
-    flex items-center justify-center
-    px-4 py-2 rounded-lg
-    font-medium text-base
+  flex items-center px-4 py-2 text-white rounded-md
+    text-sm font-normal
     transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-offset-2
     whitespace-nowrap
@@ -49,9 +48,9 @@ const Button: React.FC<ButtonProps> = ({
   // Clases específicas para cada variante
   const variantClasses = {
     primary: `
-      bg-blue-500 text-white
-      hover:bg-blue-400
-      focus:ring-sky-300
+      bg-blue-600 text-white
+      hover:bg-blue-700
+      focus:ring-sky-500
     `,
     secondary: `
       bg-gray-200 text-gray-800
@@ -68,7 +67,7 @@ const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${className} font- `}
       disabled={disabled}
       {...rest} // Pasa todas las demás propiedades HTML nativas del botón
     >
