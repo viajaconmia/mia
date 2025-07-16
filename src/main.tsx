@@ -9,7 +9,7 @@ import { Reserva } from "./pages/Reserva.tsx";
 import { ResetPassword } from "./pages/ResetPassword.tsx";
 import { UserProvider } from "./context/authContext.tsx";
 import { Facturacion } from "./components/page/Facturacion.tsx";
-import Inicio from "./components/page/Inicio.tsx";
+// import Inicio from "./components/page/Inicio.tsx";
 
 const environment = import.meta.env.VITE_ENVIRONMENT;
 console.log("😊😊😊😊😊");
