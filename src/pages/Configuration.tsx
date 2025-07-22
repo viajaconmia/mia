@@ -16,6 +16,7 @@ import { TagForm } from "../components/TagForm";
 import { PolicyForm } from "../components/PolicyForm";
 import { DatosFiscalesForm } from "../components/DatosFiscalesForm";
 import { FiscalDataModal } from "../components/FiscalDataModal";
+import {  } from "module";
 import {
   createNewEmpresa,
   createNewViajero,
@@ -47,6 +48,7 @@ import {
 import { supabase } from "../services/supabaseClient";
 import Button from "../components/atom/Button";
 import Modal from "../components/molecule/Modal";
+import { generatePayloadFromPDF } from "../helpers/helpers";
 
 export const Configuration = () => {
   const [selectedViajero, setSelectedViajero] = useState<Employee | null>(null);
@@ -413,12 +415,49 @@ export const Configuration = () => {
     }
   };
 
+  // Handler for PDF upload and payload extraction
+  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // For browser: use ArrayBuffer and adapt your helper to accept it
+    const arrayBuffer = await file.arrayBuffer();
+
+    // If your helper supports ArrayBuffer, adapt generatePayloadFromPDF to accept it.
+    // For now, just log that you received the file
+    console.log("PDF file selected:", file.name);
+
+    // If your helper only supports file path (Node/Electron), this won't work in browser.
+    // If you adapt your helper to accept ArrayBuffer, you can do:
+    // const payload = await generatePayloadFromPDF(arrayBuffer);
+
+    // For demonstration, just show a message
+    // console.log("Generated payload:", payload);
+
+    // If you want to test with Node/Electron, save the file and pass the path.
+    // For now, just log the file name.
+    console.log("Payload extraction would run here.");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Configuración de la cuenta
         </h1>
+
+        {/* PDF Upload for extracting fiscal data */}
+        <div className="mb-6">
+          <label className="block mb-2 font-semibold text-gray-700">
+            Extraer datos fiscales desde PDF
+          </label>
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={handlePDFUpload}
+            className="border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
 
         <div className="bg-white rounded-lg shadow">
           <div className="border-b border-gray-200">
