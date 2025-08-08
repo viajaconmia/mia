@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Share2 } from 'lucide-react';
-import ShareModal from './ShareModal';
+import React, { useState, useEffect, useRef } from "react";
+import { Share2 } from "lucide-react";
+import ShareModal from "./ShareModal";
 
 interface ShareButtonProps {
   url?: string;
   title?: string;
   description?: string;
   id?: string;
+  children?: React.ReactNode;
 }
 
-const ShareButton: React.FC<ShareButtonProps> = ({ 
+const ShareButton: React.FC<ShareButtonProps> = ({
   url = window.location.href,
   id = "",
   title = document.title,
-  description = ''
+  description = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
@@ -23,15 +24,18 @@ const ShareButton: React.FC<ShareButtonProps> = ({
   };
 
   const handleClickOutside = (event: MouseEvent) => {
-    if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+    if (
+      buttonRef.current &&
+      !buttonRef.current.contains(event.target as Node)
+    ) {
       setIsOpen(false);
     }
   };
 
   useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -47,9 +51,9 @@ const ShareButton: React.FC<ShareButtonProps> = ({
         <span>Compartir</span>
       </button>
 
-      <ShareModal 
-        isOpen={isOpen} 
-        onClose={() => setIsOpen(false)} 
+      <ShareModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
         url={url}
         id={id}
         title={title}
