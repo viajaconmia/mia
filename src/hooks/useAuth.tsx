@@ -3,7 +3,7 @@ import { SupabaseClient } from "../services/supabaseClient";
 import { useUser } from "../context/userContext";
 import { validateEmail } from "../helpers/validaciones";
 import { OtpService } from "../services/OtpService";
-import { AuthService } from "../services/AuthService";
+import { AuthService } from "../services/authService";
 import { InfoOldClientToRegister, UserRegistro } from "../types/auth";
 import { useNotification } from "./useNotification";
 
