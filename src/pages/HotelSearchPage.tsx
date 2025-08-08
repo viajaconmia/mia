@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { fetchHoteles } from "../hooks/useFetch";
 import HotelCard from "../components/HotelComponent";
+import ProtectedRoute from "../middleware/ProtectedRoute";
 
 interface Hotel {
   id_hotel: string;
@@ -75,11 +76,7 @@ interface Hotel {
   score_operaciones: number | null;
 }
 
-interface HotelSearchPageProps {
-  onBack: () => void;
-}
-
-export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
+export const HotelSearchPage = () => {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [filteredHotels, setFilteredHotels] = useState<Hotel[]>([]);
   const [displayedHotels, setDisplayedHotels] = useState<Hotel[]>([]);
@@ -94,6 +91,10 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
   const [states, setStates] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+
+  const onBack = () => {
+    window.history.back();
+  };
 
   useEffect(() => {
     fetchHotels();
@@ -210,158 +211,164 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 pt-16">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center text-white hover:text-white/80 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span>Volver</span>
-          </button>
-        </div>
-
-        {/* Search Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 mb-6">
-              Buscar Hoteles
-            </h1>
-
-            {/* Search Bar */}
-            <div className="relative mb-6">
-              <input
-                pattern="^[^<>]*$"
-                type="text"
-                placeholder="Buscar por marca, ciudad o estado..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-              <Search className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
-            </div>
-
-            {/* Filters Toggle */}
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 pt-16">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
+              onClick={onBack}
+              className="flex items-center text-white hover:text-white/80 transition-colors"
             >
-              <Filter className="w-5 h-5" />
-              <span>{showFilters ? "Ocultar filtros" : "Mostrar filtros"}</span>
-              {showFilters ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </button>
-
-            {/* Filters */}
-            {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                {/* State Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Estado
-                  </label>
-                  <select
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  >
-                    <option value="">Todos los estados</option>
-                    {states.map((state) => (
-                      <option key={state} value={state}>
-                        {state}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* City Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ciudad
-                  </label>
-                  <select
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  >
-                    <option value="">Todas las ciudades</option>
-                    {cities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Brand Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Marca
-                  </label>
-                  <select
-                    value={selectedBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  >
-                    <option value="">Todas las marcas</option>
-                    {brands.map((brand) => (
-                      <option key={brand} value={brand}>
-                        {brand}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Search Button */}
-            <button
-              onClick={handleSearch}
-              className="mt-6 w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              <Search className="w-5 h-5" />
-              <span>Buscar Hoteles</span>
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span>Volver</span>
             </button>
           </div>
-        </div>
 
-        {/* Results Section */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : displayedHotels.length > 0 ? (
-          <>
-            {!hasSearched && (
-              <div className="text-white text-center mb-8">
-                <h2 className="text-2xl font-bold mb-2">Hoteles Destacados</h2>
-                <p>Explora algunos de nuestros hoteles más populares</p>
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedHotels.map((hotel) => (
-                <HotelCard
-                  hotel={hotel}
-                  onReserve={() => handleReserveClick(hotel)}
+          {/* Search Section */}
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-3xl font-bold text-gray-900 mb-6">
+                Buscar Hoteles
+              </h1>
+
+              {/* Search Bar */}
+              <div className="relative mb-6">
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  placeholder="Buscar por marca, ciudad o estado..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 />
-              ))}
+                <Search className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+              </div>
+
+              {/* Filters Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                <Filter className="w-5 h-5" />
+                <span>
+                  {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                </span>
+                {showFilters ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* Filters */}
+              {showFilters && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                  {/* State Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Estado
+                    </label>
+                    <select
+                      value={selectedState}
+                      onChange={(e) => setSelectedState(e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    >
+                      <option value="">Todos los estados</option>
+                      {states.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* City Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ciudad
+                    </label>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    >
+                      <option value="">Todas las ciudades</option>
+                      {cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Brand Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Marca
+                    </label>
+                    <select
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    >
+                      <option value="">Todas las marcas</option>
+                      {brands.map((brand) => (
+                        <option key={brand} value={brand}>
+                          {brand}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Search Button */}
+              <button
+                onClick={handleSearch}
+                className="mt-6 w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                <Search className="w-5 h-5" />
+                <span>Buscar Hoteles</span>
+              </button>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
-            <Hotel className="w-16 h-16 text-white/40 mx-auto mb-4" />
-            <p className="text-white/80 text-lg">
-              No se encontraron hoteles con los filtros seleccionados
-            </p>
           </div>
-        )}
+
+          {/* Results Section */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : displayedHotels.length > 0 ? (
+            <>
+              {!hasSearched && (
+                <div className="text-white text-center mb-8">
+                  <h2 className="text-2xl font-bold mb-2">
+                    Hoteles Destacados
+                  </h2>
+                  <p>Explora algunos de nuestros hoteles más populares</p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedHotels.map((hotel) => (
+                  <HotelCard
+                    hotel={hotel}
+                    onReserve={() => handleReserveClick(hotel)}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
+              <Hotel className="w-16 h-16 text-white/40 mx-auto mb-4" />
+              <p className="text-white/80 text-lg">
+                No se encontraron hoteles con los filtros seleccionados
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 };

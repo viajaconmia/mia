@@ -1,79 +1,81 @@
-// UserContext.js
+// src/context/UserContext.js
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { supabase } from "../services/supabaseClient";
-type UserAuth = {
-  id: string;
-  email: string;
-  name: string;
-} | null;
+import { supabase, SupabaseClient } from "../services/supabaseClient";
+import { UserAuth } from "../types/auth"; // Asegúrate de que UserAuth es robusto
+import { Session } from "@supabase/supabase-js";
+import { UserSingleton } from "../services/UserSingleton";
 
-type Auth = {
-  user?: UserAuth;
-  isAuthenticated?: boolean;
-  promptCount: number;
-} | null;
+export type Auth = {
+  user: UserAuth | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+};
 
-// Crea el contexto
 const UserContext = createContext<{
-  authState?: Auth;
+  authState: Auth;
   setAuthState: React.Dispatch<React.SetStateAction<Auth>>;
 }>({
-  authState: null,
+  authState: { user: null, isAuthenticated: false, isLoading: true },
   setAuthState: () => {},
 });
 
-// Crea un proveedor que envuelva tu aplicación
-export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [authState, setAuthState] = useState<Auth>({
     user: null,
     isAuthenticated: false,
-    promptCount: 0,
+    isLoading: true,
   });
 
   useEffect(() => {
-    // Check for existing session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    const fetchInfo = async (session: Session) => {
+      const info = await SupabaseClient.getInstance().getInfo(session.user.id); // aquí pasas solo el user.id
+      const userAuth: UserAuth = {
+        id: session.user.id,
+        email: session.user.email ?? "",
+        name: session.user.user_metadata.full_name ?? "", // o como lo guardes
+        user: session.user,
+        info,
+      };
+      UserSingleton.getInstance().setUser(userAuth);
+      setAuthState({
+        user: userAuth,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      console.log(
+        "SUBSCRIPTION",
+        session,
+        "singleton:",
+        UserSingleton.getInstance().getUser()
+      );
+      if (session) {
+        fetchInfo(session);
+      } else {
+        UserSingleton.getInstance().setUser(null);
         setAuthState({
-          user: {
-            id: session.user.id,
-            email: session.user.email!,
-            name:
-              session.user.user_metadata.full_name ||
-              session.user.email!.split("@")[0],
-          },
-          isAuthenticated: true,
-          promptCount: 0,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
         });
       }
     });
 
-    // Set up auth state change listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user) {
-        setAuthState({
-          user: {
-            id: session.user.id,
-            email: session.user.email!,
-            name:
-              session.user.user_metadata.full_name ||
-              session.user.email!.split("@")[0],
-          },
-          isAuthenticated: true,
-          promptCount: 0,
-        });
+    // Carga inicial de sesión
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        await fetchInfo(data.session);
       } else {
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          promptCount: 0,
-        });
+        setAuthState((prev) => ({ ...prev, isLoading: false }));
       }
-    });
+    };
+
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
@@ -81,20 +83,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
-    console.log(authState);
+    console.log(
+      "USE EFFECT",
+      authState,
+      "singleton:",
+      UserSingleton.getInstance().getUser()
+    );
   }, [authState]);
 
   return (
-    <UserContext.Provider
-      value={{
-        authState,
-        setAuthState,
-      }}
-    >
+    <UserContext.Provider value={{ authState, setAuthState }}>
       {children}
     </UserContext.Provider>
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => useContext(UserContext);

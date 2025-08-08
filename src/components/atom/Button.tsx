@@ -10,6 +10,7 @@ interface CommonInteractiveElementProps {
    * 'ghost': Elemento transparente con texto blue-700 y borde transparente.
    */
   variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg" | "full";
   /**
    * Contenido del elemento (texto, otros elementos, etc.).
    */
@@ -63,6 +64,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
   variant = "primary", // Valor por defecto para el estilo
   children,
   className = "",
+  size = "md",
   disabled,
   as = "button", // Por defecto, será un botón HTML
   href,
@@ -70,35 +72,53 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
 }) => {
   // Clases base para todos los elementos interactivos
   const baseClasses = `
-    flex items-center justify-center px-4 py-2 rounded-md
-    text-sm font-normal
+    flex items-center justify-center rounded-md
+    font-normal
     transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-offset-2
     whitespace-nowrap
-    ${disabled ? "opacity-70 cursor-not-allowed" : ""}
+    ${
+      disabled &&
+      "opacity-70 cursor-not-allowed hover:bg-gray-50 hover:text-gray-600 text-gray-500"
+    }
   `;
+
+  const sizeClasses = {
+    sm: "text-xs px-2 py-1",
+    md: "text-sm px-4 py-2", // ya es tu base
+    lg: "text-base px-6 py-3",
+    full: "w-full text-base px-6 py-3",
+  };
 
   // Clases específicas para cada variante
   const variantClasses = {
     primary: `
       bg-blue-600 text-white
       hover:bg-blue-700
-      focus:ring-blue-500
+      focus:bg-blue-900
+      active:bg-blue-800
+      border border-transparent
     `,
     secondary: `
       bg-gray-200 text-gray-800
       hover:bg-gray-300
-      focus:ring-gray-300
+      focus:bg-gray-500
+      active:bg-gray-400
+      border border-transparent
     `,
     ghost: `
       bg-transparent text-blue-700
       hover:bg-blue-50 hover:text-blue-700
-      focus:ring-blue-100
+      focus:bg-blue-100 focus:text-blue-800
       border border-transparent
+      active:bg-blue-200
+      active:text-blue-800
     `,
   };
 
-  const combinedClasses = `${baseClasses} ${variantClasses[variant]} ${className}`;
+  const combinedClasses = `${baseClasses} ${
+    disabled ? "" : variantClasses[variant]
+  } ${className} ${sizeClasses[size]}`;
 
   // Contenido interno (ícono y texto)
   const content = (
@@ -135,7 +155,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
   // Por defecto, o si 'as' es 'button', renderiza como un botón HTML
   return (
     <button
-      className={combinedClasses}
+      className={`${combinedClasses} `}
       disabled={disabled}
       {...(rest as ButtonHTMLAttributes<HTMLButtonElement>)} // Asegura que se pasen las props correctas
     >

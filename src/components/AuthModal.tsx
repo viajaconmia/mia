@@ -6,45 +6,48 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  User,
   AlertCircle,
   Barcode,
   CheckCircle2,
   ArrowLeft,
 } from "lucide-react";
-import { loginUser } from "../services/authService";
-import { sendAndCreateOTP, verifyOTP } from "../hooks/useEmailVerification";
-import { supabase } from "../services/supabaseClient";
+import { OtpService } from "../services/OtpService";
+import useAuth from "../hooks/useAuth";
+import { useLocation } from "wouter";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (email: string, password: string) => void;
-  onRegister: (email: string, password: string, name: string) => void;
-  onNavigateToRegister: () => void;
+  // onLogin: (email: string, password: string) => void;
+  // onNavigateToRegister: () => void;
 }
+
+const otp = new OtpService();
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
-  onLogin,
-  onRegister,
-  onNavigateToRegister,
+  // onLogin,
+  // onNavigateToRegister,
 }) => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [_, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState("inicio");
   const [correo, setCorreo] = useState("");
-  const [showVerif, setShowVerif] = useState(false);
   const [code, setCode] = useState("");
   const [notif, setNotif] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const {
+    handleLogin,
+    sendEmailToResetPassword,
+    handleValidateRegistroUsuario,
+    handleRegisterOldUser,
+  } = useAuth();
 
   useEffect(() => {
     setPage("inicio");
@@ -54,65 +57,61 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
+    setIsLoading(true);
 
     try {
-      if (isLoginMode) {
-        const result = await loginUser(email, password);
-        if (result.user.isAdmin) {
-          // Redirect to admin dashboard
-          window.location.href = "/admin";
-        } else {
-          await onLogin(email, password);
+      const { data } = await handleValidateRegistroUsuario(email.toLowerCase());
+      console.log(data);
+      if (data?.registrar) {
+        if (!data?.usuario) {
+          throw new Error(
+            "Información de usuario no encontrada para registro."
+          );
         }
+        await handleRegisterOldUser(email, password, data.usuario);
       } else {
-        await onRegister(email, password, name);
+        await handleLogin(email, password);
       }
+      onClose();
     } catch (error: any) {
+      console.log(error.response || error.message);
       setError(error.message);
-      // Shake animation for the form
-      const form = document.getElementById("auth-form");
-      if (form) {
-        form.classList.add("animate-shake");
-        setTimeout(() => form.classList.remove("animate-shake"), 500);
-      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const sendOTP = async () => {
-    setIsLoading(true);
+  const sendEmailResetPassword = async () => {
     setError(null);
     setNotif(null);
-    const { data, error } = await supabase.auth.resetPasswordForEmail(correo);
-    //const response = await sendAndCreateOTP(correo);
-
-    if (error) {
-      setError("No se pudo enviar el correo con codigo de confirmacion");
-    } else {
-      setShowVerif(true);
-      //setPage("verify-code")
-      setNotif(
-        "Se te envio un correo electronico con el cual podras restablecer tu contraseña"
-      );
-    }
-    setIsLoading(false);
+    sendEmailToResetPassword(correo)
+      .then(() => {
+        setNotif(
+          "Se te envio un correo electronico con el cual podras restablecer tu contraseña"
+        );
+      })
+      .catch((error) => {
+        console.log(error);
+        setError(
+          error.message ||
+            "No se pudo enviar el correo con codigo de confirmacion"
+        );
+      });
   };
 
   const verificar = async () => {
-    setIsLoading(true);
-    setError(null);
-    setNotif(null);
-    const response = await verifyOTP(correo, code);
-    if (!response.success) {
-      setError("Código de verificación incorrecto");
-    } else {
-      setNotif("Código verificado. Ahora puedes ingresar tu nueva contraseña.");
-      setPage("reset-password");
+    try {
+      setIsLoading(true);
+      setError(null);
+      setNotif(null);
+      await otp.verificarOtp(correo, code);
+      setIsLoading(false);
+    } catch (error: any) {
+      setIsLoading(false);
+      setError(error.message);
+      return;
     }
-    setIsLoading(false);
   };
 
   const handleResetPassword = async () => {
@@ -139,7 +138,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleRegisterClick = () => {
     onClose();
-    onNavigateToRegister();
+    // onNavigateToRegister();
+    setLocation("/registration");
   };
 
   return (
@@ -400,7 +400,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               disabled={isLoading}
               className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed transition-all duration-200 mt-8"
-              onClick={sendOTP}
+              onClick={sendEmailResetPassword}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

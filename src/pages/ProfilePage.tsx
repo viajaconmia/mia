@@ -1,23 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../services/supabaseClient";
 import {
   ArrowLeft,
   User2,
-  Building2,
-  MapPin,
-  Mail,
-  Phone,
   Calendar,
-  Receipt,
   Save,
   Edit2,
   X,
   CreditCard,
-  Briefcase,
-  Globe,
-  Shield,
-  Settings,
-  Bell,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -47,10 +36,9 @@ import {
   CardElement,
 } from "@stripe/react-stripe-js";
 import { URL } from "../constants/apiConstant";
-
-interface ProfilePageProps {
-  onBack: () => void;
-}
+import useAuth from "../hooks/useAuth";
+import { ProtectedComponent } from "../middleware/ProtectedComponent";
+// import { useNavigate } from "react-router";
 
 const stripePromise = loadStripe(
   "pk_live_51Qye7lA3jkUyZycMUyLCqqbDdSSRGbsd5AYzuGOO5LAqd8LFUhcOTzUOBD06SXQoBcFEgMeDaksHdk7bJuydBSIm003u7EuPFI"
@@ -88,12 +76,13 @@ const CheckOutForm = ({ setSuccess, setTrigger }: any) => {
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState("");
+  const { user } = useAuth();
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!stripe || !elements) return;
 
-    const { data } = await supabase.auth.getUser();
-    const id_agente = data.user?.id;
+    const id_agente = user?.id;
     const cardElement = elements.getElement(CardElement);
     //crear metodo de pago
     const { error, paymentMethod } = await stripe.createPaymentMethod({
@@ -159,8 +148,8 @@ const CheckOutForm = ({ setSuccess, setTrigger }: any) => {
   );
 };
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
-  const [user, setUser] = useState<any>(null);
+export const ProfilePage = () => {
+  // const navigate = useNavigate();
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
@@ -187,6 +176,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   const [trigger, setTrigger] = useState(0);
   const [message, setMessage] = useState("");
   const [creditoValue, setCreditoValue] = useState([]);
+  const { user } = useAuth();
 
   const fetchCredit = async () => {
     const data = await fetchCreditAgent();
@@ -199,35 +189,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         setIsLoading(true);
 
         // Get current user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
         if (!user) throw new Error("No user found");
-        setUser(user);
-
-        // Get company profile
-        const { data: companyData, error: companyError } = await supabase
-          .from("company_profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-
-        if (companyError) throw companyError;
-        setCompanyProfile(companyData);
-
-        // Get user preferences
-        const { data: preferencesData, error: preferencesError } =
-          await supabase
-            .from("user_preferences")
-            .select("*")
-            .eq("user_id", user.id)
-            .single();
-
-        if (preferencesError && preferencesError.code !== "PGRST116") {
-          throw preferencesError;
-        }
-        setPreferences(preferencesData);
-        setEditedPreferences(preferencesData || {});
 
         // Get payment history
       } catch (error) {
@@ -271,19 +233,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       };
 
       let response;
-
-      if (preferences?.id) {
-        // Update existing preferences
-        response = await supabase
-          .from("user_preferences")
-          .update(preferenceData)
-          .eq("id", preferences.id);
-      } else {
-        // Insert new preferences
-        response = await supabase
-          .from("user_preferences")
-          .insert([preferenceData]);
-      }
 
       if (response.error) throw response.error;
 
@@ -341,8 +290,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
 
   const handleDeleteMethod = async (id: string) => {
     console.log("Delete payment method:", id);
-    const { data } = await supabase.auth.getUser();
-    const id_agente = data.user?.id;
+    const id_agente = user?.id;
     const response = await fetch(`${URL}/v1/stripe/delete-payment-method`, {
       method: "POST",
       headers: {
@@ -409,7 +357,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={onBack}
+            onClick={() => window.history.back()}
             className="flex items-center text-white hover:text-white/80 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -481,7 +429,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
             <span>Metodos de pago</span>
           </button>
 
-          <button
+          {/* <button
             onClick={() => setActiveTab("payments-history")}
             className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${
               activeTab === "payments-history"
@@ -491,8 +439,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
           >
             <BookOpenText className="w-5 h-5" />
             <span>Historial de pagos</span>
-          </button>
-
+          </button> */}
+          {/* 
           {creditoValue[0]?.tiene_credito_consolidado == 1 && (
             <button
               onClick={() => setActiveTab("payments-pendientes")}
@@ -506,6 +454,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
               <span>Cuentas por pagar</span>
             </button>
           )}
+            */}
         </div>
 
         {/* Content Sections */}
@@ -821,18 +770,28 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteMethod(method.id);
-                                }}
-                                className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
-                                aria-label="Delete payment method"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
+                            <ProtectedComponent
+                              admit={{
+                                administrador: true,
+                                reservante: false,
+                                viajero: false,
+                                consultor: false,
+                                "no-rol": false,
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteMethod(method.id);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                                  aria-label="Delete payment method"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </ProtectedComponent>
                           </li>
                         ))}
                         <li
