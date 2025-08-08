@@ -6,6 +6,7 @@ interface ModalProps {
   children: ReactNode;
   subtitle?: string;
   open: boolean;
+  icon?: React.ElementType;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -14,6 +15,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   subtitle,
   open,
+  icon: Icon,
 }) => {
   useEffect(() => {
     bodyClass.add();
@@ -31,7 +33,7 @@ const Modal: React.FC<ModalProps> = ({
             onClick={onClose}
           ></div>
           <div
-            className="relative bg-white rounded-lg overflow-hidden shadow-xl transform transition-all w-[90vw] max-w-2xl"
+            className="relative bg-white rounded-lg overflow-hidden shadow-xl transform transition-all w-fit max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -42,18 +44,27 @@ const Modal: React.FC<ModalProps> = ({
             >
               ×
             </button>
-            <div className="p-4 space-y-2">
-              <div className="border-b border-gray-200 pb-4">
-                {title && (
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {title}
-                  </h3>
+            <div className="p-6 space-y-2">
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-4">
+                {Icon && (
+                  <div className="w-12 h-12 bg-gradient-to-r from-sky-100 to-sky-200 rounded-full flex items-center justify-center">
+                    <Icon className=" w-6 h-6" />
+                  </div>
                 )}
-                {subtitle && (
-                  <p className="text-sm text-gray-500">{subtitle}</p>
-                )}
+                <div className="">
+                  {title && (
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      {title}
+                    </h3>
+                  )}
+                  {subtitle && (
+                    <p className="text-sm text-gray-500">{subtitle}</p>
+                  )}
+                </div>
               </div>
-              <div className="w-full overflow-y-auto relative">{children}</div>
+              <div className="w-full overflow-y-auto relative max-h-[70vh]">
+                {children}
+              </div>
             </div>
           </div>
         </div>

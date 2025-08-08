@@ -4,7 +4,7 @@ import { Barchart } from "../components/Chart";
 import { ChartLine } from "../components/LineChart";
 import { Link } from "wouter";
 import { HEADERS_API, URL } from "../constants/apiConstant";
-import { useUser } from "../context/authContext";
+import { useUser } from "../context/userContext";
 import Donut from "../components/Donut";
 
 // Componente de Tarjeta de Estadísticas

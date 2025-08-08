@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { KeyRound, EyeOff, Eye, Check, X, AlertCircle } from "lucide-react";
-import { supabase } from "../services/supabaseClient";
+import { KeyRound, EyeOff, Eye, Check, AlertCircle } from "lucide-react";
+import useAuth from "../hooks/useAuth";
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
   const getStrength = () => {
@@ -62,7 +62,8 @@ export const ResetPassword = () => {
     const errorDescription = hashParams.get("error_description");
 
     // Si hay un error, actualiza el estado con el mensaje de error
-    if (error && errorDescription) {
+    if (error || errorDescription || errorCode) {
+      console.log(error || errorDescription || errorCode);
       setErrorMessage(`Error: ${errorDescription}`);
     }
   }, []);
@@ -80,29 +81,21 @@ export const ResetPassword = () => {
     setErrors(newErrors);
     return newErrors.length === 0;
   };
-
+  const { updatePassword } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (validatePassword()) {
-      try {
-        // Actualiza la contraseña utilizando el token de recuperación
-        const { data, error } = await supabase.auth.updateUser({
-          password: formData.password,
+      updatePassword(formData.password)
+        .then(() => {
+          setIsSuccess(true);
+          setTimeout(() => {
+            window.location.href = "/"; // Redirige al login o página principal
+          }, 2000);
+        })
+        .catch((error) => {
+          setErrors([error.message || "Error al hacer update"]);
         });
-        if (error) {
-          console.log(error);
-          throw new Error("Ocurrió un error");
-        }
-        setIsSuccess(true);
-
-        // Redirige después de un corto retraso
-        setTimeout(() => {
-          window.location.href = "/"; // Redirige al login o página principal
-        }, 2000);
-      } catch (error) {
-        setErrors(["Ocurrio un error, intenta nuevamente"]);
-      }
     }
   };
 

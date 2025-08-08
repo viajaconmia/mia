@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Building2, Search } from "lucide-react";
 import { CompanyWithTaxInfo, TaxInfo } from "../types";
-import { createNewDatosFiscales } from "../hooks/useDatabase";
-import { supabase } from "../services/supabaseClient";
-import { URL } from "../constants/apiConstant";
 import { fetchEmpresasDatosFiscales } from "../hooks/useFetch";
 
 interface FiscalDataModalProps {
