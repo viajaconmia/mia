@@ -21,7 +21,7 @@ import { HEADERS_API, URL } from "../constants/apiConstant";
 import { DataFiscalModalWithCompanies } from "../components/DataFiscalModalWithCompanies";
 import { CompanyWithTaxInfo } from "../types";
 import { Root } from "../types/billing";
-import { useUser } from "../context/authContext";
+import { useUser } from "../context/userContext";
 
 const cfdiUseOptions = [
   { value: "P01", label: "Por definir" },

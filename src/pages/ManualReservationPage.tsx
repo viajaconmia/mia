@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../services/supabaseClient";
 import {
   ArrowLeft,
   Hotel,
@@ -9,14 +8,12 @@ import {
   Coffee,
   CreditCard as PaymentIcon,
   BanknoteIcon,
-  ArrowRight,
   CheckCircle,
   CreditCard,
   Plus,
   Trash2,
   CheckCircle2,
 } from "lucide-react";
-import { CallToBackend } from "../components/CallToBackend";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -32,12 +29,13 @@ import {
   fetchViajerosCompanies,
 } from "../hooks/useFetch";
 import { URL } from "../constants/apiConstant";
-import type { BookingData, Employee, PaymentMethod } from "../types";
+import type { Employee, PaymentMethod } from "../types";
 import { SupportModal } from "../components/SupportModal";
 import { currentDate } from "../utils/helpers";
-import { Admin } from "./Admin";
+import ProtectedRoute from "../middleware/ProtectedRoute";
+import { UserSingleton } from "../services/UserSingleton";
 
-const { obtenerSolicitudes, crearSolicitud } = useSolicitud();
+const { crearSolicitud } = useSolicitud();
 const API_KEY =
   "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
 const AUTH = {
@@ -70,17 +68,6 @@ const cardStyle = {
 const stripePromise = loadStripe(
   "pk_live_51Qye7lA3jkUyZycMUyLCqqbDdSSRGbsd5AYzuGOO5LAqd8LFUhcOTzUOBD06SXQoBcFEgMeDaksHdk7bJuydBSIm003u7EuPFI"
 );
-
-const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
-  return {
-    weekday: date.toLocaleDateString("es-MX", { weekday: "long" }),
-    day: date.getDate(),
-    month: date.toLocaleDateString("es-MX", { month: "long" }),
-    year: date.getFullYear(),
-  };
-};
 
 interface Hotel {
   id_hotel: string;
@@ -164,31 +151,30 @@ interface ManualReservationPageProps {
 
 const DOMAIN = "http://localhost:5173";
 
-const CheckOutForm = ({
-  setCardPayment,
-  paymentData,
-  setSuccess,
-  handleEndSubmit,
-}: any) => {
+const CheckOutForm = ({ setSuccess, handleEndSubmit }: any) => {
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState("");
+  const user = UserSingleton.getInstance().getUser();
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
       if (!stripe || !elements) return;
 
-      const { data } = await supabase.auth.getUser();
-      const id_agente = data.user?.id;
+      const id_agente = user?.id;
       const cardElement = elements.getElement(CardElement);
       //crear metodo de pago
+      if (!cardElement) {
+        setMessage("No se pudo obtener el elemento de la tarjeta.");
+        return;
+      }
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: "card",
         card: cardElement,
       });
       console.log("Se creo payment method");
       if (error) {
-        setMessage(error.message);
+        setMessage(error.message || "Ocurrió un error");
       } else {
         const response = await fetch(`${URL}/v1/stripe/save-payment-method`, {
           method: "POST",
@@ -320,7 +306,6 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
   const [creditoValue, setCreditoValue] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const fetchData = async () => {
     const data = await fetchPaymentMethods();
@@ -360,6 +345,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       fetchCredit();
     }
   }, [creditoPayment]);
+  const user = UserSingleton.getInstance().getUser();
 
   useEffect(() => {
     const storedHotel = sessionStorage.getItem("selectedHotel");
@@ -368,14 +354,12 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       setHotel(parsedHotel);
 
       // Get current user's name
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user?.user_metadata?.full_name) {
-          setReservationData((prev) => ({
-            ...prev,
-            mainGuest: reservationData.mainGuest,
-          }));
-        }
-      });
+      if (user?.user_metadata?.full_name) {
+        setReservationData((prev) => ({
+          ...prev,
+          mainGuest: reservationData.mainGuest,
+        }));
+      }
     }
     const fetchViajero = async () => {
       const data = await fetchViajerosCompanies();
@@ -441,18 +425,10 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       setIsSaving(true);
       setSaveError(null);
 
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Usuario no autenticado");
       }
 
-      // Get the first image URL from additionalImages
-      const imageUrl =
-        hotel?.URLImagenHotel ||
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80";
       const numerosAleatorios = Math.floor(100000 + Math.random() * 900000); // Genera un número de 6 dígitos
       const responseSolicitud = await crearSolicitud(
         {
@@ -473,28 +449,6 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       );
 
       const idServicio = responseSolicitud.data.id_servicio;
-
-      // Save booking to database
-      // const { data: booking, error: bookingError } = await supabase
-      //   .from("bookings")
-      //   .insert({
-      //     confirmation_code: `RES-${numerosAleatorios}`,
-      //     user_id: user.id,
-      //     hotel_name: hotel?.MARCA,
-      //     check_in: reservationData.checkIn,
-      //     check_out: reservationData.checkOut,
-      //     room_type: reservationData.roomType,
-      //     total_price: reservationData.totalPrice,
-      //     status: "pending",
-      //     image_url: imageUrl,
-      //   })
-      //   .select()
-      //   .single();
-
-      // if (bookingError) {
-      //   console.error("Error saving booking:", bookingError);
-      //   throw bookingError;
-      // }
 
       console.log("guardado");
       setIsBookingSaved(true);
@@ -517,7 +471,6 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
   };
 
   const handlePayment = async () => {
-    setIsProcessing(true);
     setSaveError(null);
 
     if (!selectedMethod) return;
@@ -530,8 +483,10 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
     console.log("Processing payment with method:", method);
     const paymentData = getPaymentData(hotel, reservationData);
     try {
-      const { data } = await supabase.auth.getUser();
-      const id_agente = data.user?.id;
+      if (!user) {
+        throw new Error("No hay user");
+      }
+      const id_agente = user?.id;
       const response = await fetch(`${URL}/v1/stripe/make-payment`, {
         method: "POST",
         headers: {
@@ -567,9 +522,9 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
         idServicio, // Reemplaza con el ID del servicio correspondiente
         paymentData.line_items[0].price_data.unit_amount,
         id_agente,
-        method?.card.brand,
-        method?.card.last4,
-        method?.card?.funding || "xddd",
+        method?.card.brand || "",
+        method?.card.last4 || "",
+        "", // funding property removed, replaced with empty string
         "tarjeta",
         "Reservacion en " + hotel?.nombre,
         responsePayment.paymentIntent.client_secret,
@@ -584,7 +539,6 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
       console.log(error);
       setSaveError("Hubo un error al procesar el pago");
     }
-    setIsProcessing(false);
   };
 
   const handlePaymentCredito = async () => {
@@ -596,8 +550,7 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
         throw new Error("No se pudo obtener el idServicio para el pago");
       }
 
-      const { data } = await supabase.auth.getUser();
-      const id_agente = data.user?.id;
+      const id_agente = user?.id;
 
       // console.log({
       //   id_servicio: idServicio,
@@ -655,9 +608,6 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
     }
   };
 
-  const checkInDate = formatDate(reservationData.checkIn);
-  const checkOutDate = formatDate(reservationData.checkOut);
-
   if (!hotel) {
     return (
       <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
@@ -678,698 +628,708 @@ export const ManualReservationPage: React.FC<ManualReservationPageProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Volver
-          </button>
-        </div>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={onBack}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Volver
+            </button>
+          </div>
 
-        {/* Hotel Header */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-          <div className="relative h-64">
-            <img
-              src={
-                hotel.URLImagenHotel ||
-                "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80"
-              }
-              alt={hotel.nombre}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <h1 className="text-3xl font-bold mb-2">{hotel.nombre}</h1>
-              <p className="text-white/90">
-                {hotel.Ciudad_Zona}, {hotel.Estado}
-              </p>
+          {/* Hotel Header */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <div className="relative h-64">
+              <img
+                src={
+                  hotel.URLImagenHotel ||
+                  "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80"
+                }
+                alt={hotel.nombre}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <h1 className="text-3xl font-bold mb-2">{hotel.nombre}</h1>
+                <p className="text-white/90">
+                  {hotel.Ciudad_Zona}, {hotel.Estado}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Hotel Details and Pricing */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-          <div className="p-6 border-b border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Hotel Information */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-gray-900">
-                  Información del Hotel
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <Hotel className="w-5 h-5 text-blue-600 mt-1" />
-                    <div>
-                      <p className="font-medium text-gray-900">Hotel</p>
-                      <p className="text-gray-600">{hotel.nombre}</p>
+          {/* Hotel Details and Pricing */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <div className="p-6 border-b border-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Hotel Information */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Información del Hotel
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <Hotel className="w-5 h-5 text-blue-600 mt-1" />
+                      <div>
+                        <p className="font-medium text-gray-900">Hotel</p>
+                        <p className="text-gray-600">{hotel.nombre}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Users className="w-5 h-5 text-blue-600 mt-1" />
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Menores de Edad
+                        </p>
+                        <p className="text-gray-600">{hotel.MenoresEdad}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Coffee className="w-5 h-5 text-blue-600 mt-1" />
+                      <div>
+                        <p className="font-medium text-gray-900">Desayuno</p>
+                        <p className="text-gray-600">
+                          {Boolean(hotel.desayuno_sencilla)
+                            ? "Incluido"
+                            : "No incluido"}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-start space-x-3">
-                    <Users className="w-5 h-5 text-blue-600 mt-1" />
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        Menores de Edad
+                </div>
+
+                {/* Room Pricing */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Tarifas por Noche
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center space-x-2">
+                          <User className="w-5 h-5 text-blue-600" />
+                          <span className="font-medium text-gray-900">
+                            Habitación Sencilla
+                          </span>
+                        </div>
+                        <span className="text-lg font-bold text-blue-600">
+                          {formatPrice(Number(hotel.precio_sencilla))}
+                        </span>
+                      </div>
+                      <p className="text-sm text-blue-600">
+                        Capacidad máxima: 1 personas
                       </p>
-                      <p className="text-gray-600">{hotel.MenoresEdad}</p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <Coffee className="w-5 h-5 text-blue-600 mt-1" />
-                    <div>
-                      <p className="font-medium text-gray-900">Desayuno</p>
-                      <p className="text-gray-600">
-                        {Boolean(hotel.desayuno_sencilla)
-                          ? "Incluido"
-                          : "No incluido"}
+
+                    <div className="bg-indigo-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Users className="w-5 h-5 text-indigo-600" />
+                          <span className="font-medium text-gray-900">
+                            Habitación Doble
+                          </span>
+                        </div>
+                        <span className="text-lg font-bold text-indigo-600">
+                          {formatPrice(Number(hotel.precio_doble))}
+                        </span>
+                      </div>
+                      <p className="text-sm text-indigo-600">
+                        Capacidad máxima: 2 personas
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Room Pricing */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-gray-900">
-                  Tarifas por Noche
+          {/* Reservation Form */}
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center">
+              <Calendar className="w-6 h-6 text-blue-600 mr-2" />
+              Detalles de la Reservación
+            </h2>
+
+            {error && (
+              <div
+                className="mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg"
+                role="alert"
+              >
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Dates Section */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Fechas de Estancia
                 </h3>
                 <div className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center space-x-2">
-                        <User className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium text-gray-900">
-                          Habitación Sencilla
-                        </span>
-                      </div>
-                      <span className="text-lg font-bold text-blue-600">
-                        {formatPrice(Number(hotel.precio_sencilla))}
-                      </span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de Llegada
+                    </label>
+                    <div className="relative">
+                      <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                      <input
+                        pattern="^[^<>]*$"
+                        type="date"
+                        value={reservationData.checkIn}
+                        onChange={(e) => {
+                          if (
+                            e.target.value <
+                              new Date(currentDate())
+                                .toISOString()
+                                .split("T")[0] &&
+                            Number(e.target.value.split("-")[0]) > 999
+                          ) {
+                            setError(
+                              "No se pueden poner fechas menores al dia de hoy"
+                            );
+                          } else {
+                            setError("");
+                            handleDateChange("checkIn", e.target.value);
+                          }
+                        }}
+                        min={
+                          new Date(currentDate()).toISOString().split("T")[0]
+                        }
+                        className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      />
                     </div>
-                    <p className="text-sm text-blue-600">
-                      Capacidad máxima: 1 personas
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de Salida
+                    </label>
+                    <div className="relative">
+                      <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                      <input
+                        pattern="^[^<>]*$"
+                        type="date"
+                        value={reservationData.checkOut}
+                        onChange={(e) => {
+                          if (
+                            e.target.value <
+                              new Date(currentDate())
+                                .toISOString()
+                                .split("T")[0] &&
+                            Number(e.target.value.split("-")[0]) > 999
+                          ) {
+                            setError(
+                              "No se pueden poner fechas menores al dia de hoy"
+                            );
+                          } else {
+                            setError("");
+                            handleDateChange("checkOut", e.target.value);
+                          }
+                        }}
+                        min={
+                          reservationData.checkIn ||
+                          new Date(currentDate()).toISOString().split("T")[0]
+                        }
+                        className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Room and Guests Section */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Habitación y Huéspedes
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo de Habitación
+                    </label>
+                    <div className="relative">
+                      <Hotel className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                      <select
+                        value={reservationData.roomType}
+                        onChange={(e) => {
+                          const newRoomType = e.target.value as
+                            | "single"
+                            | "double";
+                          setReservationData((prev) => {
+                            const { nights, pricePerNight, total } =
+                              calculateTotalPrice(
+                                prev.checkIn,
+                                prev.checkOut,
+                                newRoomType
+                              );
+                            return {
+                              ...prev,
+                              roomType: newRoomType,
+                              guests: 1,
+                              totalNights: nights,
+                              pricePerNight,
+                              totalPrice: total,
+                            };
+                          });
+                        }}
+                        className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      >
+                        <option value="single">
+                          Habitación Sencilla (máx. 1 personas)
+                        </option>
+                        <option value="double">
+                          Habitación Doble (máx. 2 personas)
+                        </option>
+                      </select>
+                    </div>
+                    <p className="text-sm my-2 text-gray-600">
+                      ¿Necesitas espacio para mas personas? <br />
+                      <span
+                        onClick={() => {
+                          setIsSupportModalOpen(true);
+                        }}
+                        className="hover:underline cursor-pointer text-blue-500"
+                      >
+                        Contacta al soporte de MIA{" "}
+                      </span>{" "}
+                      para ayudarte con cualquier modificación
                     </p>
                   </div>
 
-                  <div className="bg-indigo-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-5 h-5 text-indigo-600" />
-                        <span className="font-medium text-gray-900">
-                          Habitación Doble
-                        </span>
-                      </div>
-                      <span className="text-lg font-bold text-indigo-600">
-                        {formatPrice(Number(hotel.precio_doble))}
-                      </span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de Personas
+                    </label>
+                    <div className="relative">
+                      <Users className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                      <input
+                        pattern="^[^<>]*$"
+                        type="number"
+                        min="1"
+                        max="2"
+                        value={reservationData.guests}
+                        onChange={(e) => {
+                          if (
+                            parseInt(e.target.value) < 1 ||
+                            parseInt(e.target.value) > 2
+                          ) {
+                            return setError(
+                              "El número de personas debe ser entre 1 y 2"
+                            );
+                          }
+
+                          setReservationData((prev) => ({
+                            ...prev,
+                            guests: parseInt(e.target.value),
+                          }));
+                        }}
+                        className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      />
                     </div>
-                    <p className="text-sm text-indigo-600">
+                    <p className="mt-1 text-sm text-gray-500">
                       Capacidad máxima: 2 personas
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Reservation Form */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center">
-            <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-            Detalles de la Reservación
-          </h2>
-
-          {error && (
-            <div
-              className="mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg"
-              role="alert"
-            >
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Dates Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Fechas de Estancia
+            {/* Guest Information */}
+            <div className="mt-8 space-y-6">
+              <h3 className="text-lg font-medium text-gray-900">
+                Información de Huéspedes
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Llegada
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      pattern="^[^<>]*$"
-                      type="date"
-                      value={reservationData.checkIn}
-                      onChange={(e) => {
-                        if (
-                          e.target.value <
-                            new Date(currentDate())
-                              .toISOString()
-                              .split("T")[0] &&
-                          Number(e.target.value.split("-")[0]) > 999
-                        ) {
-                          setError(
-                            "No se pueden poner fechas menores al dia de hoy"
-                          );
-                        } else {
-                          setError("");
-                          handleDateChange("checkIn", e.target.value);
-                        }
-                      }}
-                      min={new Date(currentDate()).toISOString().split("T")[0]}
-                      className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Salida
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      pattern="^[^<>]*$"
-                      type="date"
-                      value={reservationData.checkOut}
-                      onChange={(e) => {
-                        if (
-                          e.target.value <
-                            new Date(currentDate())
-                              .toISOString()
-                              .split("T")[0] &&
-                          Number(e.target.value.split("-")[0]) > 999
-                        ) {
-                          setError(
-                            "No se pueden poner fechas menores al dia de hoy"
-                          );
-                        } else {
-                          setError("");
-                          handleDateChange("checkOut", e.target.value);
-                        }
-                      }}
-                      min={
-                        reservationData.checkIn ||
-                        new Date(currentDate()).toISOString().split("T")[0]
-                      }
-                      className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Room and Guests Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Habitación y Huéspedes
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Habitación
-                  </label>
-                  <div className="relative">
-                    <Hotel className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <select
-                      value={reservationData.roomType}
-                      onChange={(e) => {
-                        const newRoomType = e.target.value as
-                          | "single"
-                          | "double";
-                        setReservationData((prev) => {
-                          const { nights, pricePerNight, total } =
-                            calculateTotalPrice(
-                              prev.checkIn,
-                              prev.checkOut,
-                              newRoomType
-                            );
-                          return {
-                            ...prev,
-                            roomType: newRoomType,
-                            guests: 1,
-                            totalNights: nights,
-                            pricePerNight,
-                            totalPrice: total,
-                          };
-                        });
-                      }}
-                      className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    >
-                      <option value="single">
-                        Habitación Sencilla (máx. 1 personas)
-                      </option>
-                      <option value="double">
-                        Habitación Doble (máx. 2 personas)
-                      </option>
-                    </select>
-                  </div>
-                  <p className="text-sm my-2 text-gray-600">
-                    ¿Necesitas espacio para mas personas? <br />
-                    <span
-                      onClick={() => {
-                        setIsSupportModalOpen(true);
-                      }}
-                      className="hover:underline cursor-pointer text-blue-500"
-                    >
-                      Contacta al soporte de MIA{" "}
-                    </span>{" "}
-                    para ayudarte con cualquier modificación
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número de Personas
-                  </label>
-                  <div className="relative">
-                    <Users className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      pattern="^[^<>]*$"
-                      type="number"
-                      min="1"
-                      max="2"
-                      value={reservationData.guests}
-                      onChange={(e) => {
-                        if (
-                          parseInt(e.target.value) < 1 ||
-                          parseInt(e.target.value) > 2
-                        ) {
-                          return setError(
-                            "El número de personas debe ser entre 1 y 2"
-                          );
-                        }
-
-                        setReservationData((prev) => ({
-                          ...prev,
-                          guests: parseInt(e.target.value),
-                        }));
-                      }}
-                      className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    />
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Capacidad máxima: 2 personas
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Guest Information */}
-          <div className="mt-8 space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">
-              Información de Huéspedes
-            </h3>
-
-            {/* Main Guest */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Huésped Principal
-              </label>
-              <div className="relative">
-                <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <select
-                  value={reservationData.mainGuest}
-                  onChange={(e) =>
-                    setReservationData((prev) => ({
-                      ...prev,
-                      mainGuest: e.target.value,
-                    }))
-                  }
-                  className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                >
-                  <option value="">Selecciona un huésped</option>
-                  {employees.map((empleado) => (
-                    <option
-                      key={empleado.id_viajero}
-                      value={empleado.id_viajero}
-                    >
-                      {empleado.primer_nombre} {empleado.segundo_nombre}{" "}
-                      {empleado.apellido_paterno} {empleado.apellido_materno}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Additional Guests */}
-            {reservationData.guests > 1 && (
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Huéspedes Adicionales
+              {/* Main Guest */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Huésped Principal
                 </label>
-                {Array.from({ length: reservationData.guests - 1 }).map(
-                  (_, index) => (
-                    <div key={index} className="relative">
-                      <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      <select
-                        value={reservationData.additionalGuests[index] || ""}
-                        onChange={(e) => {
-                          const newGuests = [
-                            ...reservationData.additionalGuests,
-                          ];
-                          newGuests[index] = e.target.value;
-                          setReservationData((prev) => ({
-                            ...prev,
-                            additionalGuests: newGuests,
-                          }));
-                        }}
-                        className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                <div className="relative">
+                  <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <select
+                    value={reservationData.mainGuest}
+                    onChange={(e) =>
+                      setReservationData((prev) => ({
+                        ...prev,
+                        mainGuest: e.target.value,
+                      }))
+                    }
+                    className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  >
+                    <option value="">Selecciona un huésped</option>
+                    {employees.map((empleado) => (
+                      <option
+                        key={empleado.id_viajero}
+                        value={empleado.id_viajero}
                       >
-                        <option value="">Selecciona un huésped</option>
-                        {employees
-                          .filter(
-                            (empleado) =>
-                              empleado.id_viajero !== reservationData.mainGuest
-                          )
-                          .map((empleado) => (
-                            <option
-                              key={empleado.id_viajero}
-                              value={empleado.id_viajero}
+                        {empleado.primer_nombre} {empleado.segundo_nombre}{" "}
+                        {empleado.apellido_paterno} {empleado.apellido_materno}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Additional Guests */}
+              {reservationData.guests > 1 && (
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Huéspedes Adicionales
+                  </label>
+                  {Array.from({ length: reservationData.guests - 1 }).map(
+                    (_, index) => (
+                      <div key={index} className="relative">
+                        <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                        <select
+                          value={reservationData.additionalGuests[index] || ""}
+                          onChange={(e) => {
+                            const newGuests = [
+                              ...reservationData.additionalGuests,
+                            ];
+                            newGuests[index] = e.target.value;
+                            setReservationData((prev) => ({
+                              ...prev,
+                              additionalGuests: newGuests,
+                            }));
+                          }}
+                          className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        >
+                          <option value="">Selecciona un huésped</option>
+                          {employees
+                            .filter(
+                              (empleado) =>
+                                empleado.id_viajero !==
+                                reservationData.mainGuest
+                            )
+                            .map((empleado) => (
+                              <option
+                                key={empleado.id_viajero}
+                                value={empleado.id_viajero}
+                              >
+                                {empleado.primer_nombre}{" "}
+                                {empleado.segundo_nombre}{" "}
+                                {empleado.apellido_paterno}{" "}
+                                {empleado.apellido_materno}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Reservation Summary */}
+            {reservationData.totalNights > 0 &&
+              reservationData.mainGuest != "" &&
+              (cardPayment ? (
+                <>
+                  {successPayment ? (
+                    <>
+                      <div className="w-full h-32 bg-green-300 rounded-xl border-4 border-green-500 justify-center items-center flex flex-col gap-y-2">
+                        <p className="text-xl text-green-800 font-bold">
+                          ¡Se realizo el pago correctamente!
+                        </p>
+                        <CheckCircle className="w-10 h-10 text-green-800" />
+                      </div>
+
+                      <a
+                        href="/"
+                        className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                          selectedMethod
+                            ? "bg-green-600 text-white hover:bg-green-700"
+                            : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        Continuar con MIA
+                      </a>
+                    </>
+                  ) : showAddPaymentForm ? (
+                    <Elements stripe={stripePromise}>
+                      <CheckOutForm
+                        setCardPayment={setCardPayment}
+                        paymentData={getPaymentData(hotel, reservationData)}
+                        setSuccess={setShowAddPaymentForm}
+                        onCancel={() => setShowAddPaymentForm(false)}
+                        handleEndSubmit={fetchData}
+                      />
+                    </Elements>
+                  ) : (
+                    <div className="w-full bg-white rounded-xl shadow-lg p-6">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-6">
+                        Metodos de pago
+                      </h3>
+
+                      {paymentMethods.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-lg">
+                          <CreditCard
+                            className="mx-auto text-gray-400 mb-3"
+                            size={32}
+                          />
+                          <p className="text-gray-500">
+                            No se han guardado metodos de pago
+                          </p>
+                          <ul className="space-y-3 mb-6">
+                            <li
+                              onClick={handleAddMethod}
+                              className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300"
                             >
-                              {empleado.primer_nombre} {empleado.segundo_nombre}{" "}
-                              {empleado.apellido_paterno}{" "}
-                              {empleado.apellido_materno}
-                            </option>
-                          ))}
-                      </select>
+                              <div className="flex items-center gap-3">
+                                <Plus className="text-gray-600" size={20} />
+                                <p className="font-medium text-gray-800">
+                                  Agregar nuevo metodo de pago
+                                </p>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <>
+                          <ul className="space-y-3 mb-6">
+                            {paymentMethods.length > 0 &&
+                              paymentMethods.map((method) => (
+                                <li
+                                  key={method.id}
+                                  onClick={() => setSelectedMethod(method.id)}
+                                  className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${
+                                    selectedMethod === method.id
+                                      ? "bg-blue-50 border-2 border-blue-500"
+                                      : "bg-gray-50 hover:bg-gray-100"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <CreditCard
+                                      className={
+                                        selectedMethod === method.id
+                                          ? "text-blue-600"
+                                          : "text-gray-600"
+                                      }
+                                      size={20}
+                                    />
+                                    <div>
+                                      <p className="font-medium text-gray-800">
+                                        {method.card.brand.toUpperCase()} ••••{" "}
+                                        {method.card.last4}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        Vence {method.card.exp_month}/
+                                        {method.card.exp_year}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {selectedMethod === method.id && (
+                                      <CheckCircle2
+                                        className="text-blue-600"
+                                        size={20}
+                                      />
+                                    )}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteMethod(method.id);
+                                      }}
+                                      className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                                      aria-label="Delete payment method"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+
+                            <li
+                              onClick={handleAddMethod}
+                              className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Plus className="text-gray-600" size={20} />
+                                <p className="font-medium text-gray-800">
+                                  Agregar nuevo metodo de pago
+                                </p>
+                              </div>
+                            </li>
+                          </ul>
+                          <button
+                            onClick={handlePayment}
+                            disabled={!selectedMethod}
+                            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                              selectedMethod
+                                ? "bg-green-600 text-white hover:bg-green-700"
+                                : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            }`}
+                          >
+                            Pagar
+                          </button>
+                        </>
+                      )}
+                      <button
+                        className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 w-full mt-5"
+                        onClick={() => setCardPayment(false)}
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="font-medium">
+                          Cambiar forma de pago
+                        </span>
+                      </button>
                     </div>
-                  )
-                )}
+                    // <Elements stripe={stripePromise}>
+                    //   <CheckOutForm
+                    //     setCardPayment={setCardPayment}
+                    //     paymentData={getPaymentData(bookingData)}
+                    //     setSuccess={setSuccessPayment}
+                    //     idServicio={idServicio}
+                    //   />
+                    // </Elements>
+                  )}
+                </>
+              ) : creditoPayment ? (
+                <>
+                  {successCreditPayment ? (
+                    <>
+                      <div className="w-full h-32 bg-green-300 rounded-xl border-4 border-green-500 justify-center items-center flex flex-col gap-y-2">
+                        <p className="text-xl text-green-800 font-bold">
+                          ¡Se realizo el pago correctamente!
+                        </p>
+                        <CheckCircle className="w-10 h-10 text-green-800" />
+                      </div>
+
+                      <button
+                        onClick={() => window.location.reload()}
+                        className={`w-full py-3 px-4 rounded-lg font-medium transition-colors bg-green-600 text-white hover:bg-green-700`}
+                      >
+                        Continuar con MIA
+                      </button>
+                    </>
+                  ) : (
+                    <div className="w-full bg-white rounded-xl shadow-lg p-6">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-6">
+                        Pago con credito
+                      </h3>
+                      {Number(creditoValue[0]?.monto_credito_agente) -
+                        Number(reservationData.totalPrice) >=
+                        0 && creditoValue[0]?.tiene_credito_consolidado == 1 ? (
+                        <div className="space-y-4">
+                          <p className="text-xl font-medium text-gray-700">
+                            Crédito Disponible:
+                            <span className="text-2xl font-bold text-gray-900 ml-2">
+                              ${creditoValue[0]?.monto_credito_agente}
+                            </span>
+                          </p>
+
+                          <p className="text-xl font-medium text-gray-700">
+                            Monto a Pagar:
+                            <span className="text-2xl font-bold text-gray-900 ml-2">
+                              ${reservationData.totalPrice}
+                            </span>
+                          </p>
+
+                          <p className="text-xl font-medium text-gray-700">
+                            Crédito Restante:
+                            <span className="text-2xl font-bold text-gray-900 ml-2">
+                              $
+                              {creditoValue[0]?.monto_credito_agente -
+                                reservationData.totalPrice}
+                            </span>
+                          </p>
+                          <button
+                            onClick={handlePaymentCredito}
+                            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors
+                          bg-green-600 text-white hover:bg-green-700
+                            `}
+                          >
+                            Pagar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <p className="text-xl font-medium text-gray-700">
+                            No cuentas con crédito suficiente para pagar esta
+                            reservación
+                          </p>
+                        </div>
+                      )}
+
+                      <button
+                        className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 w-full mt-5"
+                        onClick={() => setCreditoPayment(false)}
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="font-medium">
+                          Cambiar forma de pago
+                        </span>
+                      </button>
+                    </div>
+                    // <Elements stripe={stripePromise}>
+                    //   <CheckOutForm
+                    //     setCardPayment={setCardPayment}
+                    //     paymentData={getPaymentData(bookingData)}
+                    //     setSuccess={setSuccessPayment}
+                    //     idServicio={idServicio}
+                    //   />
+                    // </Elements>
+                  )}
+                </>
+              ) : (
+                <div className="mt-8 bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Resumen de la Reservación
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Total de Noches:</span>
+                      <span>{reservationData.totalNights}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Precio por Noche:</span>
+                      <span>{formatPrice(reservationData.pricePerNight)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-900 font-bold text-lg pt-3 border-t border-gray-200">
+                      <span>Precio Total:</span>
+                      <span>{formatPrice(reservationData.totalPrice)}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Options */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <button
+                      className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                      onClick={() => setCardPayment(true)}
+                    >
+                      <PaymentIcon className="w-4 h-4" />
+                      <span className="font-medium">
+                        Pagar con tarjeta de Crédito o Débito
+                      </span>
+                    </button>
+
+                    <button
+                      className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                      onClick={() => setCreditoPayment(true)}
+                    >
+                      <BanknoteIcon className="w-4 h-4" />
+                      <span className="font-medium">Pagar por Crédito</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            {saveError && (
+              <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                {saveError}
               </div>
             )}
           </div>
-          {/* Reservation Summary */}
-          {reservationData.totalNights > 0 &&
-            reservationData.mainGuest != "" &&
-            (cardPayment ? (
-              <>
-                {successPayment ? (
-                  <>
-                    <div className="w-full h-32 bg-green-300 rounded-xl border-4 border-green-500 justify-center items-center flex flex-col gap-y-2">
-                      <p className="text-xl text-green-800 font-bold">
-                        ¡Se realizo el pago correctamente!
-                      </p>
-                      <CheckCircle className="w-10 h-10 text-green-800" />
-                    </div>
-
-                    <a
-                      href="/"
-                      className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                        selectedMethod
-                          ? "bg-green-600 text-white hover:bg-green-700"
-                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      }`}
-                    >
-                      Continuar con MIA
-                    </a>
-                  </>
-                ) : showAddPaymentForm ? (
-                  <Elements stripe={stripePromise}>
-                    <CheckOutForm
-                      setCardPayment={setCardPayment}
-                      paymentData={getPaymentData(hotel, reservationData)}
-                      setSuccess={setShowAddPaymentForm}
-                      onCancel={() => setShowAddPaymentForm(false)}
-                      handleEndSubmit={fetchData}
-                    />
-                  </Elements>
-                ) : (
-                  <div className="w-full bg-white rounded-xl shadow-lg p-6">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6">
-                      Metodos de pago
-                    </h3>
-
-                    {paymentMethods.length === 0 ? (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg">
-                        <CreditCard
-                          className="mx-auto text-gray-400 mb-3"
-                          size={32}
-                        />
-                        <p className="text-gray-500">
-                          No se han guardado metodos de pago
-                        </p>
-                        <ul className="space-y-3 mb-6">
-                          <li
-                            onClick={handleAddMethod}
-                            className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Plus className="text-gray-600" size={20} />
-                              <p className="font-medium text-gray-800">
-                                Agregar nuevo metodo de pago
-                              </p>
-                            </div>
-                          </li>
-                        </ul>
-                      </div>
-                    ) : (
-                      <>
-                        <ul className="space-y-3 mb-6">
-                          {paymentMethods.length > 0 &&
-                            paymentMethods.map((method) => (
-                              <li
-                                key={method.id}
-                                onClick={() => setSelectedMethod(method.id)}
-                                className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${
-                                  selectedMethod === method.id
-                                    ? "bg-blue-50 border-2 border-blue-500"
-                                    : "bg-gray-50 hover:bg-gray-100"
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <CreditCard
-                                    className={
-                                      selectedMethod === method.id
-                                        ? "text-blue-600"
-                                        : "text-gray-600"
-                                    }
-                                    size={20}
-                                  />
-                                  <div>
-                                    <p className="font-medium text-gray-800">
-                                      {method.card.brand.toUpperCase()} ••••{" "}
-                                      {method.card.last4}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                      Vence {method.card.exp_month}/
-                                      {method.card.exp_year}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {selectedMethod === method.id && (
-                                    <CheckCircle2
-                                      className="text-blue-600"
-                                      size={20}
-                                    />
-                                  )}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteMethod(method.id);
-                                    }}
-                                    className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
-                                    aria-label="Delete payment method"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                </div>
-                              </li>
-                            ))}
-
-                          <li
-                            onClick={handleAddMethod}
-                            className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Plus className="text-gray-600" size={20} />
-                              <p className="font-medium text-gray-800">
-                                Agregar nuevo metodo de pago
-                              </p>
-                            </div>
-                          </li>
-                        </ul>
-                        <button
-                          onClick={handlePayment}
-                          disabled={!selectedMethod}
-                          className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                            selectedMethod
-                              ? "bg-green-600 text-white hover:bg-green-700"
-                              : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          }`}
-                        >
-                          Pagar
-                        </button>
-                      </>
-                    )}
-                    <button
-                      className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 w-full mt-5"
-                      onClick={() => setCardPayment(false)}
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span className="font-medium">Cambiar forma de pago</span>
-                    </button>
-                  </div>
-                  // <Elements stripe={stripePromise}>
-                  //   <CheckOutForm
-                  //     setCardPayment={setCardPayment}
-                  //     paymentData={getPaymentData(bookingData)}
-                  //     setSuccess={setSuccessPayment}
-                  //     idServicio={idServicio}
-                  //   />
-                  // </Elements>
-                )}
-              </>
-            ) : creditoPayment ? (
-              <>
-                {successCreditPayment ? (
-                  <>
-                    <div className="w-full h-32 bg-green-300 rounded-xl border-4 border-green-500 justify-center items-center flex flex-col gap-y-2">
-                      <p className="text-xl text-green-800 font-bold">
-                        ¡Se realizo el pago correctamente!
-                      </p>
-                      <CheckCircle className="w-10 h-10 text-green-800" />
-                    </div>
-
-                    <button
-                      onClick={() => window.location.reload()}
-                      className={`w-full py-3 px-4 rounded-lg font-medium transition-colors bg-green-600 text-white hover:bg-green-700`}
-                    >
-                      Continuar con MIA
-                    </button>
-                  </>
-                ) : (
-                  <div className="w-full bg-white rounded-xl shadow-lg p-6">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6">
-                      Pago con credito
-                    </h3>
-                    {Number(creditoValue[0]?.monto_credito_agente) -
-                      Number(reservationData.totalPrice) >=
-                      0 && creditoValue[0]?.tiene_credito_consolidado == 1 ? (
-                      <div className="space-y-4">
-                        <p className="text-xl font-medium text-gray-700">
-                          Crédito Disponible:
-                          <span className="text-2xl font-bold text-gray-900 ml-2">
-                            ${creditoValue[0]?.monto_credito_agente}
-                          </span>
-                        </p>
-
-                        <p className="text-xl font-medium text-gray-700">
-                          Monto a Pagar:
-                          <span className="text-2xl font-bold text-gray-900 ml-2">
-                            ${reservationData.totalPrice}
-                          </span>
-                        </p>
-
-                        <p className="text-xl font-medium text-gray-700">
-                          Crédito Restante:
-                          <span className="text-2xl font-bold text-gray-900 ml-2">
-                            $
-                            {creditoValue[0]?.monto_credito_agente -
-                              reservationData.totalPrice}
-                          </span>
-                        </p>
-                        <button
-                          onClick={handlePaymentCredito}
-                          className={`w-full py-3 px-4 rounded-lg font-medium transition-colors
-                          bg-green-600 text-white hover:bg-green-700
-                            `}
-                        >
-                          Pagar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <p className="text-xl font-medium text-gray-700">
-                          No cuentas con crédito suficiente para pagar esta
-                          reservación
-                        </p>
-                      </div>
-                    )}
-
-                    <button
-                      className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 w-full mt-5"
-                      onClick={() => setCreditoPayment(false)}
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span className="font-medium">Cambiar forma de pago</span>
-                    </button>
-                  </div>
-                  // <Elements stripe={stripePromise}>
-                  //   <CheckOutForm
-                  //     setCardPayment={setCardPayment}
-                  //     paymentData={getPaymentData(bookingData)}
-                  //     setSuccess={setSuccessPayment}
-                  //     idServicio={idServicio}
-                  //   />
-                  // </Elements>
-                )}
-              </>
-            ) : (
-              <div className="mt-8 bg-gray-50 rounded-xl p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Resumen de la Reservación
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Total de Noches:</span>
-                    <span>{reservationData.totalNights}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Precio por Noche:</span>
-                    <span>{formatPrice(reservationData.pricePerNight)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-900 font-bold text-lg pt-3 border-t border-gray-200">
-                    <span>Precio Total:</span>
-                    <span>{formatPrice(reservationData.totalPrice)}</span>
-                  </div>
-                </div>
-
-                {/* Payment Options */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                  <button
-                    className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                    onClick={() => setCardPayment(true)}
-                  >
-                    <PaymentIcon className="w-4 h-4" />
-                    <span className="font-medium">
-                      Pagar con tarjeta de Crédito o Débito
-                    </span>
-                  </button>
-
-                  <button
-                    className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                    onClick={() => setCreditoPayment(true)}
-                  >
-                    <BanknoteIcon className="w-4 h-4" />
-                    <span className="font-medium">Pagar por Crédito</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          {saveError && (
-            <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
-              {saveError}
-            </div>
-          )}
         </div>
+        <SupportModal
+          isOpen={isSupportModalOpen}
+          onClose={() => setIsSupportModalOpen(false)}
+        />
       </div>
-      <SupportModal
-        isOpen={isSupportModalOpen}
-        onClose={() => setIsSupportModalOpen(false)}
-      />
-    </div>
+    </ProtectedRoute>
   );
 };

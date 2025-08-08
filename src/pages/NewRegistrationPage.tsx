@@ -6,76 +6,42 @@ import {
   Lock,
   CheckCircle2,
   Calendar,
-  PersonStanding,
   RotateCcw,
 } from "lucide-react";
-import {
-  newRegisterUser,
-  registerUserAfterVerification,
-} from "../services/authService";
-import { sendAndCreateOTP } from "../hooks/useEmailVerification";
+import useAuth from "../hooks/useAuth";
+import { UserRegistro } from "../types/auth";
+import Button from "../components/atom/Button";
+import { InputDate, InputText, SelectInput } from "../components/atom/Input";
 
-interface RegistrationFormData {
-  primer_nombre: string;
-  segundo_nombre: string;
-  apellido_paterno: string;
-  apellido_materno: string;
-  correo: string;
-  telefono: string;
-  password: string;
-  confirmPassword: string;
-  genero: string;
-  fecha_nacimiento: string;
-}
-
-interface RegistrationPageProps {
-  onComplete: () => void;
-}
-
-export const NewRegistrationPage: React.FC<RegistrationPageProps> = ({
-  onComplete,
-}) => {
-  const [step, setStep] = useState<"personal" | "completed">("personal");
-  const [formData, setFormData] = useState<RegistrationFormData>({
+export const NewRegistrationPage = () => {
+  const [formData, setFormData] = useState<UserRegistro>({
+    id_agente: "",
     primer_nombre: "",
     segundo_nombre: "",
     apellido_paterno: "",
     apellido_materno: "",
     correo: "",
     telefono: "",
-    password: "",
-    confirmPassword: "",
     genero: "",
     fecha_nacimiento: "",
+    password: "",
+    confirmPassword: "",
+    nombre_completo: "",
   });
-
-  const [passwordError, setPasswordError] = useState("");
+  const { handleSendValidacion, handleRegister, loading } = useAuth();
   const [registrationError, setRegistrationError] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
   const [emailVerificationPage, setEmailVerificationPage] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
 
   const handleEmailVerification = async () => {
     try {
-      if (isRegistering) return;
-      setIsRegistering(true);
       setRegistrationError("");
-
-      const result = await newRegisterUser(formData);
-      if (result.success) {
-        //Aqui se deberia verificar el correo pero por mientras se queda que se logea y ya
-        // console.log("revisa correo");
-        // setStep('completed');
-        //onComplete();
-        setEmailVerificationPage(true);
-      }
+      await handleSendValidacion(formData);
+      setEmailVerificationPage(true);
     } catch (error: any) {
-      console.error("Error during registration:", error);
       setRegistrationError(
         error.message || "Error al registrar. Por favor intenta de nuevo."
       );
-    } finally {
-      setIsRegistering(false);
     }
   };
 
@@ -85,53 +51,29 @@ export const NewRegistrationPage: React.FC<RegistrationPageProps> = ({
       return;
     }
     try {
-      if (isRegistering) return;
-      setIsRegistering(true);
       setRegistrationError("");
-
-      const result = await registerUserAfterVerification(
-        formData,
+      await handleRegister(
+        {
+          ...formData,
+          id_agente: "",
+          nombre_completo: [
+            formData.primer_nombre,
+            formData.segundo_nombre,
+            formData.apellido_paterno,
+            formData.apellido_materno,
+          ]
+            .filter((item) => !!item)
+            .join(" ")
+            .toUpperCase(),
+        },
         verificationCode
       );
-      console.log(result);
-      if (result.success) {
-        console.log("successssss");
-        setRegistrationError("");
-        onComplete();
-      } else {
-        throw new Error("Codigo incorrecto");
-      }
+      window.location.href = "/";
     } catch (error: any) {
       console.error("Error during registration:", error);
       setRegistrationError(
         error.message || "Error al registrar. Por favor intenta de nuevo."
       );
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
-  const sendOTP = async () => {
-    try {
-      if (isRegistering) return;
-      setIsRegistering(true);
-      setRegistrationError("");
-
-      const result = await sendAndCreateOTP(formData.correo);
-      console.log(result);
-      if (result.success) {
-        console.log("se volvio a enviar codigo");
-        setRegistrationError("");
-      } else {
-        throw new Error("Codigo incorrecto");
-      }
-    } catch (error: any) {
-      console.error("Error during registration:", error);
-      setRegistrationError(
-        error.message || "No se pudo volver a enviar el codigo."
-      );
-    } finally {
-      setIsRegistering(false);
     }
   };
 
@@ -139,12 +81,12 @@ export const NewRegistrationPage: React.FC<RegistrationPageProps> = ({
     e.preventDefault();
 
     if (formData.password.length < 8) {
-      setPasswordError("La contraseña debe tener al menos 8 caracteres");
+      setRegistrationError("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setPasswordError("Las contraseñas no coinciden");
+      setRegistrationError("Las contraseñas no coinciden");
       return;
     }
     if (
@@ -154,387 +96,198 @@ export const NewRegistrationPage: React.FC<RegistrationPageProps> = ({
       !formData.apellido_paterno ||
       !formData.correo
     ) {
-      setPasswordError("No se pueden dejar vacios los campos obligatorios");
+      setRegistrationError("No se pueden dejar vacios los campos obligatorios");
       return;
     }
 
     handleEmailVerification();
-    setPasswordError("");
+    setRegistrationError("");
   };
 
   const renderCodeVerification = () => (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-        {/* Codigo de verificacion */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Codigo
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="text"
-              required
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex space-x-4 w-full">
-        <button
-          onClick={handleRegistrationComplete}
-          disabled={isRegistering}
-          className={`flex items-center space-x-2 w-full justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors ${
-            isRegistering ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-        >
-          {isRegistering ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Verificando</span>
-            </>
-          ) : (
-            <>
-              <span>Verificar</span>
-              <CheckCircle2 className="w-5 h-5" />
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={sendOTP}
-          disabled={isRegistering}
-          className={`flex items-center space-x-2 w-full justify-center px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors ${
-            isRegistering ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-        >
-          {isRegistering ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            </>
-          ) : (
-            <>
-              <span>Volver a enviar</span>
-              <RotateCcw className="w-5 h-5" />
-            </>
-          )}
-        </button>
-      </div>
+    <div className="space-y-4">
+      <InputText
+        onChange={(value) => setVerificationCode(value)}
+        value={verificationCode}
+        required
+        label="Codigo de Verificación"
+        placeholder="Ingresa el código"
+        icon={Lock}
+        type="text"
+      />
       {registrationError && (
-        <div className="mt-4 text-red-300 bg-red-900/50 p-4 rounded-lg">
+        <div className="text-red-800 text-sm bg-red-50 p-3 rounded-lg border border-red-300 font-weight-semibold">
           {registrationError}
         </div>
       )}
+      <div className="flex space-x-4 w-full">
+        <Button
+          onClick={handleEmailVerification}
+          disabled={loading}
+          icon={RotateCcw}
+          variant="secondary"
+          size="full"
+        >
+          {loading ? <span>Enviando...</span> : <span>Volver a enviar</span>}
+        </Button>
+        <Button
+          onClick={handleRegistrationComplete}
+          disabled={loading}
+          icon={CheckCircle2}
+          size="full"
+        >
+          {loading ? <span>Verificando...</span> : <span>Verificar</span>}
+        </Button>
+      </div>
+      <div className="text-xs text-gray-500 mb-4">
+        Un código de verificación ha sido enviado a tu correo electrónico. Por
+        favor, ingrésalo para completar el registro.
+      </div>
     </div>
   );
 
   const renderPersonalForm = () => (
-    <form onSubmit={handlePersonalSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Nombre Completo */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="text"
-              required
-              value={formData.primer_nombre}
-              onChange={(e) =>
-                setFormData({ ...formData, primer_nombre: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
+    <form onSubmit={handlePersonalSubmit} className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <InputText
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, primer_nombre: value }))
+          }
+          value={formData.primer_nombre}
+          required
+          label="Nombre"
+          placeholder="Miguel"
+          icon={User}
+          type="text"
+        />
+        <InputText
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, segundo_nombre: value }))
+          }
+          value={formData.segundo_nombre}
+          label="Segundo Nombre"
+          placeholder="Juan"
+          icon={User}
+          type="text"
+        />
+        <InputText
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, apellido_paterno: value }))
+          }
+          value={formData.apellido_paterno}
+          required
+          label="Apellido Paterno"
+          placeholder="García"
+          icon={User}
+          type="text"
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Segundo Nombre
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="text"
-              value={formData.segundo_nombre}
-              onChange={(e) =>
-                setFormData({ ...formData, segundo_nombre: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Apellido paterno <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="text"
-              required
-              value={formData.apellido_paterno}
-              onChange={(e) =>
-                setFormData({ ...formData, apellido_paterno: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Apellido materno
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="text"
-              value={formData.apellido_materno}
-              onChange={(e) =>
-                setFormData({ ...formData, apellido_materno: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
+        <InputText
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, apellido_materno: value }))
+          }
+          value={formData.apellido_materno}
+          label="Apellido Materno"
+          placeholder="López"
+          icon={User}
+          type="text"
+        />
 
         {/* Correo Electrónico */}
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Correo Electrónico <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="email"
-              required
-              value={formData.correo}
-              onChange={(e) =>
-                setFormData({ ...formData, correo: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
+          <InputText
+            onChange={(value) =>
+              setFormData((prev) => ({ ...prev, correo: value }))
+            }
+            value={formData.correo}
+            required
+            label="Correo Electrónico"
+            placeholder="ejemplo@correo.com"
+            icon={Mail}
+            type="email"
+          />
         </div>
-
-        {/* Teléfono */}
+        {/* Telefono */}
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Teléfono
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Phone className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="tel"
-              required
-              value={formData.telefono}
-              onChange={(e) =>
-                setFormData({ ...formData, telefono: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
+          <InputText
+            onChange={(value) =>
+              setFormData((prev) => ({ ...prev, telefono: value }))
+            }
+            value={formData.telefono}
+            label="Teléfono"
+            placeholder="123456789"
+            icon={Phone}
+            type="tel"
+          />
         </div>
 
-        {/* Genero */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Sexo (Género)
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <PersonStanding className="h-5 w-5 text-gray-400" />
-            </div>
-            <select
-              name="genero"
-              required
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              onChange={(e) =>
-                setFormData({ ...formData, genero: e.target.value })
-              }
-            >
-              <option value="">Selecciona genero</option>
-              <option value="masculino">Masculino</option>
-              <option value="femenino">Femenino</option>
-            </select>
-          </div>
-        </div>
+        <SelectInput
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, genero: value }))
+          }
+          value={formData.genero}
+          label="Sexo (Género)"
+          options={[
+            { value: "", label: "Selecciona género" },
+            { value: "masculino", label: "Masculino" },
+            { value: "femenino", label: "Femenino" },
+          ]}
+        />
 
-        {/* Fecha de nacimiento */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Fecha de nacimiento
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Calendar className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="date"
-              required
-              value={formData.fecha_nacimiento}
-              onChange={(e) =>
-                setFormData({ ...formData, fecha_nacimiento: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
+        <InputDate
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, fecha_nacimiento: value }))
+          }
+          value={formData.fecha_nacimiento}
+          label="Fecha de Nacimiento"
+          max={new Date().toISOString().split("T")[0]}
+          icon={Calendar}
+        />
 
         {/* Contraseña */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Contraseña <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="password"
-              required
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="Mínimo 8 caracteres"
-            />
-          </div>
-        </div>
-
-        {/* Confirmar Contraseña */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Confirmar Contraseña <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              pattern="^[^<>]*$"
-              type="password"
-              required
-              value={formData.confirmPassword}
-              onChange={(e) =>
-                setFormData({ ...formData, confirmPassword: e.target.value })
-              }
-              className="pl-10 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </div>
+        <InputText
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, password: value }))
+          }
+          value={formData.password}
+          required
+          label="Contraseña"
+          placeholder="Mínimo 8 caracteres"
+          icon={Lock}
+          type="password"
+        />
+        {/* Contraseña */}
+        <InputText
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, confirmPassword: value }))
+          }
+          value={formData.confirmPassword}
+          required
+          label="Contraseña"
+          placeholder="Mínimo 8 caracteres"
+          icon={Lock}
+          type="password"
+        />
       </div>
 
-      {passwordError && (
-        <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
-          {passwordError}
+      {registrationError && (
+        <div className="text-red-800 text-sm bg-red-50 p-3 rounded-lg border border-red-300 font-weight-semibold">
+          {registrationError}
         </div>
       )}
 
       <div className="flex space-x-4 w-full">
-        <button
+        <Button
+          size="full"
+          disabled={loading}
           onClick={handlePersonalSubmit}
-          disabled={isRegistering}
-          className={`flex items-center space-x-2 w-full justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors ${
-            isRegistering ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          icon={CheckCircle2}
         >
-          {isRegistering ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Registrando...</span>
-            </>
-          ) : (
-            <>
-              <span>Registrarse</span>
-              <CheckCircle2 className="w-5 h-5" />
-            </>
-          )}
-        </button>
+          {loading ? <span>Registrando...</span> : <span>Registrarse</span>}
+        </Button>
       </div>
-      {registrationError && (
-        <div className="mt-4 text-red-300 bg-red-900/50 p-4 rounded-lg">
-          {registrationError}
-        </div>
-      )}
     </form>
   );
-
-  const renderContent = () => {
-    switch (step) {
-      case "personal":
-        return (
-          <>
-            {emailVerificationPage == true ? (
-              <>
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900">
-                    Verifica tu correo electronico
-                  </h2>
-                  <p className="mt-2 text-gray-600">
-                    Ingresa el codigo de verificacion enviado a{" "}
-                    {formData.correo}
-                  </p>
-                </div>
-                {renderCodeVerification()}
-              </>
-            ) : (
-              <>
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900">
-                    Información Personal
-                  </h2>
-                  <p className="mt-2 text-gray-600">
-                    Datos de acceso a tu cuenta
-                  </p>
-                </div>
-                {renderPersonalForm()}
-              </>
-            )}
-          </>
-        );
-      case "completed":
-        return (
-          <>
-            <div className="flex flex-col justify-center items-center">
-              <h1>Registro realizado correctamente</h1>
-              <p>Verifica tu direccion de correo electronico</p>
-              <CheckCircle2 />
-            </div>
-          </>
-        );
-    }
-  };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 pt-20">
@@ -571,7 +324,36 @@ export const NewRegistrationPage: React.FC<RegistrationPageProps> = ({
 
             {/* Right Panel - Form */}
             <div className="md:col-span-3 p-8 lg:p-12">
-              <div className="max-w-2xl mx-auto">{renderContent()}</div>
+              <div className="max-w-2xl mx-auto">
+                <>
+                  {emailVerificationPage == true ? (
+                    <>
+                      <div className="text-center mb-8">
+                        <h2 className="text-3xl font-bold text-gray-900">
+                          Verifica tu correo electronico
+                        </h2>
+                        <p className="mt-2 text-gray-600">
+                          Ingresa el codigo de verificacion enviado a{" "}
+                          {formData.correo}
+                        </p>
+                      </div>
+                      {renderCodeVerification()}
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center mb-8">
+                        <h2 className="text-3xl font-bold text-gray-900">
+                          Información Personal
+                        </h2>
+                        <p className="mt-2 text-gray-600">
+                          Datos de acceso a tu cuenta
+                        </p>
+                      </div>
+                      {renderPersonalForm()}
+                    </>
+                  )}
+                </>
+              </div>
             </div>
           </div>
         </div>

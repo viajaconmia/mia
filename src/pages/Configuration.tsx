@@ -43,13 +43,25 @@ import {
   BookOpenText,
   Bell,
   FileEdit,
+  User,
+  Lock,
+  Shield,
+  CheckCircle,
+  UserCog,
 } from "lucide-react";
-import { supabase } from "../services/supabaseClient";
-import Button from "../components/atom/Button";
 import Modal from "../components/molecule/Modal";
+import ProtectedRoute from "../middleware/ProtectedRoute";
+import useAuth from "../hooks/useAuth";
+import Button from "../components/atom/Button";
+import Loader from "../components/atom/Loader";
+import { useNotification } from "../hooks/useNotification";
+import { UserSingleton } from "../services/UserSingleton";
+import { ProtectedComponent } from "../middleware/ProtectedComponent";
 
 export const Configuration = () => {
-  const [selectedViajero, setSelectedViajero] = useState<Employee | null>(null);
+  const [selectedViajero, setSelectedViajero] = useState<InfoUsuario | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useState<
     | "companies"
     | "employees"
@@ -73,6 +85,7 @@ export const Configuration = () => {
     useState<CompanyWithTaxInfo | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const { user } = useAuth();
 
   const handleSaveFiscalData = (companyId: string, fiscalData: TaxInfo) => {
     setCompanies(
@@ -212,15 +225,10 @@ export const Configuration = () => {
       case "company":
         if (formMode === "create") {
           try {
-            const { data: user, error: userError } =
-              await supabase.auth.getUser();
-            if (userError) {
-              throw userError;
-            }
             if (!user) {
               throw new Error("No hay usuario autenticado");
             }
-            const responseCompany = await createNewEmpresa(data, user.user.id);
+            const responseCompany = await createNewEmpresa(data, user.id);
             if (!responseCompany.success) {
               throw new Error("No se pudo registrar a la empresa");
             }
@@ -230,18 +238,13 @@ export const Configuration = () => {
           }
         } else {
           try {
-            const { data: user, error: userError } =
-              await supabase.auth.getUser();
-            if (userError) {
-              throw userError;
-            }
             if (!user) {
               throw new Error("No hay usuario autenticado");
             }
             const responseCompany = await updateEmpresa(
               data,
               data.id_empresa,
-              user.user.id
+              user.id
             );
             if (!responseCompany.success) {
               throw new Error("No se pudo actualizar a la empresa");
@@ -255,11 +258,6 @@ export const Configuration = () => {
       case "employee":
         if (formMode === "create") {
           try {
-            const { data: user, error: userError } =
-              await supabase.auth.getUser();
-            if (userError) {
-              throw userError;
-            }
             if (!user) {
               throw new Error("No hay usuario autenticado");
             }
@@ -276,11 +274,6 @@ export const Configuration = () => {
           }
         } else {
           try {
-            const { data: user, error: userError } =
-              await supabase.auth.getUser();
-            if (userError) {
-              throw userError;
-            }
             if (!user) {
               throw new Error("No hay usuario autenticado");
             }
@@ -303,11 +296,6 @@ export const Configuration = () => {
         if (formMode === "create") {
           console.log(data);
           try {
-            const { data: user, error: userError } =
-              await supabase.auth.getUser();
-            if (userError) {
-              throw userError;
-            }
             if (!user) {
               throw new Error("No hay usuario autenticado");
             }
@@ -688,25 +676,38 @@ export const Configuration = () => {
                               </button>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={() => {
-                                  setFormMode("edit");
-                                  setSelectedItem(company);
-                                  setShowForm(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-900 mr-4"
-                              >
-                                <Pencil className="h-5 w-5" />
-                              </button>
                               {company.rn != 1 && (
-                                <button
-                                  onClick={() =>
-                                    handleDelete("company", company.id_empresa)
-                                  }
-                                  className="text-red-600 hover:text-red-900"
+                                <ProtectedComponent
+                                  admit={{
+                                    administrador: true,
+                                    reservante: false,
+                                    viajero: false,
+                                    consultor: false,
+                                    "no-rol": false,
+                                  }}
                                 >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
+                                  <button
+                                    onClick={() => {
+                                      setFormMode("edit");
+                                      setSelectedItem(company);
+                                      setShowForm(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-900 mr-4"
+                                  >
+                                    <Pencil className="h-5 w-5" />
+                                  </button>
+                                  {/* <button
+                                    onClick={() =>
+                                      handleDelete(
+                                        "company",
+                                        company.id_empresa
+                                      )
+                                    }
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </button> */}
+                                </ProtectedComponent>
                               )}
                             </td>
                           </tr>
@@ -756,9 +757,17 @@ export const Configuration = () => {
                               <br />
                               {employee.telefono}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium grid grid-cols-2 gap-2 place-items-center">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
                               {employee.rn != 1 && (
-                                <>
+                                <ProtectedComponent
+                                  admit={{
+                                    administrador: true,
+                                    reservante: false,
+                                    viajero: false,
+                                    consultor: false,
+                                    "no-rol": false,
+                                  }}
+                                >
                                   <button
                                     onClick={() => {
                                       setFormMode("edit");
@@ -786,7 +795,15 @@ export const Configuration = () => {
                                   >
                                     Editar rol
                                   </Button> */}
-                                </>
+                                  <Button
+                                    onClick={() => {
+                                      setSelectedViajero(employee);
+                                    }}
+                                    variant="secondary"
+                                  >
+                                    Definir rol
+                                  </Button>
+                                </ProtectedComponent>
                               )}
                             </td>
                           </tr>
@@ -988,14 +1005,263 @@ export const Configuration = () => {
       )}
       <Modal
         open={!!selectedViajero}
-        title={`Manejo rol del usuario: ${selectedViajero?.primer_nombre}`}
-        subtitle="Cuando crees el rol del usuario se creara una cuenta con este rol para que pueda acceder"
-        onClose={function (): void {
+        title={`Asignar rol`}
+        subtitle="Configura el acceso inicial"
+        onClose={() => {
           setSelectedViajero(null);
         }}
+        icon={Shield}
       >
-        <h1>{JSON.stringify(selectedViajero)}</h1>
+        <DefinirRol
+          viajero={selectedViajero}
+          onClose={() => {
+            setSelectedViajero(null);
+          }}
+        ></DefinirRol>
       </Modal>
     </div>
   );
+};
+
+const DefinirRol = ({
+  viajero,
+  onClose,
+}: {
+  viajero: InfoUsuario | null;
+  onClose: () => void;
+}) => {
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [valid, setValid] = useState<boolean>(false);
+  const { validarViajeroToRol, loading, viajeroToUsuarioWithRol } = useAuth();
+  const notificationContext = useNotification();
+
+  if (!viajero) return null;
+
+  // Verifica si notificationContext existe antes de usar showNotification
+  const showNotification = notificationContext?.showNotification ?? (() => {});
+
+  console.log(viajero);
+  const roles = [
+    {
+      id: "consultor",
+      label: "Consultor",
+      icon: CheckCircle,
+      color: "bg-blue-500",
+      description: "Puede ver la información",
+    },
+    {
+      id: "viajero",
+      label: "Viajero",
+      icon: User,
+      color: "bg-blue-500",
+      description: "Puede ver las reservas",
+    },
+    {
+      id: "reservante",
+      label: "Reservante",
+      icon: Shield,
+      color: "bg-green-500",
+      description: "Gestión del sistema",
+    },
+    {
+      id: "administrador",
+      label: "Administrador",
+      icon: UserCog,
+      color: "bg-purple-500",
+      description: "Acceso completo",
+    },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRole || !password) return;
+    if (!UserSingleton.getInstance().getUser()?.info?.id_agente)
+      throw new Error("No hay usuario");
+
+    try {
+      const { message } = await viajeroToUsuarioWithRol({
+        correo: viajero.correo,
+        id_agente:
+          UserSingleton.getInstance().getUser()?.info?.id_agente ?? null,
+        id_viajero: viajero.id_viajero,
+        password,
+        rol: selectedRole,
+      });
+      showNotification("success", message);
+      onClose();
+    } catch (error: any) {
+      console.error(error);
+      showNotification("error", error.message);
+    }
+  };
+
+  useEffect(() => {
+    validarViajeroToRol(viajero.correo)
+      .then((result) => {
+        setValid(result);
+      })
+      .catch((error) => {
+        console.log(error);
+        onClose();
+      });
+  }, []);
+
+  const isFormValid = selectedRole && password.length >= 8;
+
+  return (
+    <div className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-md mx-auto">
+      {/* Header
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Shield className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800">Asignar Rol</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Configura el acceso inicial
+        </p>
+      </div> */}
+      {/* User Info */}
+      <div className="bg-gray-50 rounded-lg p-4 mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <User className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-800">{viajero.nombre}</p>
+            <p className="text-sm text-gray-600">{viajero.correo}</p>
+          </div>
+        </div>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Role Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Seleccionar Rol
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {roles.map((role) => {
+              const IconComponent = role.icon;
+              return (
+                <label
+                  key={role.id}
+                  className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                    selectedRole === role.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={role.id}
+                    checked={selectedRole === role.id}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-8 h-8 ${role.color} rounded-full flex items-center justify-center mr-3`}
+                  >
+                    <IconComponent className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-800">
+                      {role.label}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {role.description}
+                    </div>
+                  </div>
+                  {selectedRole === role.id && (
+                    <CheckCircle className="w-5 h-5 text-blue-500" />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Password Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Contraseña Inicial
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              minLength={8}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm font-medium"
+            >
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+          {password && password.length < 6 && (
+            <p className="text-xs text-red-500 mt-1">
+              La contraseña debe tener al menos 6 caracteres
+            </p>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-3 pt-4">
+          <Button type="submit" disabled={!isFormValid || loading} size="full">
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Guardando...
+              </div>
+            ) : (
+              "Asignar Rol"
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export type Empresa = {
+  id_empresa: string;
+  razon_social: string;
+};
+
+export type InfoUsuario = {
+  id_agente: string;
+  monto_credito: string | null;
+  saldo: string;
+  tiene_credito_consolidado: number;
+  nombre: string;
+  notas: string;
+  por_confirmar: string;
+  vendedor: string | null;
+  created_agente: string; // ISO string, puedes usar Date si prefieres
+  id_viajero: string;
+  primer_nombre: string;
+  segundo_nombre: string | null;
+  apellido_paterno: string;
+  apellido_materno: string | null;
+  correo: string;
+  fecha_nacimiento: string | null;
+  genero: string | null;
+  telefono: string | null;
+  created_at: string;
+  updated_at: string;
+  nacionalidad: string | null;
+  numero_pasaporte: string | null;
+  numero_empleado: string | null;
+  nombre_agente_completo: string;
+  empresas: Empresa[];
+  rn: number;
+  wallet: string;
 };

@@ -9,7 +9,6 @@ import {
   Settings,
   LifeBuoy,
   LogOut,
-  Sparkles,
   HelpCircle,
   BarChart,
   BookOpen,
