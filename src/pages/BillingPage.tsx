@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   AlertCircle,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "../helpers/helpers";
+import { formatCurrency, formatDate } from "../utils/format";
 import { DataInvoice, DescargaFactura, ProductInvoice } from "../types/billing";
 import { useApi } from "../hooks/useApi";
 import { useRoute, Link } from "wouter";
@@ -21,7 +21,7 @@ import { HEADERS_API, URL } from "../constants/apiConstant";
 import { DataFiscalModalWithCompanies } from "../components/DataFiscalModalWithCompanies";
 import { CompanyWithTaxInfo } from "../types";
 import { Root } from "../types/billing";
-import { useUser } from "../context/authContext";
+import { useUser } from "../context/userContext";
 
 const cfdiUseOptions = [
   { value: "P01", label: "Por definir" },

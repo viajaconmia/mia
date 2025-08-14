@@ -1,4 +1,4 @@
-import { supabase } from "../services/supabaseClient";
+import { UserSingleton } from "../services/UserSingleton";
 import {
   getCompaniesAgent,
   getCompaniesAgentViajeros,
@@ -12,11 +12,11 @@ import {
 
 export const fetchCompaniesAgent = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
+    if (!user.info) throw new Error("error");
 
-    const companiesData = await getCompaniesAgent(user.user.id);
+    const companiesData = await getCompaniesAgent(user.info.id_agente);
     return companiesData.data || [];
   } catch (error) {
     console.error("Error fetching companies:", error);
@@ -26,11 +26,11 @@ export const fetchCompaniesAgent = async () => {
 
 export const fetchViajerosCompanies = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
+    if (!user.info) throw new Error("error");
 
-    const employeesData = await getCompaniesAgentViajeros(user.user.id);
+    const employeesData = await getCompaniesAgentViajeros(user.info.id_agente);
     return employeesData.data || [];
   } catch (error) {
     console.error("Error fetching employees:", error);
@@ -40,11 +40,11 @@ export const fetchViajerosCompanies = async () => {
 
 export const fetchEmpresasDatosFiscales = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
+    if (!user.info) throw new Error("error");
 
-    const employeesData = await getEmpresasDatosFiscales(user.user.id);
+    const employeesData = await getEmpresasDatosFiscales(user.info.id_agente);
     return employeesData.data || [];
   } catch (error) {
     console.error("Error fetching employees:", error);
@@ -54,11 +54,11 @@ export const fetchEmpresasDatosFiscales = async () => {
 
 export const fetchPaymentMethods = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
+    if (!user.info) throw new Error("error");
 
-    const paymentMehtods = await getPaymentMethods(user.user.id);
+    const paymentMehtods = await getPaymentMethods(user.info.id_agente);
     if (paymentMehtods.error) throw paymentMehtods.error;
     return paymentMehtods || [];
   } catch (error) {
@@ -69,11 +69,11 @@ export const fetchPaymentMethods = async () => {
 
 export const fetchCreditAgent = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
+    if (!user.info) throw new Error("error");
 
-    const creditData = await getCreditAgent(user.user.id);
+    const creditData = await getCreditAgent(user.info.id_agente);
     console.log(creditData);
     return creditData || [];
   } catch (error) {
@@ -84,10 +84,11 @@ export const fetchCreditAgent = async () => {
 
 export const fetchPagosAgent = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
-    const paymentData = await getPagosAgente(user.user.id);
+    if (!user.info) throw new Error("error");
+
+    const paymentData = await getPagosAgente(user.info.id_agente);
 
     console.log(paymentData);
     return paymentData || [];
@@ -99,10 +100,11 @@ export const fetchPagosAgent = async () => {
 
 export const fetchPendientesAgent = async () => {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const user = UserSingleton.getInstance().getUser();
     if (!user) throw new Error("No hay usuario autenticado");
-    const paymentData = await getPendientesAgente(user.user.id);
+    if (!user.info) throw new Error("error");
+
+    const paymentData = await getPendientesAgente(user.info.id_agente);
 
     console.log(paymentData);
     return paymentData || [];
