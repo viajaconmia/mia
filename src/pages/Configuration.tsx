@@ -1,47 +1,27 @@
 import React, { useEffect, useState } from "react";
-import {
-  Company,
-  Employee,
-  Assignment,
-  FormMode,
-  Tag,
-  Policy,
-  TaxInfo,
-  CompanyWithTaxInfo,
-} from "../types";
+import { Employee, FormMode, TaxInfo, CompanyWithTaxInfo } from "../types";
 import { CompanyForm } from "../components/CompanyForm";
 import { EmployeeForm } from "../components/EmployeeForm";
-import { AssignmentForm } from "../components/AssignmentForm";
-import { TagForm } from "../components/TagForm";
-import { PolicyForm } from "../components/PolicyForm";
-import { DatosFiscalesForm } from "../components/DatosFiscalesForm";
 import { FiscalDataModal } from "../components/FiscalDataModal";
 import {
   createNewEmpresa,
   createNewViajero,
-  createNewDatosFiscales,
   updateEmpresa,
   updateViajero,
   deleteTraveler,
   deleteCompany,
 } from "../hooks/useDatabase";
 import {
-  fetchCompaniesAgent,
   fetchViajerosCompanies,
   fetchEmpresasDatosFiscales,
 } from "../hooks/useFetch";
 import {
   Building2,
   Users,
-  Link,
   Search,
   Plus,
   Pencil,
   Trash2,
-  Tags,
-  BookOpen,
-  BookOpenText,
-  Bell,
   FileEdit,
   User,
   Lock,
@@ -50,33 +30,24 @@ import {
   UserCog,
 } from "lucide-react";
 import Modal from "../components/molecule/Modal";
-import ProtectedRoute from "../middleware/ProtectedRoute";
 import useAuth from "../hooks/useAuth";
 import Button from "../components/atom/Button";
-import Loader from "../components/atom/Loader";
 import { useNotification } from "../hooks/useNotification";
 import { UserSingleton } from "../services/UserSingleton";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
+import { InputText } from "../components/atom/Input";
+import PageContainer from "../components/atom/PageContainer";
+import { TabsList } from "../components/molecule/TabsList";
 
 export const Configuration = () => {
   const [selectedViajero, setSelectedViajero] = useState<InfoUsuario | null>(
     null
   );
-  const [activeTab, setActiveTab] = useState<
-    | "companies"
-    | "employees"
-    | "assignments"
-    | "tags"
-    | "policies"
-    | "notifications"
-    | "taxInfo"
-  >("companies");
+  const [activeTab, setActiveTab] = useState<"companies" | "employees">(
+    "companies"
+  );
   const [companies, setCompanies] = useState<CompanyWithTaxInfo[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [datosFiscales, setDatosFiscales] = useState<TaxInfo[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [policies, setPolicies] = useState<Policy[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
@@ -84,7 +55,6 @@ export const Configuration = () => {
   const [selectedCompany, setSelectedCompany] =
     useState<CompanyWithTaxInfo | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
   const { user } = useAuth();
 
   const handleSaveFiscalData = (companyId: string, fiscalData: TaxInfo) => {
@@ -96,68 +66,24 @@ export const Configuration = () => {
       )
     );
     setShowModal(false);
-    setShowNotification(true);
-    setTimeout(() => setShowNotification(false), 3000);
   };
 
   const fetchData = async () => {
     if (activeTab === "companies") {
       const data = await fetchEmpresasDatosFiscales();
       if (data && Array.isArray(data)) {
-        const formattedCompanies: CompanyWithTaxInfo[] = data.map(
-          (company) => ({
-            ...company,
-            id_empresa: company.id_empresa,
-            razon_social: company.razon_social,
-            nombre_comercial: company.nombre_comercial,
-            empresa_direccion: company.empresa_direccion || "", // Asegurar que haya dirección
-            empresa_municipio: company.empresa_municipio,
-            empresa_estado: company.empresa_estado,
-            empresa_colonia: company.empresa_colonia,
-            empresa_cp: company.empresa_cp,
-            tipo_persona: company.tipo_persona,
-            taxInfo: company.id_datos_fiscales
-              ? {
-                  id_datos_fiscales: company.id_datos_fiscales,
-                  id_empresa: company.id_empresa,
-                  rfc: company.rfc,
-                  calle: company.calle,
-                  colonia: company.colonia,
-                  municipio: company.municipio,
-                  estado: company.estado,
-                  codigo_postal_fiscal: company.codigo_postal_fiscal.toString(),
-                  regimen_fiscal: company.regimen_fiscal || "",
-                  razon_social: company.razon_social_df || "",
-                }
-              : null,
-          })
-        );
-
+        const formattedCompanies: CompanyWithTaxInfo[] = data;
         setCompanies(formattedCompanies);
-        console.log(companies);
       }
     } else if (activeTab === "employees") {
       const data = await fetchViajerosCompanies();
       setEmployees(data);
-    } else if (activeTab === "taxInfo") {
-      const data = await fetchEmpresasDatosFiscales();
-      setDatosFiscales(data);
     }
   };
 
   useEffect(() => {
     fetchData();
   }, [activeTab]);
-
-  // List of departments (could be moved to a separate configuration)
-  const departments = [
-    "Ingenieria",
-    "Marketing",
-    "Ventas",
-    "Recursos Humanos",
-    "Finanzas",
-    "Operaciones",
-  ];
 
   const handleSearch = (items: any[]) => {
     if (!searchTerm) return items;
@@ -170,10 +96,7 @@ export const Configuration = () => {
     );
   };
 
-  const handleDelete = async (
-    type: "company" | "employee" | "assignment" | "tag" | "policy",
-    id: string
-  ) => {
+  const handleDelete = async (type: "company" | "employee", id: string) => {
     console.log(id);
     if (!confirm("Estas seguro que quieres eliminarlo?")) return;
 
@@ -190,26 +113,6 @@ export const Configuration = () => {
         if (respondeDeleteEmployee.success) {
           setEmployees(employees.filter((e) => e.id_viajero !== id));
         }
-        /*setAssignments(assignments.filter((a) => a.employeeId !== id));
-        setPolicies(policies.map(p => ({
-          ...p,
-          employeeIds: p.employeeIds.filter(eId => eId !== id)
-        })));*/
-        break;
-      case "assignment":
-        setAssignments(assignments.filter((a) => a.id !== id));
-        break;
-      case "tag":
-        setTags(tags.filter((t) => t.id !== id));
-        setEmployees(
-          employees.map((e) => ({
-            ...e,
-            tagIds: e.tagIds.filter((tId) => tId !== id),
-          }))
-        );
-        break;
-      case "policy":
-        setPolicies(policies.filter((p) => p.id !== id));
         break;
     }
   };
@@ -218,8 +121,6 @@ export const Configuration = () => {
     type: "company" | "employee" | "assignment" | "tag" | "policy" | "taxInfo",
     data: any
   ) => {
-    const id = formMode === "create" ? crypto.randomUUID() : selectedItem.id;
-    const newData = { ...data, id };
     console.log(data);
     switch (type) {
       case "company":
@@ -291,49 +192,6 @@ export const Configuration = () => {
           }
         }
         break;
-
-      case "taxInfo":
-        if (formMode === "create") {
-          console.log(data);
-          try {
-            if (!user) {
-              throw new Error("No hay usuario autenticado");
-            }
-            const responseCompany = await createNewDatosFiscales(data);
-            if (!responseCompany.success) {
-              throw new Error("No se pudo registrar los datos fiscales");
-            }
-            console.log(responseCompany);
-          } catch (error) {
-            console.error("Error creando nuevis datos fiscales", error);
-          }
-        } else {
-          setCompanies(
-            companies.map((c) => (c.id_empresa === id ? newData : c))
-          );
-        }
-        break;
-      case "assignment":
-        if (formMode === "create") {
-          setAssignments([...assignments, newData]);
-        } else {
-          setAssignments(assignments.map((a) => (a.id === id ? newData : a)));
-        }
-        break;
-      case "tag":
-        if (formMode === "create") {
-          setTags([...tags, newData]);
-        } else {
-          setTags(tags.map((t) => (t.id === id ? newData : t)));
-        }
-        break;
-      case "policy":
-        if (formMode === "create") {
-          setPolicies([...policies, newData]);
-        } else {
-          setPolicies(policies.map((p) => (p.id === id ? newData : p)));
-        }
-        break;
     }
     fetchData();
     setShowForm(false);
@@ -360,142 +218,30 @@ export const Configuration = () => {
             initialData={selectedItem}
           />
         );
-      case "assignments":
-        return (
-          <AssignmentForm
-            companies={companies}
-            employees={employees}
-            onSubmit={(data) => handleSubmit("assignment", data)}
-            onCancel={() => setShowForm(false)}
-            initialData={selectedItem}
-          />
-        );
-      case "taxInfo":
-        return (
-          <DatosFiscalesForm
-            onSubmit={(data) => handleSubmit("taxInfo", data)}
-            onCancel={() => setShowForm(false)}
-            initialData={selectedItem}
-          />
-        );
-      case "tags":
-        return (
-          <TagForm
-            onSubmit={(data) => handleSubmit("tag", data)}
-            onCancel={() => setShowForm(false)}
-            initialData={selectedItem}
-            employees={employees}
-          />
-        );
-      case "policies":
-        return (
-          <PolicyForm
-            onSubmit={(data) => handleSubmit("policy", data)}
-            onCancel={() => setShowForm(false)}
-            departments={departments}
-            employees={employees}
-            initialData={selectedItem}
-            empresas={companies}
-          />
-        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+    <PageContainer>
+      <>
+        {/* // <div className="min-h-screen bg-gray-50 pt-12">
+    //   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"> */}
+        {/* <h1 className="text-xl font-bold text-gray-100 mb-4">
           Configuración de la cuenta
-        </h1>
+        </h1> */}
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex flex-wrap">
-              <button
-                onClick={() => {
-                  setActiveTab("companies");
-                  setShowForm(false);
-                }}
-                className={`${
-                  activeTab === "companies"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <Building2 className="mr-2 h-5 w-5" />
-                Compañias
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("employees");
-                  setShowForm(false);
-                }}
-                className={`${
-                  activeTab === "employees"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <Users className="mr-2 h-5 w-5" />
-                Viajeros
-              </button>
-              {/* <button
-                onClick={() => setActiveTab('assignments')}
-                className={`${
-                  activeTab === 'assignments'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <Link className="mr-2 h-5 w-5" />
-                Assignments
-              </button> */}
-              {/* <button
-                onClick={() => setActiveTab('taxInfo')}
-                className={`${activeTab === 'taxInfo'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <BookOpenText className="mr-2 h-5 w-5" />
-                Datos fiscales
-              </button> */}
-              {/*<button
-                onClick={() => setActiveTab('tags')}
-                className={`${activeTab === 'tags'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <Tags className="mr-2 h-5 w-5" />
-                Etiquetas
-              </button>*/}
-              {/*<button
-                onClick={() => setActiveTab('policies')}
-                className={`${activeTab === 'policies'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <BookOpen className="mr-2 h-5 w-5" />
-                Politicas
-              </button>*/}
-              <button
-                onClick={() => {
-                  setActiveTab("notifications");
-                  setShowForm(false);
-                }}
-                className={`${
-                  activeTab === "notifications"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                } flex items-center w-1/5 py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                <Bell className="mr-2 h-5 w-5" />
-                Notificaciones
-              </button>
-            </nav>
-          </div>
+        <div className="bg-white rounded-lg shadow mt-8">
+          <TabsList
+            tabs={[
+              { tab: "companies", icon: Building2 },
+              { tab: "employees", icon: Users },
+            ]}
+            activeTab={activeTab}
+            onChange={(tab) => {
+              setActiveTab(tab as "companies" | "employees");
+              setShowForm(false);
+            }}
+          />
 
           <div className="p-6">
             {showForm ? (
@@ -506,7 +252,7 @@ export const Configuration = () => {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
-                      pattern="^[^<>]*$"
+                      pattern="^[^<div>]*$"
                       type="text"
                       placeholder="Buscar..."
                       value={searchTerm}
@@ -563,71 +309,6 @@ export const Configuration = () => {
                             </th>
                           </>
                         )}
-                        {activeTab === "taxInfo" && (
-                          <>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Empresa
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              RFC
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Dirección
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Estado/Municipio
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Código Postal
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Régimen Fiscal
-                            </th>
-                          </>
-                        )}
-
-                        {activeTab === "assignments" && (
-                          <>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Compañia
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Empleado
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Rol
-                            </th>
-                          </>
-                        )}
-                        {activeTab === "tags" && (
-                          <>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Nombre de la etiqueta
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Descripción
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Usada por
-                            </th>
-                          </>
-                        )}
-                        {activeTab === "policies" && (
-                          <>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Nombre de politica
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Tipo
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Estatus
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Validez
-                            </th>
-                          </>
-                        )}
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Acciones
                         </th>
@@ -656,7 +337,7 @@ export const Configuration = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {company.empresa_direccion}
+                              {company.empresa_direccion || ""}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {company.tipo_persona}
@@ -741,7 +422,10 @@ export const Configuration = () => {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
                                 {employee.empresas
-                                  ?.map((emp) => emp.razon_social)
+                                  ?.map(
+                                    (emp: { razon_social: any }) =>
+                                      emp.razon_social
+                                  )
                                   .join(", ")}
                               </div>
                             </td>
@@ -808,185 +492,6 @@ export const Configuration = () => {
                             </td>
                           </tr>
                         ))}
-                      {activeTab === "taxInfo" &&
-                        datosFiscales.map((datosFiscal) => {
-                          const empresa = companies.find(
-                            (c) => c.id_empresa === datosFiscal.id_empresa
-                          ); // Suponiendo que 'companies' contiene las empresas relacionadas
-                          return (
-                            <tr key={datosFiscal.id_datos_fiscales}>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  {/* Aquí puedes mostrar algo relacionado con la empresa o el ID */}
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {empresa
-                                      ? empresa.razon_social
-                                      : "Empresa no encontrada"}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {datosFiscal.rfc || "-"}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {datosFiscal.calle || "-"},{" "}
-                                {datosFiscal.colonia || "-"}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {datosFiscal.estado || "-"},{" "}
-                                {datosFiscal.municipio || "-"}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {datosFiscal.codigo_postal_fiscal || "-"}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {datosFiscal.regimen_fiscal || "-"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button
-                                  onClick={() => {
-                                    setFormMode("edit");
-                                    setSelectedItem(datosFiscal);
-                                    setShowForm(true);
-                                  }}
-                                  className="text-blue-600 hover:text-blue-900 mr-4"
-                                >
-                                  <Pencil className="h-5 w-5" />
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleDelete(
-                                      "datosFiscal",
-                                      datosFiscal.id_datos_fiscales
-                                    )
-                                  }
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-
-                      {activeTab === "tags" &&
-                        handleSearch(tags).map((tag) => {
-                          const taggedEmployees = employees.filter((e) =>
-                            e.tagIds?.includes(tag.id)
-                          );
-                          return (
-                            <tr key={tag.id}>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <div
-                                    className="h-6 w-6 rounded mr-2"
-                                    style={{ backgroundColor: tag.color }}
-                                  />
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {tag.name}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {tag.description || "-"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {taggedEmployees.length} employees
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button
-                                  onClick={() => {
-                                    setFormMode("edit");
-                                    setSelectedItem(tag);
-                                    setShowForm(true);
-                                  }}
-                                  className="text-blue-600 hover:text-blue-900 mr-4"
-                                >
-                                  <Pencil className="h-5 w-5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete("tag", tag.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      {activeTab === "policies" &&
-                        handleSearch(policies).map((policy) => (
-                          <tr key={policy.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {policy.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {policy.description.length > 50
-                                  ? policy.description.substring(0, 50) + "..."
-                                  : policy.description}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  policy.type === "budget"
-                                    ? "bg-green-100 text-green-800"
-                                    : policy.type === "schedule"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : policy.type === "benefits"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {policy.type.charAt(0).toUpperCase() +
-                                  policy.type.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  policy.status === "active"
-                                    ? "bg-green-100 text-green-800"
-                                    : policy.status === "inactive"
-                                    ? "bg-gray-100 text-gray-800"
-                                    : policy.status === "draft"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {policy.status.charAt(0).toUpperCase() +
-                                  policy.status.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(policy.startDate).toLocaleDateString()}{" "}
-                              -
-                              <br />
-                              {new Date(policy.endDate).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={() => {
-                                  setFormMode("edit");
-                                  setSelectedItem(policy);
-                                  setShowForm(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-900 mr-4"
-                              >
-                                <Pencil className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDelete("policy", policy.id)
-                                }
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -994,32 +499,32 @@ export const Configuration = () => {
             )}
           </div>
         </div>
-      </div>
-      {selectedCompany && (
-        <FiscalDataModal
-          company={selectedCompany}
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSave={handleSaveFiscalData}
-        />
-      )}
-      <Modal
-        open={!!selectedViajero}
-        title={`Asignar rol`}
-        subtitle="Configura el acceso inicial"
-        onClose={() => {
-          setSelectedViajero(null);
-        }}
-        icon={Shield}
-      >
-        <DefinirRol
-          viajero={selectedViajero}
+        {selectedCompany && (
+          <FiscalDataModal
+            company={selectedCompany}
+            isOpen={showModal}
+            onClose={() => setShowModal(false)}
+            onSave={handleSaveFiscalData}
+          />
+        )}
+        <Modal
+          open={!!selectedViajero}
+          title={`Asignar rol`}
+          subtitle="Configura el acceso inicial"
           onClose={() => {
             setSelectedViajero(null);
           }}
-        ></DefinirRol>
-      </Modal>
-    </div>
+          icon={Shield}
+        >
+          <DefinirRol
+            viajero={selectedViajero}
+            onClose={() => {
+              setSelectedViajero(null);
+            }}
+          ></DefinirRol>
+        </Modal>
+      </>
+    </PageContainer>
   );
 };
 
@@ -1033,7 +538,7 @@ const DefinirRol = ({
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [valid, setValid] = useState<boolean>(false);
+  const [, setValid] = useState<boolean>(false);
   const { validarViajeroToRol, loading, viajeroToUsuarioWithRol } = useAuth();
   const notificationContext = useNotification();
 
@@ -1111,7 +616,7 @@ const DefinirRol = ({
   const isFormValid = selectedRole && password.length >= 8;
 
   return (
-    <div className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-md mx-auto">
+    <div className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-md mx-auto p-4">
       {/* Header
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -1129,7 +634,9 @@ const DefinirRol = ({
             <User className="w-5 h-5 text-blue-600" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">{viajero.nombre}</p>
+            <p className="font-semibold text-gray-800">
+              {viajero.nombre_agente_completo}
+            </p>
             <p className="text-sm text-gray-600">{viajero.correo}</p>
           </div>
         </div>
@@ -1184,27 +691,25 @@ const DefinirRol = ({
 
         {/* Password Input */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700">
             Contraseña Inicial
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
+            <InputText
+              icon={Lock}
               type={showPassword ? "text" : "password"}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(value) => setPassword(value)}
               placeholder="Mínimo 8 caracteres"
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-              minLength={8}
-              required
             />
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm font-medium"
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm font-medium"
             >
               {showPassword ? "Ocultar" : "Mostrar"}
-            </button>
+            </Button>
           </div>
           {password && password.length < 6 && (
             <p className="text-xs text-red-500 mt-1">
@@ -1222,7 +727,7 @@ const DefinirRol = ({
                 Guardando...
               </div>
             ) : (
-              "Asignar Rol"
+              "Asignar"
             )}
           </Button>
         </div>

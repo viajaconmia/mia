@@ -20,6 +20,7 @@ import Loader from "./components/atom/Loader.tsx";
 import { Reserva } from "./pages/Reserva.tsx";
 import { Notification } from "./components/molecule/Notification.tsx";
 import { NotificationProvider } from "./hooks/useNotification.tsx";
+import { CartProvider } from "./context/cartContext.tsx";
 
 const RouteSecure: React.FC<{
   path: string;
@@ -49,59 +50,61 @@ createRoot(document.getElementById("root")!).render(
     <NotificationProvider>
       <Notification></Notification>
       <UserProvider>
-        <NavigationBar />
-        <Switch>
-          <RouteSecure component={Reserva} path={ROUTES.BOOKINGS.ID} />
-          <RouteSecure component={FAQPage} path={ROUTES.FAQ} />
-          <RouteSecure
-            component={NewRegistrationPage}
-            path={ROUTES.AUTH.REGISTER}
-          />
-          <RouteSecure component={Inicio} path={ROUTES.HOME} />
-          <RouteSecure
-            restricted={true}
-            component={HotelSearchPage}
-            path={ROUTES.HOTELS.SEARCH}
-          />
-          <RouteSecure
-            restricted={true}
-            component={Configuration}
-            path={ROUTES.SETTINGS}
-          />
-          <RouteSecure
-            restricted={true}
-            component={Dashboard}
-            path={ROUTES.DASHBOARD}
-          />
-          <RouteSecure
-            restricted={true}
-            component={AdminDashboard}
-            path={ROUTES.CONSULTAS}
-          />
-          <RouteSecure
-            restricted={true}
-            component={ProfilePage}
-            path={ROUTES.PROFILE}
-          />
-          <RouteSecure
-            restricted={true}
-            component={BookingsReportPage}
-            path={ROUTES.BOOKINGS.HOME}
-          />
+        <CartProvider>
+          <NavigationBar />
+          <Switch>
+            <RouteSecure component={Reserva} path={ROUTES.BOOKINGS.ID} />
+            <RouteSecure component={FAQPage} path={ROUTES.FAQ} />
+            <RouteSecure
+              component={NewRegistrationPage}
+              path={ROUTES.AUTH.REGISTER}
+            />
+            <RouteSecure component={Inicio} path={ROUTES.HOME} />
+            <RouteSecure
+              restricted={true}
+              component={HotelSearchPage}
+              path={ROUTES.HOTELS.SEARCH}
+            />
+            <RouteSecure
+              restricted={true}
+              component={Configuration}
+              path={ROUTES.SETTINGS}
+            />
+            <RouteSecure
+              restricted={true}
+              component={Dashboard}
+              path={ROUTES.DASHBOARD}
+            />
+            <RouteSecure
+              restricted={true}
+              component={AdminDashboard}
+              path={ROUTES.CONSULTAS}
+            />
+            <RouteSecure
+              restricted={true}
+              component={ProfilePage}
+              path={ROUTES.PROFILE}
+            />
+            <RouteSecure
+              restricted={true}
+              component={BookingsReportPage}
+              path={ROUTES.BOOKINGS.HOME}
+            />
 
-          <RouteSecure
-            component={ResetPassword}
-            path={ROUTES.AUTH.RESET_PASSWORD}
-          />
-          <Route path={"*"}>
-            <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50">
-              <Loader></Loader>
-              <h1 className="text-sky-950 font-semibold text-lg">
-                ERROR 404: Página no encontrada
-              </h1>
-            </div>
-          </Route>
-        </Switch>
+            <RouteSecure
+              component={ResetPassword}
+              path={ROUTES.AUTH.RESET_PASSWORD}
+            />
+            <Route path={"*"}>
+              <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50">
+                <Loader></Loader>
+                <h1 className="text-sky-950 font-semibold text-lg">
+                  ERROR 404: Página no encontrada
+                </h1>
+              </div>
+            </Route>
+          </Switch>
+        </CartProvider>
       </UserProvider>
     </NotificationProvider>
   </StrictMode>

@@ -11,6 +11,7 @@ import {
   Building2,
   ArrowRight,
   Phone,
+  ShoppingCart,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
 import { Loader } from "../Loader";
@@ -20,6 +21,9 @@ import { useLocation } from "wouter";
 import { NavigationLink } from "../atom/NavigationLink";
 import ROUTES from "../../constants/routes";
 import { ProtectedComponent } from "../../middleware/ProtectedComponent";
+import { TabsList } from "../molecule/TabsList";
+import PageContainer from "../atom/PageContainer";
+import { Cart } from "../Cart";
 
 const Inicio = () => {
   const [promptCount, setPromptCount] = useState(0);
@@ -29,6 +33,7 @@ const Inicio = () => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Reservation | null>(null);
+  const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
   const { authState } = useUser();
 
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -107,9 +112,9 @@ const Inicio = () => {
   const promptLimitReached = !authState.isAuthenticated && promptCount >= 2;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-400 to-blue-300">
-      <div className="flex min-h-screen pt-16">
-        {/* Chat Panel - Left Side */}
+    <PageContainer>
+      {/* Chat Panel - Left Side */}
+      <div className="flex justify-end">
         <div
           className={`${
             showWelcomeMessage ? "w-full" : "w-2/3"
@@ -231,7 +236,7 @@ const Inicio = () => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col h-full bg-gradient-to-br from-blue-500 via-blue-400 to-blue-600">
+            <div className="flex flex-col h-full border-r">
               {/* Manual Reservation Button */}
               <div className="p-4 bg-white/10 backdrop-blur-sm">
                 <button
@@ -275,7 +280,7 @@ const Inicio = () => {
               </div>
 
               {/* Chat Input Area */}
-              <div className="border-t border-white/10 backdrop-blur-lg p-6">
+              <div className="border-t border-white/10 backdrop-blur-lg p-6  bg-blue-600">
                 <div className="w-full mx-auto">
                   <div className="flex items-center space-x-4">
                     <div className="flex-1 relative">
@@ -327,14 +332,27 @@ const Inicio = () => {
 
         {/* Reservation Panel - Right Side */}
         {!showWelcomeMessage && (
-          <>
-            <div className="w-1/3 ml-[66%] min-h-[calc(100vh-4rem)] p-6 bg-gradient-to-br from-blue-500 via-blue-400 to-blue-300">
-              <ReservationPanel booking={bookingData || null} />
+          <div className="w-1/3 h-[calc(100vh-4rem)] p-6 flex justify-center">
+            <div className="bg-white rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
+              <TabsList
+                activeTab={activeTab}
+                onChange={(tab) => {
+                  setActiveTab(tab as "reserva" | "carrito");
+                }}
+                tabs={[
+                  { tab: "reserva", icon: Building2 },
+                  { tab: "carrito", icon: ShoppingCart },
+                ]}
+              />
+              {activeTab == "reserva" && (
+                <ReservationPanel booking={bookingData || null} />
+              )}
+              {activeTab == "carrito" && <Cart></Cart>}
             </div>
-          </>
+          </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

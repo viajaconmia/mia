@@ -2,6 +2,7 @@ import { exportToCSV } from "../../utils";
 import { ArrowDown, FileDown } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Loader from "../atom/Loader";
+import Button from "../atom/Button";
 
 type Registro = {
   [key: string]: any;
@@ -91,7 +92,9 @@ export const Table = <T,>({
           </div>
           <div className="flex gap-4">
             {children}
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => {
                 exportToCSV(
                   displayData.map(({ item, ...rest }) => rest),
@@ -102,7 +105,7 @@ export const Table = <T,>({
             >
               <FileDown className="w-4 h-4 mr-2" />
               Exportar CSV
-            </button>
+            </Button>
           </div>
         </div>
       )}

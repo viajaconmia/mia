@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   AlertCircle,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "../helpers/helpers";
+import { formatCurrency, formatDate } from "../utils/format";
 import { DataInvoice, DescargaFactura, ProductInvoice } from "../types/billing";
 import { useApi } from "../hooks/useApi";
 import { useRoute, Link } from "wouter";

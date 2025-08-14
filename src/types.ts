@@ -208,3 +208,51 @@ export interface Invoice {
   currency: string;
   url?: string;
 }
+
+//********************************************************************
+// *********************************************************************
+//  */
+export type CartItemType = "hotel" | "car_rental" | "flight";
+
+export interface CartItemBase {
+  id: string; // ID único del item en el carrito
+  type: CartItemType; // Tipo de servicio/producto
+  total: number; // Precio total
+  selected: boolean;
+}
+
+export interface HotelDetails {
+  hotel: string;
+  id_hotel: string;
+  check_in: string;
+  check_out: string;
+  room: string;
+  viajero_principal: string;
+  id_acompanantes: string[];
+  noches: number;
+  id_agente: string;
+  usuario_creador: string;
+}
+
+export interface CarRentalDetails {
+  company: string;
+  pickup_location: string;
+  dropoff_location: string;
+  pickup_date: string;
+  dropoff_date: string;
+  driver_name: string;
+}
+
+export interface FlightDetails {
+  airline: string;
+  origin: string;
+  destination: string;
+  departure_date: string;
+  return_date?: string;
+  passengers: { id: string; nombre: string; is_principal: boolean }[];
+}
+
+export type CartItem =
+  | (CartItemBase & { type: "hotel"; details: HotelDetails })
+  | (CartItemBase & { type: "car_rental"; details: CarRentalDetails })
+  | (CartItemBase & { type: "flight"; details: FlightDetails });

@@ -475,7 +475,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
   if (!bookingData) {
     return (
-      <div className="h-full bg-white p-6 rounded-lg shadow-lg flex items-center justify-center">
+      <div className="h-full p-6 flex items-center justify-center">
         <div className="text-center text-[#10244c93]">
           <p className="text-3xl mb-2">Aún no hay detalles de la reservación</p>
           <p className="text-sm opacity-80 flex justify-center">
@@ -523,7 +523,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
   if (!hasAnyData) {
     return (
-      <div className="h-full bg-white p-6 rounded-lg shadow-lg flex items-center justify-center">
+      <div className="h-full p-6  flex items-center justify-center">
         <div className="text-center text-[#10244c93]">
           <p className="text-3xl mb-2">Aún no hay detalles de la reservación</p>
           <p className="text-sm opacity-80 flex justify-center">
@@ -681,7 +681,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const checkOutDate = formatDate(bookingData.dates?.checkOut);
 
   return (
-    <div className="h-full bg-white p-6 rounded-lg shadow-lg space-y-10 overflow-y-auto">
+    <div className="h-full p-6 space-y-10 overflow-y-auto">
       {bookingData.confirmationCode && (
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl overflow-hidden shadow-lg mb-10">
           <div className="p-6">

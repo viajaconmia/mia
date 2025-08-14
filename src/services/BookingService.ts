@@ -12,11 +12,9 @@ export class BookingService extends ApiService {
   constructor() {
     super("/v1/mia/reservasClient");
     this.user = UserSingleton.getInstance();
-    console.log("BOOKING CONSTRUCTOR:", this.user.getUser());
   }
 
   async getReservas() {
-    console.log("iniciando carga");
     const path = this.formatPath(this.ENDPOINTS.GET.RESERVAS);
     return this.get<Reserva[]>({
       path,

@@ -9,7 +9,7 @@ interface CommonInteractiveElementProps {
    * 'secondary': Elemento secundario con un fondo gris claro.
    * 'ghost': Elemento transparente con texto blue-700 y borde transparente.
    */
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "warning";
   size?: "sm" | "md" | "lg" | "full";
   /**
    * Contenido del elemento (texto, otros elementos, etc.).
@@ -114,11 +114,19 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
       active:bg-blue-200
       active:text-blue-800
     `,
+    warning: `
+      bg-red-600 text-gray-50
+      hover:bg-red-700
+      focus:bg-red-900
+      border border-transparent
+      active:bg-red-800
+      active:text-gray-50
+    `,
   };
 
   const combinedClasses = `${baseClasses} ${
     disabled ? "" : variantClasses[variant]
-  } ${className} ${sizeClasses[size]}`;
+  } ${sizeClasses[size]} ${className} `;
 
   // Contenido interno (ícono y texto)
   const content = (

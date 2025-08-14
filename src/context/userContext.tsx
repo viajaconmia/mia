@@ -47,12 +47,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => {
-      console.log(
-        "SUBSCRIPTION",
-        session,
-        "singleton:",
-        UserSingleton.getInstance().getUser()
-      );
       if (session) {
         fetchInfo(session);
       } else {
@@ -81,15 +75,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    console.log(
-      "USE EFFECT",
-      authState,
-      "singleton:",
-      UserSingleton.getInstance().getUser()
-    );
-  }, [authState]);
 
   return (
     <UserContext.Provider value={{ authState, setAuthState }}>

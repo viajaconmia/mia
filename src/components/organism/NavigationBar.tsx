@@ -13,6 +13,7 @@ import {
   LogOut,
   BookOpen,
   BarChart,
+  ShoppingCart,
 } from "lucide-react";
 import type { User } from "../../types";
 import { AuthModal } from "../AuthModal";
@@ -21,13 +22,16 @@ import Button from "../atom/Button";
 import useAuth from "../../hooks/useAuth";
 import { SupportModal } from "../SupportModal";
 import { SupabaseClient } from "../../services/supabaseClient";
-import ProtectedRoute from "../../middleware/ProtectedRoute";
 import { ProtectedComponent } from "../../middleware/ProtectedComponent";
+import Modal from "../molecule/Modal";
+import { Cart } from "../Cart";
+import { useCart } from "../../context/cartContext";
 
 export const NavigationBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [openCart, setOpenCart] = useState(false);
   const { user, handleLogout } = useAuth();
 
   const onSupportClick = () => {
@@ -58,6 +62,7 @@ export const NavigationBar = () => {
                       .catch((error) => console.log(error));
                   }}
                   onSupportClick={onSupportClick}
+                  onCart={() => setOpenCart(true)}
                 />
               ) : (
                 <GuestLinks onLogin={() => setIsModalOpen(true)} />
@@ -83,6 +88,7 @@ export const NavigationBar = () => {
         {/* Mobile menu */}
         {isMenuOpen && (
           <MobileMenu
+            onCart={() => setOpenCart(true)}
             user={user ?? null}
             handleLogout={handleLogout}
             onSupportClick={onSupportClick}
@@ -95,6 +101,18 @@ export const NavigationBar = () => {
         onClose={() => setIsSupportModalOpen(false)}
       />
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <Modal
+        open={openCart}
+        onClose={() => {
+          setOpenCart(false);
+        }}
+        icon={ShoppingCart}
+        title="Carrito"
+      >
+        <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-10rem)]">
+          <Cart></Cart>
+        </div>
+      </Modal>
     </>
   );
 };
@@ -104,10 +122,12 @@ interface MobileMenuProps {
   handleLogout: () => void;
   onSupportClick: () => void;
   setIsModalOpen: (value: boolean) => void;
+  onCart: () => void;
 }
 
 export const MobileMenu: React.FC<MobileMenuProps> = ({
   user,
+  onCart,
   handleLogout,
   onSupportClick,
   setIsModalOpen,
@@ -117,6 +137,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
       <div className="px-2 pt-2 pb-3 space-y-1">
         {user ? (
           <AuthLinks
+            onCart={onCart}
             user={user}
             handleLogout={handleLogout}
             onSupportClick={onSupportClick}
@@ -133,26 +154,39 @@ interface AuthLinksProps {
   user: User | null;
   handleLogout: () => void;
   onSupportClick: () => void;
+  onCart: () => void;
 }
 
 export const AuthLinks: React.FC<AuthLinksProps> = ({
   user,
   handleLogout,
   onSupportClick,
-}) => (
-  <>
-    <NavigationLink href={ROUTES.HOME} icon={MessageSquare}>
-      Habla con MIA
-    </NavigationLink>
-    <NavigationLink href={ROUTES.BOOKINGS.HOME} icon={FileText}>
-      Reporte de Reservas
-    </NavigationLink>
-    <Button onClick={onSupportClick} icon={LifeBuoy} className="w-full">
-      Contactar a Soporte
-    </Button>
-    <UserDropdown user={user} handleLogout={handleLogout} />
-  </>
-);
+  onCart,
+}) => {
+  const { totalCart } = useCart();
+  return (
+    <>
+      <NavigationLink href={ROUTES.HOME} icon={MessageSquare}>
+        Habla con MIA
+      </NavigationLink>
+      <NavigationLink href={ROUTES.BOOKINGS.HOME} icon={FileText}>
+        Reporte de Reservas
+      </NavigationLink>
+      <Button onClick={onSupportClick} icon={LifeBuoy} className="w-full">
+        Contactar a Soporte
+      </Button>
+      <UserDropdown user={user} handleLogout={handleLogout} />
+      <Button
+        variant="ghost"
+        icon={ShoppingCart}
+        className="w-full text-gray-700"
+        onClick={onCart}
+      >
+        {totalCart}
+      </Button>
+    </>
+  );
+};
 
 interface UserDropdownProps {
   user: User | null;
@@ -187,7 +221,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
       <Button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         variant="ghost"
-        className="flex items-center space-x-2 text-gray-800 font-semibold w-full"
+        className="flex items-center space-x-2 text-gray-800 w-full"
         icon={User2}
       >
         {user?.name || "Usuario"}

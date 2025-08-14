@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "../services/supabaseClient";
 import { useUser } from "../context/userContext";
-import { validateEmail } from "../helpers/validaciones";
+import { validateEmail } from "../utils/validaciones";
 import { OtpService } from "../services/OtpService";
 import { AuthService } from "../services/authService";
 import { InfoOldClientToRegister, UserRegistro } from "../types/auth";
