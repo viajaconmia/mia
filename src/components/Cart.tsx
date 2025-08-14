@@ -12,6 +12,7 @@ import {
 import Button from "./atom/Button";
 import { useCart } from "../context/cartContext";
 import { CartItem } from "../types";
+import { CartService } from "../services/CartService";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
@@ -187,15 +188,33 @@ export const Cart = () => {
   const refContainer = useRef<HTMLDivElement>(null);
 
   const handleSelectCart = (id: string, value: boolean) => {
-    setCart((prev) =>
-      prev.map((cartItem) =>
-        cartItem.id == id ? { ...cartItem, selected: !value } : cartItem
-      )
-    );
+    CartService.getInstance()
+      .updateSelected(id, !value)
+      .then(() => {
+        setCart((prev) =>
+          prev.map((cartItem) =>
+            cartItem.id == id ? { ...cartItem, selected: !value } : cartItem
+          )
+        );
+      })
+      .catch((error) => {
+        console.error(
+          error.response || error.message || "Error al agregar al carrito"
+        );
+      });
   };
 
   const handleDeleteCart = (id: string) => {
-    setCart((prev) => prev.filter((cart) => cart.id != id));
+    CartService.getInstance()
+      .deleteCartItem(id)
+      .then(() => {
+        setCart((prev) => prev.filter((cart) => cart.id != id));
+      })
+      .catch((error) => {
+        console.error(
+          error.response || error.message || "Error al agregar al carrito"
+        );
+      });
   };
 
   if (cart.length == 0) {

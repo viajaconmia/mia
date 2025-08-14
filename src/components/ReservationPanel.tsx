@@ -14,6 +14,7 @@ import {
   CheckCircle,
   CheckCircle2,
   Plus,
+  ShoppingCartIcon,
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -30,6 +31,10 @@ import { Reservation } from "../types/chat";
 import { Hotel } from "../types/hotel";
 import { fetchHotelById } from "../services/database";
 import useAuth from "../hooks/useAuth";
+import Button from "./atom/Button";
+import { CartService } from "../services/CartService";
+import { ApiError } from "../services/ApiService";
+import { useNotification } from "../hooks/useNotification";
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -250,6 +255,7 @@ const CheckOutForm = ({
 export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   booking,
 }) => {
+  const [idSolicitud, setIdSolicitud] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -267,6 +273,9 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [dataHotel, setDataHotel] = useState<Hotel | null>(null);
   const { user } = useAuth();
+
+  const notificationContext = useNotification();
+  const showNotification = notificationContext?.showNotification;
 
   useEffect(() => {
     let currentBooking = booking || null;
@@ -445,6 +454,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
         bookingData.hotel.image ||
         "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80";
       console.log(bookingData);
+      console.log("Saving booking data:", bookingData);
       const responseSolicitud = await crearSolicitudChat(
         {
           confirmation_code: bookingData.confirmationCode,
@@ -459,9 +469,13 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
           },
           nombre_viajero: bookingData.guests[0],
         },
-        user.id
+        user.info?.id_agente || ""
       );
-
+      console.log(
+        "Response from crearSolicitudChat:",
+        responseSolicitud.data.response.resultsCallback[0]
+      );
+      setIdSolicitud(responseSolicitud.data.response.resultsCallback[0]);
       setIdServicio(responseSolicitud.data.id_servicio);
 
       setIsBookingSaved(true);
@@ -636,6 +650,26 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       setSaveError("Hubo un error al procesar el pago");
     }
     setIsProcessing(false);
+  };
+
+  const handleAddToCart = async (total: string, type: "hotel") => {
+    try {
+      if (!idSolicitud) throw new Error("Solicitud no creada");
+
+      const { message } = await CartService.getInstance().createCartItem({
+        id_solicitud: idSolicitud,
+        total,
+        type,
+        selected: true,
+      });
+      if (showNotification) {
+        showNotification("success", message || "Agregado al carrito");
+      }
+    } catch (error: any) {
+      console.error(
+        error.response || error.message || "Error al agregar al carrito"
+      );
+    }
   };
 
   const handlePaymentCredito = async () => {
@@ -964,6 +998,21 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                   >
                     <span className="font-medium">Pagar por Crédito</span>
                   </button>
+                  {idSolicitud && (
+                    <Button
+                      icon={ShoppingCartIcon}
+                      variant="primary"
+                      size="full"
+                      onClick={() =>
+                        handleAddToCart(
+                          (bookingData.room?.totalPrice || 0).toFixed(2),
+                          "hotel"
+                        )
+                      }
+                    >
+                      Agregar al carrito
+                    </Button>
+                  )}
                   {/* <CallToBackend
                     paymentData={getPaymentData(bookingData)}
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"

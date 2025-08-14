@@ -109,7 +109,7 @@ export const NavigationBar = () => {
         icon={ShoppingCart}
         title="Carrito"
       >
-        <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-10rem)]">
+        <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-11rem)]">
           <Cart></Cart>
         </div>
       </Modal>
