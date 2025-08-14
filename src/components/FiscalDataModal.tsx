@@ -5,8 +5,8 @@ import {
   createNewDatosFiscales,
   updateNewDatosFiscales,
 } from "../hooks/useDatabase";
-import { supabase } from "../services/supabaseClient";
 import { URL } from "../constants/apiConstant";
+import useAuth from "../hooks/useAuth";
 
 interface FiscalDataModalProps {
   company: CompanyWithTaxInfo;
@@ -27,6 +27,7 @@ export function FiscalDataModal({
   onClose,
   onSave,
 }: FiscalDataModalProps) {
+  const { user } = useAuth();
   const [colonias, setColonias] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(!company.taxInfo);
   const [formData, setFormData] = useState<TaxInfo>(
@@ -139,10 +140,6 @@ export function FiscalDataModal({
     e.preventDefault();
 
     try {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        throw userError;
-      }
       if (!user) {
         throw new Error("No hay usuario autenticado");
       }

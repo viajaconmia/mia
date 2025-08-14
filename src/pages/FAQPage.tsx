@@ -25,14 +25,13 @@ interface FAQSection {
   }[];
 }
 
-interface FAQPageProps {
-  onBack: () => void;
-}
-
-export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
+export const FAQPage = () => {
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const onBack = () => {
+    window.history.back();
+  };
   const [openQuestions, setOpenQuestions] = useState<{
     [key: string]: boolean;
   }>({});

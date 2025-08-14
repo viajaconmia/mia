@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Plus,
 } from "lucide-react";
-import { supabase } from "../services/supabaseClient";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -30,6 +29,7 @@ import { URL } from "../constants/apiConstant";
 import { Reservation } from "../types/chat";
 import { Hotel } from "../types/hotel";
 import { fetchHotelById } from "../services/database";
+import useAuth from "../hooks/useAuth";
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -161,14 +161,14 @@ const CheckOutForm = ({
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState("");
+  const { user } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
       if (!stripe || !elements) return;
 
-      const { data } = await supabase.auth.getUser();
-      const id_agente = data.user?.id;
+      const id_agente = user?.id;
       const cardElement = elements.getElement(CardElement);
       //crear metodo de pago
       const { error, paymentMethod } = await stripe.createPaymentMethod({
@@ -266,6 +266,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dataHotel, setDataHotel] = useState<Hotel | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     let currentBooking = booking || null;
@@ -434,10 +435,6 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       setIsSaving(true);
       setSaveError(null);
 
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Usuario no autenticado");
       }
@@ -467,29 +464,6 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
       setIdServicio(responseSolicitud.data.id_servicio);
 
-      // Save booking to database
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          confirmation_code: bookingData.confirmationCode,
-          user_id: user.id,
-          hotel_name: bookingData.hotel.name,
-          check_in: bookingData.dates.checkIn,
-          check_out: bookingData.dates.checkOut,
-          room_type: bookingData.room?.type,
-          total_price: bookingData.room?.totalPrice,
-          status: "pending",
-          image_url: imageUrl,
-        })
-        .select()
-        .single();
-
-      if (bookingError) {
-        console.error("Error saving booking:", bookingError);
-        throw bookingError;
-      }
-
-      console.log("guardado");
       setIsBookingSaved(true);
     } catch (error: any) {
       console.error("Error saving booking:", error);
@@ -501,7 +475,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
   if (!bookingData) {
     return (
-      <div className="h-full bg-white p-6 rounded-lg shadow-lg flex items-center justify-center">
+      <div className="h-full p-6 flex items-center justify-center">
         <div className="text-center text-[#10244c93]">
           <p className="text-3xl mb-2">Aún no hay detalles de la reservación</p>
           <p className="text-sm opacity-80 flex justify-center">
@@ -549,7 +523,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
   if (!hasAnyData) {
     return (
-      <div className="h-full bg-white p-6 rounded-lg shadow-lg flex items-center justify-center">
+      <div className="h-full p-6  flex items-center justify-center">
         <div className="text-center text-[#10244c93]">
           <p className="text-3xl mb-2">Aún no hay detalles de la reservación</p>
           <p className="text-sm opacity-80 flex justify-center">
@@ -606,8 +580,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       const method = paymentMethods.find((m) => m.id === selectedMethod);
       console.log("Processing payment with method:", method);
       const paymentData = getPaymentData(bookingData);
-      const { data } = await supabase.auth.getUser();
-      const id_agente = data.user?.id;
+      const id_agente = user?.id;
       const response = await fetch(`${URL}/v1/stripe/make-payment`, {
         method: "POST",
         headers: {
@@ -668,8 +641,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const handlePaymentCredito = async () => {
     setSaveError(null);
     try {
-      const { data } = await supabase.auth.getUser();
-      const id_agente = data.user?.id;
+      const id_agente = user?.id;
       const response = await fetch(`${URL}/v1/mia/pagos/credito`, {
         method: "POST",
         headers: {
@@ -709,7 +681,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const checkOutDate = formatDate(bookingData.dates?.checkOut);
 
   return (
-    <div className="h-full bg-white p-6 rounded-lg shadow-lg space-y-10 overflow-y-auto">
+    <div className="h-full p-6 space-y-10 overflow-y-auto">
       {bookingData.confirmationCode && (
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl overflow-hidden shadow-lg mb-10">
           <div className="p-6">

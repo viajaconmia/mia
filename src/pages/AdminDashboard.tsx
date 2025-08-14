@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../services/supabaseClient";
+import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 import CsvDownload from "react-csv-downloader";
 import {
@@ -15,12 +14,9 @@ import {
   CheckCircle,
   XCircle,
   Search,
-  Filter,
   Download,
   RefreshCw,
   Building2,
-  Plus,
-  MapPin,
   Tag,
   FilePenLine,
   Factory,
@@ -28,6 +24,7 @@ import {
   MapPinned,
   SlidersHorizontal,
 } from "lucide-react";
+import useAuth from "../hooks/useAuth";
 
 interface DashboardStats {
   totalUsers: number;
@@ -106,7 +103,6 @@ export const AdminDashboard = () => {
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPaymets, setFilteredPayments] = useState<Payment[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   //columnas reservaciones
@@ -130,16 +126,6 @@ export const AdminDashboard = () => {
   //mostrar exportaciones
   const [exportUsers, setExportUsers] = useState(false);
   const [exportBookings, setExportBookings] = useState(false);
-  const [showNewBookingModal, setShowNewBookingModal] = useState(false);
-  const [newBooking, setNewBooking] = useState({
-    hotel_name: "",
-    check_in: "",
-    check_out: "",
-    room_type: "single",
-    total_price: 0,
-    user_email: "",
-    confirmation_code: `RES${Date.now().toString().slice(-6)}`,
-  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -180,8 +166,7 @@ export const AdminDashboard = () => {
       filtered = filtered.filter(
         (booking) =>
           booking.hotel_name.toLowerCase().includes(searchLower) ||
-          booking.confirmation_code.toLowerCase().includes(searchLower) ||
-          booking.user?.email.toLowerCase().includes(searchLower)
+          booking.confirmation_code.toLowerCase().includes(searchLower)
       );
     }
 
@@ -218,25 +203,14 @@ export const AdminDashboard = () => {
 
     setFilteredUsers(filtered);
   };
-
+  const { user } = useAuth();
   const fetchBookings = async () => {
     try {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-
-      if (userError) {
-        throw userError;
-      }
       if (!user) {
         throw new Error("No hay usuario autenticado.");
       }
-      const { data: bookingsData, error } = await supabase
-        .from("bookings")
-        .select("*, company_profiles(company_name)");
-
-      if (error) throw error;
-
-      setBookings(bookingsData || []);
-      setFilteredBookings(bookingsData || []);
+      setBookings([]);
+      setFilteredBookings([]);
     } catch (error) {
       console.error("Error fetching bookings:", error);
     }
@@ -244,19 +218,11 @@ export const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        throw userError;
-      }
       if (!user) {
         throw new Error("No hay usuario autenticado");
       }
-      const { data: userData, error } = await supabase
-        .from("company_profiles")
-        .select("*");
-      if (error) throw error;
-      setUsers(userData || []);
-      setFilteredUsers(userData || []);
+      setUsers([]);
+      setFilteredUsers([]);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -264,69 +230,12 @@ export const AdminDashboard = () => {
 
   const fetchPayments = async () => {
     try {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        throw userError;
-      }
       if (!user) {
         throw new Error("No hay usuario autenticado");
       }
-      const { data: payments, error } = await supabase
-        .from("payments")
-        .select("*, bookings(hotel_name)");
-      if (error) throw error;
-      setPayments(payments || []);
-      setFilteredPayments(payments || []);
+      setFilteredPayments([]);
     } catch (error) {
       console.error("Error fetching users:", error);
-    }
-  };
-
-  const handleCreateBooking = async () => {
-    try {
-      // First get the user ID from the email
-      const { data: userData, error: userError } = await supabase
-        .from("auth.users")
-        .select("id")
-        .eq("email", newBooking.user_email)
-        .single();
-
-      if (userError) throw userError;
-
-      const { error: bookingError } = await supabase.from("bookings").insert({
-        confirmation_code: newBooking.confirmation_code,
-        user_id: userData.id,
-        hotel_name: newBooking.hotel_name,
-        check_in: newBooking.check_in,
-        check_out: newBooking.check_out,
-        room_type: newBooking.room_type,
-        total_price: newBooking.total_price,
-        status: "pending",
-      });
-
-      if (bookingError) throw bookingError;
-
-      setShowNewBookingModal(false);
-      fetchBookings();
-    } catch (error) {
-      console.error("Error creating booking:", error);
-    }
-  };
-
-  const handleUpdateBookingStatus = async (
-    bookingId: string,
-    newStatus: string
-  ) => {
-    try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: newStatus })
-        .eq("id", bookingId);
-
-      if (error) throw error;
-      fetchBookings();
-    } catch (error) {
-      console.error("Error updating booking status:", error);
     }
   };
 
@@ -334,56 +243,16 @@ export const AdminDashboard = () => {
     try {
       setIsRefreshing(true);
 
-      // Fetch total users
-      const { count: userCount } = await supabase
-        .from("company_profiles")
-        .select("*", { count: "exact" });
-
-      // Fetch bookings statistics
-      const { data: bookings } = await supabase.from("bookings").select("*");
-
-      const activeBookings =
-        bookings?.filter((b) => b.status === "pending").length || 0;
-      const completedBookings =
-        bookings?.filter((b) => b.status === "completed").length || 0;
-      const cancelledBookings =
-        bookings?.filter((b) => b.status === "cancelled").length || 0;
-
-      // Fetch recent payments with booking details
-      const { data: payments } = await supabase
-        .from("payments")
-        .select("*, bookings(hotel_name)")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      // Calculate total revenue
-      const totalRevenue =
-        payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-
-      // Fetch recent users with company profiles
-      const { data: recentUsers } = await supabase
-        .from("company_profiles")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      // Fetch recent bookings
-      const { data: recentBookings } = await supabase
-        .from("bookings")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
       setStats({
-        totalUsers: userCount || 0,
+        totalUsers: 0,
         totalBookings: bookings?.length || 0,
-        totalRevenue,
-        activeBookings,
-        completedBookings,
-        cancelledBookings,
-        recentUsers: recentUsers || [],
-        recentBookings: recentBookings || [],
-        recentPayments: payments || [],
+        totalRevenue: 0,
+        activeBookings: 0,
+        completedBookings: 0,
+        cancelledBookings: 0,
+        recentUsers: [],
+        recentBookings: [],
+        recentPayments: [],
         monthlyRevenue: [],
       });
     } catch (error) {
@@ -943,13 +812,6 @@ export const AdminDashboard = () => {
                   </button>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setShowNewBookingModal(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span>Nueva Reserva</span>
-                  </button>
                   <div className="relative flex items-center space-x-4">
                     <button
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1250,22 +1112,7 @@ export const AdminDashboard = () => {
                         )}
                         {activeColActionsBookings && (
                           <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <select
-                                value={booking.status}
-                                onChange={(e) =>
-                                  handleUpdateBookingStatus(
-                                    booking.id,
-                                    e.target.value
-                                  )
-                                }
-                                className="px-2 py-1 border border-gray-300 rounded text-sm"
-                              >
-                                <option value="pending">Pendiente</option>
-                                <option value="completed">Completada</option>
-                                <option value="cancelled">Cancelada</option>
-                              </select>
-                            </div>
+                            <div className="flex items-center space-x-2"></div>
                           </td>
                         )}
                       </tr>

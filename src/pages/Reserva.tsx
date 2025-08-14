@@ -11,14 +11,18 @@ import {
 } from "lucide-react";
 import { useRoute } from "wouter";
 import { SupportModal } from "../components/SupportModal";
-import { ReservationDetails2} from "../types/index";
+import { ReservationDetails2 } from "../types/index";
 import { fetchReservation } from "../services/reservas";
+import ROUTES from "../constants/routes";
 
 export function Reserva() {
-  const [, params] = useRoute("/reserva/:id");
+  const [, params] = useRoute(`${ROUTES.BOOKINGS.ID}`);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-  const [reservationDetails, setReservationDetails] = useState<ReservationDetails2 | null>(null);
+  const [reservationDetails, setReservationDetails] =
+    useState<ReservationDetails2 | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  console.log(params);
 
   useEffect(() => {
     if (params?.id) {
@@ -105,9 +109,7 @@ export function Reserva() {
                     <InfoCard
                       icon={User}
                       label="Huésped"
-                      value={
-                        reservationDetails.huesped || ""
-                      }
+                      value={reservationDetails.huesped || ""}
                     />
                     <InfoCard
                       icon={Hotel}
@@ -157,7 +159,9 @@ export function Reserva() {
                     <InfoCard
                       icon={MessageCircle}
                       label="Comentarios"
-                      value={reservationDetails.comentarios || "No hay comentarios"}
+                      value={
+                        reservationDetails.comentarios || "No hay comentarios"
+                      }
                     />
                   </div>
                 </div>

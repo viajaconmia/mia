@@ -10,6 +10,13 @@ export interface UserPreferences {
   updated_at: string;
 }
 
+export type Roles =
+  | "administrador"
+  | "reservante"
+  | "viajero"
+  | "consultor"
+  | "no-rol";
+
 export interface PaymentHistory {
   id: string;
   user_id: string;
@@ -115,7 +122,7 @@ export interface ReservationDetails {
   codigo_confirmacion: string;
   hotel: string;
   direccion: string;
-  acompañantes :string;
+  acompañantes: string;
   incluye_desayuno: number;
   check_in: string; // ISO date string
   check_out: string; // ISO date string

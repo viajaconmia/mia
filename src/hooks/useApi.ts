@@ -1,15 +1,5 @@
 import { CfdiInvoice } from "../types/billing";
 import { ENDPOINTS, ROUTES, URL, HEADERS_API } from "../constants/apiConstant";
-import { supabase } from "../services/supabaseClient";
-
-export const probando = async () => {
-  const { data } = await supabase.auth.getUser();
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("user_id", data.user?.id);
-  console.log(bookings);
-};
 
 export const useApi = () => {
   const obtenerSessionCheckout = async (ID_CHECKOUT_SESSION: string) => {
