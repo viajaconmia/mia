@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   AlertCircle,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "../helpers/helpers";
+import { formatCurrency, formatDate } from "../utils/format";
 import { DataInvoice, DescargaFactura, ProductInvoice } from "../types/billing";
 import { useApi } from "../hooks/useApi";
 import { useRoute, Link } from "wouter";
@@ -21,7 +21,7 @@ import { HEADERS_API, URL } from "../constants/apiConstant";
 import { DataFiscalModalWithCompanies } from "../components/DataFiscalModalWithCompanies";
 import { CompanyWithTaxInfo } from "../types";
 import { Root } from "../types/billing";
-import { useUser } from "../context/authContext";
+import { useUser } from "../context/userContext";
 
 const cfdiUseOptions = [
   { value: "P01", label: "Por definir" },
@@ -83,6 +83,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [descarga, setDescarga] = useState<DescargaFactura | null>(null);
   const [descargaxml, setDescargaxml] = useState<DescargaFactura | null>(null);
+  const [isEmpresaSelected, setIsEmpresaSelected] = useState("");
   const [isInvoiceGenerated, setIsInvoiceGenerated] = useState<Root | null>(
     null
   );
@@ -141,7 +142,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           }
         );
         const json = await response.json();
-        const data_solicitud = json[0];
+        console.log("😊", json);
+        const data_solicitud = json.data[0];
         console.log(data_solicitud);
         const responsefiscal = await fetch(
           `${URL}/v1/mia/datosFiscales/id?id=${idCompany}`,
@@ -203,7 +205,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           return;
         }
         // Suponiendo que data_solicitud.total ya incluye el IVA
-        const total = Number(data_solicitud.total);
+        const total = Number(data_solicitud.total_solicitud);
         const subtotal = +(total / 1.16).toFixed(2); // antes de IVA
         const iva = +(total - subtotal).toFixed(2); // solo el IVA
 
@@ -221,6 +223,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           CfdiType: "I",
           NameId: "1",
           ExpeditionPlace: "11570",
+          // ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
           Serie: null,
           Folio: Math.round(Math.random() * 999999999),
           PaymentForm: selectedPaymentForm,
@@ -263,8 +266,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
     }
   }, [idCompany, selectedCfdiUse, selectedPaymentForm]);
 
-  const handleUpdateCompany = (idCompany: string) => {
-    setIdCompany(idCompany);
+  const handleUpdateCompany = (idCompany: any) => {
+    console.log("ID Company updated:", idCompany);
+    setIsEmpresaSelected(idCompany.id_empresa);
+    setIdCompany(idCompany.taxInfo.id_datos_fiscales);
   };
 
   useEffect(() => {
@@ -332,6 +337,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             id_user: authState?.user?.id,
             id_solicitud: params?.id,
           },
+          datos_empresa: {
+            rfc: cfdi.Receiver.Rfc,
+            id_empresa: isEmpresaSelected,
+          },
         });
 
         const response = await crearCfdi({
@@ -344,6 +353,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           info_user: {
             id_user: authState?.user?.id,
             id_solicitud: params?.id,
+          },
+          datos_empresa: {
+            rfc: cfdi.Receiver.Rfc,
+            id_empresa: isEmpresaSelected,
           },
         });
         if (response.error) {

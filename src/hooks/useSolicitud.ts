@@ -137,6 +137,7 @@ async function postChatSolicitud(solicitud: any, id_usuario: string) {
     }
   );
   const jsonviajero = await responseviajero.json();
+  console.log(jsonviajero);
   const dataviajero = jsonviajero[0];
   const { id_viajero } = dataviajero;
   // Generamos un `confirmation_code` si no existe
@@ -172,7 +173,7 @@ async function postChatSolicitud(solicitud: any, id_usuario: string) {
       body: JSON.stringify(datosSolicitud),
     });
     const json = await res.json();
-    console.log(json);
+    console.log("response from solicitud create", json);
     return json; // Muestra la respuesta del servidor
   } catch (error) {
     console.log(error); // Manejo de errores
@@ -204,7 +205,7 @@ async function postSolicitud(solicitud: any, id_usuario: string) {
         status: "pending",
         id_agente: id_usuario,
         nombre_viajero: null,
-        viajeros_adicionales : solicitud.viajeros_adicionales || [], // Aseguramos que este campo sea un array, aunque esté vacío
+        viajeros_adicionales: solicitud.viajeros_adicionales || [], // Aseguramos que este campo sea un array, aunque esté vacío
       },
     ], // Establecemos el estado por defecto como "pending"
   };
