@@ -820,3 +820,5 @@ export const getFacturasConsultasAgente = async (agent_id: string) => {
     throw error;
   }
 };
+
+
