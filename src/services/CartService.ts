@@ -1,4 +1,5 @@
-import { ApiService } from "./ApiService";
+import { CartItem } from "../types";
+import { ApiResponse, ApiService } from "./ApiService";
 import { UserSingleton } from "./UserSingleton";
 
 export class CartService extends ApiService {
@@ -30,8 +31,8 @@ export class CartService extends ApiService {
     return CartService.instance;
   }
 
-  public getCartItems = async () =>
-    this.get({
+  public getCartItems = async (): Promise<ApiResponse<CartItem[]>> =>
+    this.get<CartItem[]>({
       path: this.formatPath(this.ENDPOINTS.GET.obtener_items),
       params: { id_agente: this.user.getUser()?.info?.id_agente },
     });

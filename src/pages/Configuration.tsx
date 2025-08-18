@@ -35,7 +35,7 @@ import Button from "../components/atom/Button";
 import { useNotification } from "../hooks/useNotification";
 import { UserSingleton } from "../services/UserSingleton";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
-import { InputText } from "../components/atom/Input";
+import { InputRadio, InputText } from "../components/atom/Input";
 import PageContainer from "../components/atom/PageContainer";
 import { TabsList } from "../components/molecule/TabsList";
 
@@ -544,37 +544,35 @@ const DefinirRol = ({
 
   if (!viajero) return null;
 
-  // Verifica si notificationContext existe antes de usar showNotification
   const showNotification = notificationContext?.showNotification ?? (() => {});
 
-  console.log(viajero);
   const roles = [
     {
       id: "consultor",
       label: "Consultor",
       icon: CheckCircle,
-      color: "bg-blue-500",
+      color: "bg-blue",
       description: "Puede ver la información",
     },
     {
       id: "viajero",
       label: "Viajero",
       icon: User,
-      color: "bg-blue-500",
+      color: "bg-blue",
       description: "Puede ver las reservas",
     },
     {
       id: "reservante",
       label: "Reservante",
       icon: Shield,
-      color: "bg-green-500",
+      color: "bg-green",
       description: "Gestión del sistema",
     },
     {
       id: "administrador",
       label: "Administrador",
       icon: UserCog,
-      color: "bg-purple-500",
+      color: "bg-purple",
       description: "Acceso completo",
     },
   ];
@@ -617,17 +615,6 @@ const DefinirRol = ({
 
   return (
     <div className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-md mx-auto p-4">
-      {/* Header
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Shield className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">Asignar Rol</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Configura el acceso inicial
-        </p>
-      </div> */}
-      {/* User Info */}
       <div className="bg-gray-50 rounded-lg p-4 mb-6">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -648,44 +635,14 @@ const DefinirRol = ({
             Seleccionar Rol
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {roles.map((role) => {
-              const IconComponent = role.icon;
-              return (
-                <label
-                  key={role.id}
-                  className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    selectedRole === role.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={role.id}
-                    checked={selectedRole === role.id}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div
-                    className={`w-8 h-8 ${role.color} rounded-full flex items-center justify-center mr-3`}
-                  >
-                    <IconComponent className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-800">
-                      {role.label}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {role.description}
-                    </div>
-                  </div>
-                  {selectedRole === role.id && (
-                    <CheckCircle className="w-5 h-5 text-blue-500" />
-                  )}
-                </label>
-              );
-            })}
+            {roles.map((role) => (
+              <InputRadio
+                item={role}
+                name="role"
+                onChange={setSelectedRole}
+                selectedItem={selectedRole}
+              ></InputRadio>
+            ))}
           </div>
         </div>
 

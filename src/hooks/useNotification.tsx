@@ -49,4 +49,15 @@ export const NotificationProvider = ({
   );
 };
 
-export const useNotification = () => useContext(NotificationContext);
+export const useNotification = () => {
+  const context = useContext(NotificationContext);
+
+  if (!context) {
+    console.log("useNotification must be used within a NotificationProvider");
+    throw new Error(
+      "useNotification must be used within a NotificationProvider"
+    );
+  }
+
+  return context;
+};

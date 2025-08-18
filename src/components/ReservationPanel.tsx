@@ -35,6 +35,7 @@ import Button from "./atom/Button";
 import { CartService } from "../services/CartService";
 import { ApiError } from "../services/ApiService";
 import { useNotification } from "../hooks/useNotification";
+import { useCart } from "../context/cartContext";
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -273,6 +274,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [dataHotel, setDataHotel] = useState<Hotel | null>(null);
   const { user } = useAuth();
+  const { handleActualizarCarrito } = useCart();
 
   const notificationContext = useNotification();
   const showNotification = notificationContext?.showNotification;
@@ -1007,7 +1009,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                         handleAddToCart(
                           (bookingData.room?.totalPrice || 0).toFixed(2),
                           "hotel"
-                        )
+                        ).then(() => handleActualizarCarrito())
                       }
                     >
                       Agregar al carrito

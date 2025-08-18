@@ -2,26 +2,43 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { CartItem } from "../types";
 import useAuth from "../hooks/useAuth";
-import { formatNumberWithCommas } from "../utils/format";
 import { CartService } from "../services/CartService";
 
 const CartContext = createContext<{
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
-  totalCart: string;
+  totalCart: number;
+  handleActualizarCarrito: () => void;
 }>({
   cart: [],
   setCart: () => {},
-  totalCart: "0",
+  totalCart: 0,
+  handleActualizarCarrito: () => {},
 });
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [totalCart, setTotalCart] = useState<string>("0");
+  const [totalCart, setTotalCart] = useState<number>(0);
 
-  //Este es para cargar la información del carrito, se usara al client
   useEffect(() => {
+    handleActualizarCarrito();
+  }, [user?.id]);
+
+  useEffect(() => {
+    setTotalCart(
+      Number(
+        (cart.length > 0
+          ? cart
+              .filter((cart) => cart.selected)
+              .reduce((sum, item) => sum + item.total, 0)
+          : 0
+        ).toFixed(2)
+      )
+    );
+  }, [cart]);
+
+  const handleActualizarCarrito = () => {
     if (!user) {
       setCart([]);
       return;
@@ -31,6 +48,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       .then((response) => {
         const { data } = response;
         console.log(response);
+        if (data == null) {
+          setCart([]);
+          return;
+        }
         setCart(data);
       })
       .catch((error) => {
@@ -39,23 +60,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           error.response || error.message || "Error al agregar al carrito"
         );
       });
-    console.log("HACIENDO CAMBIOS");
-  }, [user?.id]);
-
-  useEffect(() => {
-    setTotalCart(
-      formatNumberWithCommas(
-        cart.length > 0
-          ? cart
-              .filter((cart) => cart.selected)
-              .reduce((sum, item) => sum + item.total, 0)
-          : 0
-      )
-    );
-  }, [cart]);
+  };
 
   return (
-    <CartContext.Provider value={{ cart, setCart, totalCart }}>
+    <CartContext.Provider
+      value={{ cart, setCart, totalCart, handleActualizarCarrito }}
+    >
       {children}
     </CartContext.Provider>
   );
