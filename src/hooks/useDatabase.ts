@@ -44,14 +44,15 @@ export const createAgente = async (data: any, id: string) => {
 };
 
 export const createEmpresa = async (data: any, id: string) => {
-  const nombreEmpresa =
-    data.primer_nombre +
-    " " +
-    data.segundo_nombre +
-    " " +
-    data.apellido_paterno +
-    " " +
-    data.apellido_materno;
+  const nombreEmpresa = [
+    data.primer_nombre,
+    data.segundo_nombre,
+    data.apellido_paterno,
+    data.apellido_materno,
+  ]
+    .filter((item) => !!item)
+    .join(" ")
+    .toUpperCase();
   try {
     const response = await fetch(`${URL}/v1/mia/empresas`, {
       method: "POST",

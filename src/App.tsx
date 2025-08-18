@@ -4,7 +4,7 @@ import { ChatMessagesController } from "./components/ChatMessage";
 import { Navigation } from "./components/Navigation";
 import { sendMessageToN8N } from "./services/n8nService";
 import { supabase } from "./services/supabaseClient";
-import { useUser } from "./context/authContext";
+import { useUser } from "./context/userContext";
 import type { User, Message, AuthState, BookingData } from "./types";
 import {
   Menu,
