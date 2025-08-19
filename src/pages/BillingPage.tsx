@@ -633,4 +633,7 @@ interface BillingPageProps {
   invoiceData?: DataInvoice;
 }
 
-export default BillingPage;
+const Prueba = () =>{
+  return <></>
+}
+export default Prueba;
