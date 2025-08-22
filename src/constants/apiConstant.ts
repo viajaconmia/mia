@@ -38,6 +38,8 @@ export const ENDPOINTS = {
 };
 export const URL = import.meta.env.VITE_URL;
 
+export const API_KEY_STRIPE = import.meta.env.VITE_STRIPE;
+
 export const ROUTES = {
   stripe: "/v1/stripe",
   factura: "/v1/factura",
