@@ -104,7 +104,6 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
       hover:bg-gray-300
       focus:bg-gray-500
       active:bg-gray-400
-      border border-transparent
     `,
     ghost: `
       bg-transparent text-blue-700

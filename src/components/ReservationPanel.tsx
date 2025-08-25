@@ -36,6 +36,7 @@ import { CartService } from "../services/CartService";
 import { ApiError } from "../services/ApiService";
 import { useNotification } from "../hooks/useNotification";
 import { useCart } from "../context/cartContext";
+import { Logo } from "./atom/Logo";
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -422,23 +423,6 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
     }
   }, [bookingData?.confirmationCode]);
 
-  // const handleDownloadPDF = () => {
-  //   const element = document.getElementById("reservation-content");
-  //   if (!element) return;
-
-  //   const opt = {
-  //     margin: 1,
-  //     filename: `reservacion-${
-  //       bookingData?.confirmationCode || "borrador"
-  //     }.pdf`,
-  //     image: { type: "jpeg", quality: 0.98 },
-  //     html2canvas: { scale: 2 },
-  //     jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-  //   };
-
-  //   html2pdf().set(opt).from(element).save();
-  // };
-
   const saveBookingToDatabase = async () => {
     if (!bookingData || isSaving || isBookingSaved) return;
 
@@ -490,45 +474,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   };
 
   if (!bookingData) {
-    return (
-      <div className="h-full p-6 flex items-center justify-center">
-        <div className="text-center text-[#10244c93]">
-          <p className="text-3xl mb-2">Aún no hay detalles de la reservación</p>
-          <p className="text-sm opacity-80 flex justify-center">
-            <span>
-              <svg
-                version="1.1"
-                id="Capa_1"
-                xmlns="http://www.w3.org/2000/svg"
-                x="0px"
-                y="0px"
-                viewBox="0 0 493 539"
-                className="w-[300px] h-[300px] -rotate-12 transform text-sky-950"
-              >
-                <path
-                  fill="currentColor"
-                  d="M205.1,500.5C205.1,500.5,205,500.6,205.1,500.5C140.5,436.1,71.7,369.1,71.7,291.1 c0-86.6,84.2-157.1,187.6-157.1S447,204.4,447,291.1c0,74.8-63.4,139.6-150.8,154.1c0,0,0,0,0,0l-8.8-53.1 c61.3-10.2,105.8-52.6,105.8-100.9c0-56.9-60-103.2-133.7-103.2s-133.7,46.3-133.7,103.2c0,49.8,48,93.6,111.7,101.8c0,0,0,0,0,0 L205.1,500.5L205.1,500.5z"
-                ></path>
-                <path
-                  fill="currentColor"
-                  d="M341,125.5c-2.9,0-5.8-0.7-8.6-2.1c-70.3-37.3-135.9-1.7-138.7-0.2c-8.8,4.9-20,1.8-24.9-7.1 c-4.9-8.8-1.8-20,7-24.9c3.4-1.9,85.4-47.1,173.8-0.2c9,4.8,12.4,15.9,7.6,24.8C353.9,122,347.6,125.5,341,125.5z"
-                ></path>
-                <g>
-                  <path
-                    fill="currentColor"
-                    d="M248.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C257.8,277.6,255.4,268.3,248.8,263.8z"
-                  ></path>
-                  <path
-                    fill="currentColor"
-                    d="M348.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C357.8,277.6,355.4,268.3,348.8,263.8z"
-                  ></path>
-                </g>
-              </svg>
-            </span>
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const hasAnyData =
@@ -544,34 +490,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
           <p className="text-3xl mb-2">Aún no hay detalles de la reservación</p>
           <p className="text-sm opacity-80 flex justify-center">
             <span>
-              <svg
-                version="1.1"
-                id="Capa_1"
-                xmlns="http://www.w3.org/2000/svg"
-                x="0px"
-                y="0px"
-                viewBox="0 0 493 539"
-                className="w-[300px] h-[300px] -rotate-12 transform text-sky-950"
-              >
-                <path
-                  fill="currentColor"
-                  d="M205.1,500.5C205.1,500.5,205,500.6,205.1,500.5C140.5,436.1,71.7,369.1,71.7,291.1 c0-86.6,84.2-157.1,187.6-157.1S447,204.4,447,291.1c0,74.8-63.4,139.6-150.8,154.1c0,0,0,0,0,0l-8.8-53.1 c61.3-10.2,105.8-52.6,105.8-100.9c0-56.9-60-103.2-133.7-103.2s-133.7,46.3-133.7,103.2c0,49.8,48,93.6,111.7,101.8c0,0,0,0,0,0 L205.1,500.5L205.1,500.5z"
-                ></path>
-                <path
-                  fill="currentColor"
-                  d="M341,125.5c-2.9,0-5.8-0.7-8.6-2.1c-70.3-37.3-135.9-1.7-138.7-0.2c-8.8,4.9-20,1.8-24.9-7.1 c-4.9-8.8-1.8-20,7-24.9c3.4-1.9,85.4-47.1,173.8-0.2c9,4.8,12.4,15.9,7.6,24.8C353.9,122,347.6,125.5,341,125.5z"
-                ></path>
-                <g>
-                  <path
-                    fill="currentColor"
-                    d="M248.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C257.8,277.6,255.4,268.3,248.8,263.8z"
-                  ></path>
-                  <path
-                    fill="currentColor"
-                    d="M348.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C357.8,277.6,355.4,268.3,348.8,263.8z"
-                  ></path>
-                </g>
-              </svg>
+              <Logo className="w-full -rotate-12 transform text-sky-950" />
             </span>
           </p>
         </div>

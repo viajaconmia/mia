@@ -29,7 +29,6 @@ export class UserSingleton {
   }
 
   public getUser(): UserAuth | null {
-    console.log(this.user);
     return this.user;
   }
 
