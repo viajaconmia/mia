@@ -1,4 +1,5 @@
 import { URL } from "../constants/apiConstant";
+import { UserSingleton } from "../services/UserSingleton";
 
 const API_KEY =
   "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
@@ -44,6 +45,9 @@ export const createAgente = async (data: any, id: string) => {
 };
 
 export const createEmpresa = async (data: any, id: string) => {
+
+  const agente_id = UserSingleton.getInstance().getUser()?.info?.id_agente
+  console.log("PROOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",agente_id)
   const nombreEmpresa = [
     data.primer_nombre,
     data.segundo_nombre,
@@ -54,6 +58,9 @@ export const createEmpresa = async (data: any, id: string) => {
     .join(" ")
     .toUpperCase();
   try {
+    if (agente_id === undefined) {
+      throw new Error("Agente ID no encontrado");
+    }
     const response = await fetch(`${URL}/v1/mia/empresas`, {
       method: "POST",
       headers: {
@@ -61,7 +68,7 @@ export const createEmpresa = async (data: any, id: string) => {
         ...AUTH,
       },
       body: JSON.stringify({
-        agente_id: id,
+        agente_id: agente_id,
         razon_social: nombreEmpresa,
         nombre_comercial: nombreEmpresa,
         tipo_persona: "fisica",
@@ -90,6 +97,8 @@ export const createEmpresa = async (data: any, id: string) => {
 };
 
 export const createNewEmpresa = async (data: any, id: string) => {
+  const agente_id = UserSingleton.getInstance().getUser()?.info?.id_agente
+  console.log("PROOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",agente_id)
   try {
     const response = await fetch(`${URL}/v1/mia/empresas`, {
       method: "POST",
@@ -98,7 +107,7 @@ export const createNewEmpresa = async (data: any, id: string) => {
         ...AUTH,
       },
       body: JSON.stringify({
-        agente_id: id,
+        agente_id: agente_id,
         razon_social: data.razon_social,
         nombre_comercial: data.nombre_comercial,
         tipo_persona: data.tipo_persona,

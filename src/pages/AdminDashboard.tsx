@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 import CsvDownload from "react-csv-downloader";
+import { URL, API_KEY } from "../constants/apiConstant";
 import {
   Users,
   Hotel,
@@ -39,16 +40,17 @@ interface DashboardStats {
   monthlyRevenue: any[];
 }
 
+// **Interfaz de Booking corregida para reflejar la estructura de los datos que usas en el componente.**
 interface Booking {
-  id: string;
+  id: string; // Mapea del id_booking de la API
   confirmation_code: string;
   user_id: string;
-  hotel_name: string;
+  hotel_name: string; // Mapea del `hotel` de la API
   check_in: string;
   check_out: string;
-  room_type: string;
-  total_price: number;
-  status: string;
+  room_type: string; // Mapea del `room` de la API
+  total_price: number; // Mapea del `total` de la API, ya transformado
+  status: string; // Mapea del `status_reserva` de la API
   image_url?: string;
   created_at: string;
   company_profiles?: {
@@ -76,6 +78,34 @@ interface Payment {
     hotel_name: string;
   };
 }
+
+const getReservasByAgente = async (id_agente: string) => {
+  try {
+    const response = await fetch(
+      `${URL}/v1/mia/reservasClient/get_reservasClient_by_id_agente?user_id=${id_agente}`,
+      {
+        method: "GET",
+        headers: {
+          "x-api-key": API_KEY || "",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Reservas obtenidas:", data);
+    return data;
+  } catch (error) {
+    console.error("Error al obtener reservas:", error);
+    return null;
+  }
+};
 
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -160,7 +190,6 @@ export const AdminDashboard = () => {
   const filterBookings = () => {
     let filtered = [...bookings];
 
-    // Filter by search term
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -170,7 +199,6 @@ export const AdminDashboard = () => {
       );
     }
 
-    // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter((booking) => booking.status === statusFilter);
     }
@@ -189,7 +217,6 @@ export const AdminDashboard = () => {
   const filterUsers = () => {
     let filtered = [...users];
 
-    // Filter by search term
     if (searchTermUser) {
       const searchLower = searchTermUser.toLowerCase();
       filtered = filtered.filter(
@@ -204,15 +231,48 @@ export const AdminDashboard = () => {
     setFilteredUsers(filtered);
   };
   const { user } = useAuth();
+  console.log("usuarios", user.info.id_agente);
+
   const fetchBookings = async () => {
     try {
-      if (!user) {
-        throw new Error("No hay usuario autenticado.");
+      if (!user?.id) {
+        throw new Error("No user authenticated or user ID is missing.");
       }
-      setBookings([]);
-      setFilteredBookings([]);
+
+      const apiData = await getReservasByAgente(user.info.id_agente || "");
+
+      if (apiData && Array.isArray(apiData.data)) {
+        console.log("Datos de la API recibidos:", apiData.data);
+
+        const transformedBookings: Booking[] = apiData.data.map((item: any) => ({
+          id: item.id_booking,
+          confirmation_code: item.confirmation_code,
+          user_id: item.user_id,
+          hotel_name: item.hotel,
+          check_in: item.check_in,
+          check_out: item.check_out,
+          room_type: item.room,
+          total_price: parseFloat(item.total),
+          status: item.status_reserva,
+          image_url: item.URLImagenHotel,
+          created_at: item.created_at,
+          company_profiles: {
+            company_name: item.quien_reservó // Podrías mapear `quien_reservó` aquí
+          }
+        }));
+
+        console.log("Datos de reservas transformados para la tabla:", transformedBookings);
+        setBookings(transformedBookings);
+        setFilteredBookings(transformedBookings);
+      } else {
+        console.log("No se recibieron datos de reservas o el formato es incorrecto.");
+        setBookings([]);
+        setFilteredBookings([]);
+      }
     } catch (error) {
       console.error("Error fetching bookings:", error);
+      setBookings([]);
+      setFilteredBookings([]);
     }
   };
 
@@ -242,7 +302,6 @@ export const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setIsRefreshing(true);
-
       setStats({
         totalUsers: 0,
         totalBookings: bookings?.length || 0,
@@ -288,7 +347,7 @@ export const AdminDashboard = () => {
     html2pdf(element);
   };
 
-  const procesarDatos = async (data) => {
+  const procesarDatos = async (data: any) => {
     return Promise.resolve(data);
   };
 
@@ -335,44 +394,40 @@ export const AdminDashboard = () => {
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => setActiveView("overview")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "overview"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "overview"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
           >
             <BarChart3 className="w-5 h-5" />
             <span>Vista General</span>
           </button>
           <button
             onClick={() => setActiveView("users")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "users"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "users"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
           >
             <Users className="w-5 h-5" />
             <span>Usuarios</span>
           </button>
           <button
             onClick={() => setActiveView("bookings")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "bookings"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "bookings"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
           >
             <Hotel className="w-5 h-5" />
             <span>Reservaciones</span>
           </button>
           <button
             onClick={() => setActiveView("payments")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-              activeView === "payments"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "payments"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
           >
             <CreditCard className="w-5 h-5" />
             <span>Pagos</span>
@@ -512,13 +567,12 @@ export const AdminDashboard = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              booking.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : booking.status === "pending"
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : booking.status === "pending"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
-                            }`}
+                              }`}
                           >
                             {booking.status === "completed" ? (
                               <CheckCircle className="w-4 h-4 mr-1" />
@@ -561,13 +615,12 @@ export const AdminDashboard = () => {
                       </div>
                       <div className="flex items-center space-x-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            payment.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : payment.status === "pending"
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === "completed"
+                            ? "bg-green-100 text-green-800"
+                            : payment.status === "pending"
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
-                          }`}
+                            }`}
                         >
                           {payment.status}
                         </span>
@@ -647,22 +700,20 @@ export const AdminDashboard = () => {
                   <div className="flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap">
                     <button
                       onClick={() => setActiveColCompUsers(!activeColCompUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColCompUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCompUsers
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Building2 className="w-5 h-5" />
                       <span>Compañia</span>
                     </button>
                     <button
                       onClick={() => setActiveColDateUsers(!activeColDateUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColDateUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColDateUsers
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Calendar className="w-5 h-5" />
                       <span>Fecha Registro</span>
@@ -671,33 +722,30 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColIndustryUsers(!activeColIndustryUsers)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColIndustryUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColIndustryUsers
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Factory className="w-5 h-5" />
                       <span>Industria</span>
                     </button>
                     <button
                       onClick={() => setActiveColRFCUsers(!activeColRFCUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColRFCUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColRFCUsers
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <FileSignature className="w-5 h-5" />
                       <span>RFC</span>
                     </button>
                     <button
                       onClick={() => setActiveColCityUsers(!activeColCityUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColCityUsers
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCityUsers
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <MapPinned className="w-5 h-5" />
                       <span>Ciudad</span>
@@ -898,11 +946,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColCodeBookings(!activeColCodeBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColCodeBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCodeBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Tag className="w-5 h-5" />
                       <span>Código</span>
@@ -911,11 +958,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColHotelsBookings(!activeColHotelBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColHotelBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColHotelBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Hotel className="w-5 h-5" />
                       <span>Hotel</span>
@@ -924,11 +970,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColUsersBookings(!activeColUsersBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColUsersBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColUsersBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Users className="w-5 h-5" />
                       <span>Usuario</span>
@@ -937,11 +982,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColDateBookings(!activeColDateBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColDateBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColDateBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Calendar className="w-5 h-5" />
                       <span>Fechas</span>
@@ -950,11 +994,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColPriceBookings(!activeColPriceBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColPriceBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColPriceBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <DollarSign className="w-5 h-5" />
                       <span>Precio</span>
@@ -963,11 +1006,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColStatusBookings(!activeColStatusBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColStatusBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColStatusBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <Clock className="w-5 h-5" />
                       <span>Estado</span>
@@ -976,11 +1018,10 @@ export const AdminDashboard = () => {
                       onClick={() =>
                         setActiveColActionsBookings(!activeColActionsBookings)
                       }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${
-                        activeColActionsBookings
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColActionsBookings
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
                     >
                       <FilePenLine className="w-5 h-5" />
                       <span>Acciones</span>
@@ -1032,7 +1073,7 @@ export const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredBookings.map((booking) => (
+                    {Array.isArray(filteredBookings) && filteredBookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50">
                         {activeColCodeBookings && (
                           <td className="py-4">
@@ -1091,17 +1132,16 @@ export const AdminDashboard = () => {
                         {activeColStatusBookings && (
                           <td className="py-4">
                             <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                booking.status === "completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : booking.status === "pending"
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "Confirmada"
+                                ? "bg-green-100 text-green-800"
+                                : booking.status === "Pendiente"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
-                              }`}
+                                }`}
                             >
-                              {booking.status === "completed" ? (
+                              {booking.status === "Confirmada" ? (
                                 <CheckCircle className="w-4 h-4 mr-1" />
-                              ) : booking.status === "pending" ? (
+                              ) : booking.status === "Pendiente" ? (
                                 <Clock className="w-4 h-4 mr-1" />
                               ) : (
                                 <XCircle className="w-4 h-4 mr-1" />
