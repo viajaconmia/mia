@@ -35,7 +35,7 @@ import Button from "../components/atom/Button";
 import { useNotification } from "../hooks/useNotification";
 import { UserSingleton } from "../services/UserSingleton";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
-import { InputText } from "../components/atom/Input";
+import { InputRadio, InputText } from "../components/atom/Input";
 import PageContainer from "../components/atom/PageContainer";
 import { TabsList } from "../components/molecule/TabsList";
 
@@ -229,155 +229,155 @@ export const Configuration = () => {
         {/* <h1 className="text-xl font-bold text-gray-100 mb-4">
           Configuración de la cuenta
         </h1> */}
+        <div className="flex justify-center items-center">
+          <div className="bg-white rounded-lg shadow mt-8 w-[95vw] max-w-7xl">
+            <TabsList
+              tabs={[
+                { tab: "companies", icon: Building2 },
+                { tab: "employees", icon: Users },
+              ]}
+              activeTab={activeTab}
+              onChange={(tab) => {
+                setActiveTab(tab as "companies" | "employees");
+                setShowForm(false);
+              }}
+            />
 
-        <div className="bg-white rounded-lg shadow mt-8">
-          <TabsList
-            tabs={[
-              { tab: "companies", icon: Building2 },
-              { tab: "employees", icon: Users },
-            ]}
-            activeTab={activeTab}
-            onChange={(tab) => {
-              setActiveTab(tab as "companies" | "employees");
-              setShowForm(false);
-            }}
-          />
-
-          <div className="p-6">
-            {showForm ? (
-              renderForm()
-            ) : (
-              <>
-                <div className="flex justify-between items-center mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      pattern="^[^<div>]*$"
-                      type="text"
-                      placeholder="Buscar..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+            <div className="p-6">
+              {showForm ? (
+                renderForm()
+              ) : (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        pattern="^[^<div>]*$"
+                        type="text"
+                        placeholder="Buscar..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        setFormMode("create");
+                        setSelectedItem(null);
+                        setShowForm(true);
+                      }}
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      Añadir nueva
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      setFormMode("create");
-                      setSelectedItem(null);
-                      setShowForm(true);
-                    }}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    <Plus className="mr-2 h-5 w-5" />
-                    Añadir nueva
-                  </button>
-                </div>
 
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr>
-                        {activeTab === "companies" && (
-                          <>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Nombre de la empresa
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Calle y número
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Tipo de persona
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Datos Fiscales
-                            </th>
-                          </>
-                        )}
-                        {activeTab === "employees" && (
-                          <>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Viajero
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Empresas
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Fecha de nacimiento
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Contacto
-                            </th>
-                          </>
-                        )}
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {activeTab === "companies" &&
-                        handleSearch(companies).map((company) => (
-                          <tr key={company.id_empresa}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                {company.logo ? (
-                                  <img
-                                    src={company.logo}
-                                    alt={company.nombre_comercial}
-                                    className="h-10 w-10 rounded-full mr-3"
-                                  />
-                                ) : (
-                                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                                    <Building2 className="h-6 w-6 text-gray-500" />
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          {activeTab === "companies" && (
+                            <>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Nombre de la empresa
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Calle y número
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Tipo de persona
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Datos Fiscales
+                              </th>
+                            </>
+                          )}
+                          {activeTab === "employees" && (
+                            <>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Viajero
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Empresas
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Fecha de nacimiento
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Contacto
+                              </th>
+                            </>
+                          )}
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {activeTab === "companies" &&
+                          handleSearch(companies).map((company) => (
+                            <tr key={company.id_empresa}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  {company.logo ? (
+                                    <img
+                                      src={company.logo}
+                                      alt={company.nombre_comercial}
+                                      className="h-10 w-10 rounded-full mr-3"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                                      <Building2 className="h-6 w-6 text-gray-500" />
+                                    </div>
+                                  )}
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {company.nombre_comercial}
                                   </div>
-                                )}
-                                <div className="text-sm font-medium text-gray-900">
-                                  {company.nombre_comercial}
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {company.empresa_direccion || ""}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {company.tipo_persona}
-                              <br />
-                              {company.phone}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <button
-                                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                onClick={() => {
-                                  setSelectedCompany(company);
-                                  setShowModal(true);
-                                }}
-                              >
-                                <FileEdit size={16} className="mr-2" />
-                                Datos fiscales
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              {company.rn != 1 && (
-                                <ProtectedComponent
-                                  admit={{
-                                    administrador: true,
-                                    reservante: false,
-                                    viajero: false,
-                                    consultor: false,
-                                    "no-rol": false,
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {company.empresa_direccion || ""}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {company.tipo_persona}
+                                <br />
+                                {company.phone}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button
+                                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                  onClick={() => {
+                                    setSelectedCompany(company);
+                                    setShowModal(true);
                                   }}
                                 >
-                                  <button
-                                    onClick={() => {
-                                      setFormMode("edit");
-                                      setSelectedItem(company);
-                                      setShowForm(true);
+                                  <FileEdit size={16} className="mr-2" />
+                                  Datos fiscales
+                                </button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                {company.rn != 1 && (
+                                  <ProtectedComponent
+                                    admit={{
+                                      administrador: true,
+                                      reservante: false,
+                                      viajero: false,
+                                      consultor: false,
+                                      "no-rol": false,
                                     }}
-                                    className="text-blue-600 hover:text-blue-900 mr-4"
                                   >
-                                    <Pencil className="h-5 w-5" />
-                                  </button>
-                                  {/* <button
+                                    <button
+                                      onClick={() => {
+                                        setFormMode("edit");
+                                        setSelectedItem(company);
+                                        setShowForm(true);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-900 mr-4"
+                                    >
+                                      <Pencil className="h-5 w-5" />
+                                    </button>
+                                    {/* <button
                                     onClick={() =>
                                       handleDelete(
                                         "company",
@@ -388,115 +388,116 @@ export const Configuration = () => {
                                   >
                                     <Trash2 className="h-5 w-5" />
                                   </button> */}
-                                </ProtectedComponent>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      {activeTab === "employees" &&
-                        handleSearch(employees).map((employee) => (
-                          <tr key={employee.id_viajero}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                {employee.photo ? (
-                                  <img
-                                    src={employee.photo}
-                                    alt={employee.primer_nombre}
-                                    className="h-10 w-10 rounded-full mr-3"
-                                  />
-                                ) : (
-                                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                                    <Users className="h-6 w-6 text-gray-500" />
-                                  </div>
+                                  </ProtectedComponent>
                                 )}
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {employee.primer_nombre}{" "}
-                                    {employee.segundo_nombre}{" "}
-                                    {employee.apellido_paterno}{" "}
-                                    {employee.apellido_materno}
+                              </td>
+                            </tr>
+                          ))}
+                        {activeTab === "employees" &&
+                          handleSearch(employees).map((employee) => (
+                            <tr key={employee.id_viajero}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  {employee.photo ? (
+                                    <img
+                                      src={employee.photo}
+                                      alt={employee.primer_nombre}
+                                      className="h-10 w-10 rounded-full mr-3"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                                      <Users className="h-6 w-6 text-gray-500" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {employee.primer_nombre}{" "}
+                                      {employee.segundo_nombre}{" "}
+                                      {employee.apellido_paterno}{" "}
+                                      {employee.apellido_materno}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {employee.empresas
-                                  ?.map(
-                                    (emp: { razon_social: any }) =>
-                                      emp.razon_social
-                                  )
-                                  .join(", ")}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              {employee.fecha_nacimiento
-                                ? new Date(
-                                    employee.fecha_nacimiento
-                                  ).toLocaleDateString()
-                                : ""}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {employee.correo}
-                              <br />
-                              {employee.telefono}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
-                              {employee.rn != 1 && (
-                                <ProtectedComponent
-                                  admit={{
-                                    administrador: true,
-                                    reservante: false,
-                                    viajero: false,
-                                    consultor: false,
-                                    "no-rol": false,
-                                  }}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      setFormMode("edit");
-                                      setSelectedItem(employee);
-                                      setShowForm(true);
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {employee.empresas
+                                    ?.map(
+                                      (emp: { razon_social: any }) =>
+                                        emp.razon_social
+                                    )
+                                    .join(", ")}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                {employee.fecha_nacimiento
+                                  ? new Date(
+                                      employee.fecha_nacimiento
+                                    ).toLocaleDateString()
+                                  : ""}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {employee.correo}
+                                <br />
+                                {employee.telefono}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
+                                {employee.rn != 1 && (
+                                  <ProtectedComponent
+                                    admit={{
+                                      administrador: true,
+                                      reservante: false,
+                                      viajero: false,
+                                      consultor: false,
+                                      "no-rol": false,
                                     }}
-                                    className="text-blue-600 hover:text-blue-900 mr-4"
                                   >
-                                    <Pencil className="h-5 w-5" />
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDelete(
-                                        "employee",
-                                        employee.id_viajero
-                                      )
-                                    }
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    <Trash2 className="h-5 w-5" />
-                                  </button>
-                                  {/* <Button
+                                    <button
+                                      onClick={() => {
+                                        setFormMode("edit");
+                                        setSelectedItem(employee);
+                                        setShowForm(true);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-900 mr-4"
+                                    >
+                                      <Pencil className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDelete(
+                                          "employee",
+                                          employee.id_viajero
+                                        )
+                                      }
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      <Trash2 className="h-5 w-5" />
+                                    </button>
+                                    {/* <Button
                                     onClick={() => setSelectedViajero(employee)}
                                     className="col-span-2"
                                   >
                                     Editar rol
                                   </Button> */}
-                                  <Button
-                                    onClick={() => {
-                                      setSelectedViajero(employee);
-                                    }}
-                                    variant="secondary"
-                                  >
-                                    Definir rol
-                                  </Button>
-                                </ProtectedComponent>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
+                                    <Button
+                                      onClick={() => {
+                                        setSelectedViajero(employee);
+                                      }}
+                                      variant="secondary"
+                                    >
+                                      Definir rol
+                                    </Button>
+                                  </ProtectedComponent>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
         {selectedCompany && (
@@ -544,37 +545,35 @@ const DefinirRol = ({
 
   if (!viajero) return null;
 
-  // Verifica si notificationContext existe antes de usar showNotification
   const showNotification = notificationContext?.showNotification ?? (() => {});
 
-  console.log(viajero);
   const roles = [
     {
       id: "consultor",
       label: "Consultor",
       icon: CheckCircle,
-      color: "bg-blue-500",
+      color: "bg-blue",
       description: "Puede ver la información",
     },
     {
       id: "viajero",
       label: "Viajero",
       icon: User,
-      color: "bg-blue-500",
+      color: "bg-blue",
       description: "Puede ver las reservas",
     },
     {
       id: "reservante",
       label: "Reservante",
       icon: Shield,
-      color: "bg-green-500",
+      color: "bg-green",
       description: "Gestión del sistema",
     },
     {
       id: "administrador",
       label: "Administrador",
       icon: UserCog,
-      color: "bg-purple-500",
+      color: "bg-purple",
       description: "Acceso completo",
     },
   ];
@@ -617,17 +616,6 @@ const DefinirRol = ({
 
   return (
     <div className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-md mx-auto p-4">
-      {/* Header
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Shield className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">Asignar Rol</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Configura el acceso inicial
-        </p>
-      </div> */}
-      {/* User Info */}
       <div className="bg-gray-50 rounded-lg p-4 mb-6">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -648,44 +636,14 @@ const DefinirRol = ({
             Seleccionar Rol
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {roles.map((role) => {
-              const IconComponent = role.icon;
-              return (
-                <label
-                  key={role.id}
-                  className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    selectedRole === role.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={role.id}
-                    checked={selectedRole === role.id}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div
-                    className={`w-8 h-8 ${role.color} rounded-full flex items-center justify-center mr-3`}
-                  >
-                    <IconComponent className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-800">
-                      {role.label}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {role.description}
-                    </div>
-                  </div>
-                  {selectedRole === role.id && (
-                    <CheckCircle className="w-5 h-5 text-blue-500" />
-                  )}
-                </label>
-              );
-            })}
+            {roles.map((role) => (
+              <InputRadio
+                item={role}
+                name="role"
+                onChange={setSelectedRole}
+                selectedItem={selectedRole}
+              ></InputRadio>
+            ))}
           </div>
         </div>
 

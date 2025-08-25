@@ -280,7 +280,7 @@ const Inicio = () => {
               </div>
 
               {/* Chat Input Area */}
-              <div className="border-t border-white/10 backdrop-blur-lg p-6  bg-blue-600">
+              <div className="border-t border-white/10 backdrop-blur-lg p-6  bg-blue-700">
                 <div className="w-full mx-auto">
                   <div className="flex items-center space-x-4">
                     <div className="flex-1 relative">
