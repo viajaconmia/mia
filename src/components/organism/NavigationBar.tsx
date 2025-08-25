@@ -26,6 +26,7 @@ import { ProtectedComponent } from "../../middleware/ProtectedComponent";
 import Modal from "../molecule/Modal";
 import { Cart } from "../Cart";
 import { useCart } from "../../context/cartContext";
+import { formatNumberWithCommas } from "../../utils/format";
 
 export const NavigationBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -37,6 +38,7 @@ export const NavigationBar = () => {
   const onSupportClick = () => {
     setIsSupportModalOpen(true);
   };
+
   return (
     <>
       <nav className="bg-white/80 backdrop-blur-sm shadow-lg fixed w-full top-0 z-50">
@@ -108,8 +110,9 @@ export const NavigationBar = () => {
         }}
         icon={ShoppingCart}
         title="Carrito"
+        subtitle="Selecciona los items que deseas pagar"
       >
-        <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-10rem)]">
+        <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-11rem)]">
           <Cart></Cart>
         </div>
       </Modal>
@@ -182,7 +185,7 @@ export const AuthLinks: React.FC<AuthLinksProps> = ({
         className="w-full text-gray-700"
         onClick={onCart}
       >
-        {totalCart}
+        {formatNumberWithCommas(totalCart)}
       </Button>
     </>
   );

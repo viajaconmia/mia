@@ -50,7 +50,9 @@ export function formatNumberWithCommas(
 
   // 3. Unir la parte entera formateada con la parte decimal (si existe)
   if (decimalPart !== undefined) {
-    return `$${formattedInteger}.${decimalPart}`;
+    return `$${formattedInteger}.${
+      decimalPart.length == 2 ? decimalPart : decimalPart + "0"
+    }`;
   } else {
     return `$${formattedInteger}.00`;
   }

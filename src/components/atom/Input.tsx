@@ -110,6 +110,7 @@ export const InputDate: React.FC<InputDateProps> = ({
   );
 };
 
+import { CheckCircle } from "lucide-react";
 import React from "react";
 
 // Define la estructura para cada opción del select
@@ -194,5 +195,68 @@ export const SelectInput: React.FC<SelectProps> = ({
         </div> */}
       </div>
     </div>
+  );
+};
+
+export const InputRadio = <T,>({
+  name,
+  item,
+  selectedItem,
+  onChange,
+  disabled = false,
+}: {
+  name: string;
+  item: {
+    id: T;
+    label: string;
+    icon: React.ElementType;
+    color?: string;
+    description: string;
+  };
+  disabled?: boolean;
+  selectedItem: string;
+  onChange: React.Dispatch<React.SetStateAction<T>>;
+}) => {
+  const IconComponent = item.icon;
+  return (
+    <label
+      className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+        disabled === true
+          ? "border-gray-50 bg-gray-50"
+          : selectedItem === item.id
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-200 hover:border-gray-300"
+      }`}
+    >
+      <input
+        type="radio"
+        name={name}
+        value={item.id as string}
+        checked={selectedItem === item.id}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="sr-only"
+      />
+      <div
+        className={`w-8 h-8 ${item.color || "bg-gray"}${
+          disabled ? "-300" : "-600"
+        } rounded-full flex items-center justify-center mr-3`}
+      >
+        <IconComponent className="w-4 h-4 text-white" />
+      </div>
+      <div className="flex-1">
+        <div
+          className={`font-medium ${
+            disabled ? "text-gray-500" : "text-gray-800"
+          }`}
+        >
+          {item.label}
+        </div>
+        <div className="text-xs text-gray-500">{item.description}</div>
+      </div>
+      {selectedItem === item.id && (
+        <CheckCircle className="w-5 h-5 text-blue-500" />
+      )}
+    </label>
   );
 };
