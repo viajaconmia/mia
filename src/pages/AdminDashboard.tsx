@@ -26,6 +26,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
+import { Table } from "../components/atom/table"; // Import the new Table component
 
 interface DashboardStats {
   totalUsers: number;
@@ -40,17 +41,16 @@ interface DashboardStats {
   monthlyRevenue: any[];
 }
 
-// **Interfaz de Booking corregida para reflejar la estructura de los datos que usas en el componente.**
 interface Booking {
-  id: string; // Mapea del id_booking de la API
+  id: string;
   confirmation_code: string;
   user_id: string;
-  hotel_name: string; // Mapea del `hotel` de la API
+  hotel_name: string;
   check_in: string;
   check_out: string;
-  room_type: string; // Mapea del `room` de la API
-  total_price: number; // Mapea del `total` de la API, ya transformado
-  status: string; // Mapea del `status_reserva` de la API
+  room_type: string;
+  total_price: number;
+  status: string;
   image_url?: string;
   created_at: string;
   company_profiles?: {
@@ -79,6 +79,49 @@ interface Payment {
   };
 }
 
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  booking_id: string;
+  company_name: string;
+  rfc: string;
+  amount: number;
+  currency: string;
+  status: string;
+  issue_date: string;
+  due_date: string;
+  bookings?: {
+    hotel_name: string;
+    confirmation_code: string;
+  };
+}
+
+const get_pagos_prepago_by_ID = async (id_agente: string) => {
+  try {
+    const response = await fetch(
+      `${URL}/v1/mia/pagos/get_pagos_prepago_by_ID?id_agente=${id_agente}`,
+      {
+        method: "GET",
+        headers: {
+          "x-api-key": API_KEY || "",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log("Pagos obtenidos:", data);
+    return data;
+  } catch (error) {
+    console.error("Error al obtener reservas:", error);
+    return null;
+  }
+};
+
 const getReservasByAgente = async (id_agente: string) => {
   try {
     const response = await fetch(
@@ -93,11 +136,35 @@ const getReservasByAgente = async (id_agente: string) => {
         cache: "no-store",
       }
     );
-
     if (!response.ok) {
       throw new Error(`Error HTTP: ${response.status}`);
     }
+    const data = await response.json();
+    console.log("Reservas obtenidas:", data);
+    return data;
+  } catch (error) {
+    console.error("Error al obtener reservas:", error);
+    return null;
+  }
+};
 
+const getfacturasByAgente = async (id_agente: string) => {
+  try {
+    const response = await fetch(
+      `${URL}/v1/mia/factura/get_agente_facturas?id_agente=${id_agente}`,
+      {
+        method: "GET",
+        headers: {
+          "x-api-key": API_KEY || "",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
     const data = await response.json();
     console.log("Reservas obtenidas:", data);
     return data;
@@ -122,7 +189,7 @@ export const AdminDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<
-    "overview" | "users" | "bookings" | "payments"
+    "overview" | "users" | "bookings" | "payments" | "invoices"
   >("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTermUser, setSearchTermUser] = useState("");
@@ -133,29 +200,15 @@ export const AdminDashboard = () => {
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [filteredPaymets, setFilteredPayments] = useState<Payment[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  //columnas reservaciones
-  const [activeColUsersBookings, setActiveColUsersBookings] = useState(true);
-  const [activeColCodeBookings, setActiveColCodeBookings] = useState(true);
-  const [activeColHotelBookings, setActiveColHotelsBookings] = useState(true);
-  const [activeColDateBookings, setActiveColDateBookings] = useState(true);
-  const [activeColPriceBookings, setActiveColPriceBookings] = useState(true);
-  const [activeColStatusBookings, setActiveColStatusBookings] = useState(true);
-  const [activeColActionsBookings, setActiveColActionsBookings] =
-    useState(false);
-  //columnas Usuarios
-  const [activeColCompUsers, setActiveColCompUsers] = useState(true);
-  const [activeColDateUsers, setActiveColDateUsers] = useState(true);
-  const [activeColIndustryUsers, setActiveColIndustryUsers] = useState(true);
-  const [activeColRFCUsers, setActiveColRFCUsers] = useState(true);
-  const [activeColCityUsers, setActiveColCityUsers] = useState(true);
-  //Estado para mostrar filtros
   const [activateFilters, setActivateFilters] = useState(false);
   const [activateFiltersUsers, setActivateFiltersUsers] = useState(false);
-  //mostrar exportaciones
   const [exportUsers, setExportUsers] = useState(false);
   const [exportBookings, setExportBookings] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchDashboardData();
@@ -187,9 +240,62 @@ export const AdminDashboard = () => {
     filterUsers();
   }, [searchTermUser]);
 
+  useEffect(() => {
+    if (activeView === "invoices") {
+      fetchInvoices();
+    }
+  }, [activeView]);
+
+  const fetchInvoices = async () => {
+    try {
+      const invoicesData = await getfacturasByAgente(user?.info?.id_agente || "");
+      if (invoicesData) {
+        setInvoices(invoicesData);
+        setFilteredInvoices(invoicesData);
+      } else {
+        console.error("No Tiene facturas.");
+        setInvoices([]);
+        setFilteredInvoices([]);
+      }
+    } catch (error) {
+      console.error("Error al obtener facturas:", error);
+      setInvoices([]);
+      setFilteredInvoices([]);
+    }
+  };
+
+  const fetchPayments = async () => {
+    try {
+      if (!user?.info?.id_agente) {
+        throw new Error("No hay ID de agente disponible");
+      }
+      const apiData = await get_pagos_prepago_by_ID(user.info.id_agente);
+      if (apiData && Array.isArray(apiData.data)) {
+        const transformedPayments: Payment[] = apiData.data.map((item: any) => ({
+          id: item.id_movimiento || "",
+          amount: parseFloat(item.monto) || 0,
+          currency: item.moneda || "MXN",
+          status: item.estatus || "pending",
+          forma_pago: item.metodo,
+          tipo_tarjeta: item.tipo || "",
+          created_at: item.fecha_emision || new Date().toISOString().split('T')[0],
+          updated_at: item.fecha_vencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          bookings: {
+            hotel_name: item.nombre_hotel || "Hotel no especificado",
+          },
+        }));
+        setFilteredPayments(transformedPayments);
+      } else {
+        setFilteredPayments([]);
+      }
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      setFilteredPayments([]);
+    }
+  };
+
   const filterBookings = () => {
     let filtered = [...bookings];
-
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -198,11 +304,9 @@ export const AdminDashboard = () => {
           booking.confirmation_code.toLowerCase().includes(searchLower)
       );
     }
-
     if (statusFilter !== "all") {
       filtered = filtered.filter((booking) => booking.status === statusFilter);
     }
-
     if (dateEnd != "" && dateStart != "") {
       filtered = filtered.filter(
         (booking) =>
@@ -210,13 +314,11 @@ export const AdminDashboard = () => {
           Date.parse(booking.check_out) <= Date.parse(dateEnd)
       );
     }
-
     setFilteredBookings(filtered);
   };
 
   const filterUsers = () => {
     let filtered = [...users];
-
     if (searchTermUser) {
       const searchLower = searchTermUser.toLowerCase();
       filtered = filtered.filter(
@@ -227,23 +329,16 @@ export const AdminDashboard = () => {
           user.rfc?.toLowerCase().includes(searchLower)
       );
     }
-
     setFilteredUsers(filtered);
   };
-  const { user } = useAuth();
-  console.log("usuarios", user.info.id_agente);
 
   const fetchBookings = async () => {
     try {
       if (!user?.id) {
         throw new Error("No user authenticated or user ID is missing.");
       }
-
       const apiData = await getReservasByAgente(user.info.id_agente || "");
-
       if (apiData && Array.isArray(apiData.data)) {
-        console.log("Datos de la API recibidos:", apiData.data);
-
         const transformedBookings: Booking[] = apiData.data.map((item: any) => ({
           id: item.id_booking,
           confirmation_code: item.confirmation_code,
@@ -256,16 +351,16 @@ export const AdminDashboard = () => {
           status: item.status_reserva,
           image_url: item.URLImagenHotel,
           created_at: item.created_at,
+          viajero: item.nombre_viajero_reservacion,
+          acompañantes: item.nombre_viajero_reservacion,
           company_profiles: {
-            company_name: item.quien_reservó // Podrías mapear `quien_reservó` aquí
-          }
+            company_name: item.quien_reservó,
+          },
         }));
-
-        console.log("Datos de reservas transformados para la tabla:", transformedBookings);
-        setBookings(transformedBookings);
-        setFilteredBookings(transformedBookings);
+        const completedBookings = transformedBookings.filter(booking => booking.status === "Confirmada");
+        setBookings(completedBookings);
+        setFilteredBookings(completedBookings);
       } else {
-        console.log("No se recibieron datos de reservas o el formato es incorrecto.");
         setBookings([]);
         setFilteredBookings([]);
       }
@@ -283,17 +378,6 @@ export const AdminDashboard = () => {
       }
       setUsers([]);
       setFilteredUsers([]);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  const fetchPayments = async () => {
-    try {
-      if (!user) {
-        throw new Error("No hay usuario autenticado");
-      }
-      setFilteredPayments([]);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -337,28 +421,142 @@ export const AdminDashboard = () => {
     });
   };
 
-  const exportPDF = async () => {
-    const element = document.querySelector("#bookings");
-    html2pdf(element);
-  };
-
-  const exportPDFUsers = async () => {
-    const element = document.querySelector("#users");
-    html2pdf(element);
+  const exportPDF = async (tableId: string, filename: string) => {
+    const element = document.querySelector(`#${tableId}`);
+    if (element) {
+      html2pdf(element).set({
+        filename: filename,
+        html2canvas: { scale: 2 },
+      }).save();
+    }
   };
 
   const procesarDatos = async (data: any) => {
     return Promise.resolve(data);
   };
 
+  // Column definitions for each view
+  const userColumns = [
+    {
+      key: "company_name", header: "Compañia", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Building2 className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+    {
+      key: "created_at", header: "Fecha Registro", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Calendar className="w-4 h-4 text-gray-400" /><span>{formatDate(value)}</span></div>
+      )
+    },
+    {
+      key: "industry", header: "Industria", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Factory className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+    {
+      key: "rfc", header: "RFC", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><FileSignature className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+    {
+      key: "city", header: "Ciudad", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><MapPinned className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+  ];
+
+  const bookingColumns = [
+    {
+      key: "created_at", header: "Fecha Creación", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Calendar className="w-4 h-4 text-gray-400" /><span>{formatDate(value)}</span></div>
+      )
+    },
+    {
+      key: "hotel_name", header: "Hotel", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Hotel className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+    {
+      key: "viajero", header: "Viajero", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Users className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+    {
+      key: "check_in", header: "Check-in", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Calendar className="w-4 h-4 text-gray-400" /><span>{formatDate(value)}</span></div>
+      )
+    },
+    {
+      key: "check_out", header: "Check-out", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Calendar className="w-4 h-4 text-gray-400" /><span>{formatDate(value)}</span></div>
+      )
+    },
+    {
+      key: "room_type", header: "Cuarto", renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2"><Tag className="w-4 h-4 text-gray-400" /><span>{value}</span></div>
+      )
+    },
+    {
+      key: "total_price", header: "Precio", renderer: ({ value }: { value: number }) => (
+        <div className="flex items-center space-x-2"><DollarSign className="w-4 h-4 text-gray-400" /><span>{formatCurrency(value)}</span></div>
+      )
+    },
+    {
+      key: "actions", header: "Acciones", renderer: ({ item }: { item: Payment }) => (
+        <div className="flex items-center space-x-2">
+          <button className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors" title="Ver detalle">
+            <FilePenLine className="w-5 h-5" />
+          </button>
+        </div>
+      )
+    },
+  ];
+
+  const paymentColumns = [
+    { key: "created_at", header: "Fecha de Pago", renderer: ({ value }: { value: string }) => <span>{formatDate(value)}</span> },
+    {
+      key: "amount", header: "Monto", renderer: ({ value }: { value: number }) => (
+        <div className="flex items-center space-x-2"><DollarSign className="w-4 h-4 text-gray-400" /><span>{formatCurrency(value)}</span></div>
+      )
+    },
+    { key: "forma_pago", header: "Forma de Pago" }, // Asume que existe una propiedad "forma_pago" en tu data
+    { key: "tipo_tarjeta", header: "Tipo de Tarjeta" }, // Asume que existe una propiedad "tipo_tarjeta" en tu data
+    {
+      key: "actions", header: "Acciones", renderer: ({ item }: { item: Payment }) => (
+        <div className="flex items-center space-x-2">
+          <button className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors" title="Ver detalle">
+            <FilePenLine className="w-5 h-5" />
+          </button>
+        </div>
+      )
+    },
+  ];
+
+  const invoiceColumns = [
+    { key: "issue_date", header: "Fecha Facturación", renderer: ({ value }: { value: string }) => <span>{formatDate(value)}</span> },
+    { key: "subtotal", header: "Subtotal" }, // Asume que existe una propiedad "subtotal" en tu data
+    { key: "iva", header: "IVA" }, // Asume que existe una propiedad "iva" en tu data
+    {
+      key: "amount", header: "Total", renderer: ({ value }: { value: number }) => (
+        <div className="flex items-center space-x-2"><DollarSign className="w-4 h-4 text-gray-400" /><span>{formatCurrency(value)}</span></div>
+      )
+    },
+    {
+      key: "actions", header: "Acciones", renderer: ({ item }: { item: Payment }) => (
+        <div className="flex items-center space-x-2">
+          <button className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors" title="Ver detalle">
+            <FilePenLine className="w-5 h-5" />
+          </button>
+        </div>
+      )
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-lg text-gray-700">
-            Cargando panel de administración...
-          </span>
+          <span className="text-lg text-gray-700">Cargando panel de administración...</span>
         </div>
       </div>
     );
@@ -372,17 +570,13 @@ export const AdminDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Building2 className="w-8 h-8 text-blue-600" />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">
-                Panel de Administración
-              </h1>
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">Panel de Administración</h1>
             </div>
             <button
               onClick={fetchDashboardData}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
             >
-              <RefreshCw
-                className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
               <span>Actualizar</span>
             </button>
           </div>
@@ -412,27 +606,29 @@ export const AdminDashboard = () => {
             <Users className="w-5 h-5" />
             <span>Usuarios</span>
           </button>
-          <button
-            onClick={() => setActiveView("bookings")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "bookings"
-              ? "bg-blue-600 text-white"
-              : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-          >
+          <button onClick={() => setActiveView("bookings")} className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "bookings" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
             <Hotel className="w-5 h-5" />
             <span>Reservaciones</span>
           </button>
-          <button
-            onClick={() => setActiveView("payments")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "payments"
-              ? "bg-blue-600 text-white"
-              : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-          >
+          <button onClick={() => setActiveView("payments")} className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "payments" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
             <CreditCard className="w-5 h-5" />
             <span>Pagos</span>
           </button>
+          <button onClick={() => setActiveView("invoices")} className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${activeView === "invoices" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+            <FileSignature className="w-5 h-5" />
+            <span>Facturas</span>
+          </button>
         </div>
+
+        {/* Overview */}
+        {activeView === "overview" && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Stats Grid */}
+            </div>
+            {/* Recent Activity */}
+          </div>
+        )}
 
         {/* Overview */}
         {activeView === "overview" && (
@@ -642,204 +838,37 @@ export const AdminDashboard = () => {
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items">
-                  <button
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    onClick={() =>
-                      setActivateFiltersUsers(!activateFiltersUsers)
-                    }
-                  >
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onClick={() => setActivateFiltersUsers(!activateFiltersUsers)}>
                     <SlidersHorizontal className="w-5 h-5" />
                     <span>Filtrar</span>
                   </button>
                 </div>
                 <div className="relative flex items-center space-x-4">
-                  <button
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    onClick={() => setExportUsers(!exportUsers)}
-                  >
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onClick={() => setExportUsers(!exportUsers)}>
                     <Download className="w-5 h-5" />
                     <span>Exportar</span>
                   </button>
                   {exportUsers && (
-                    <div className="absolute font-semibold top-full  mt-2 z-20 bg-slate-100 shadow-lg rounded-lg w-24 flex flex-col p-2">
-                      <button
-                        className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200"
-                        onClick={exportPDFUsers}
-                      >
+                    <div className="absolute font-semibold top-full mt-2 z-20 bg-slate-100 shadow-lg rounded-lg w-24 flex flex-col p-2">
+                      <button className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200" onClick={() => exportPDF("usersTable", "datosUsuarios.pdf")}>
                         PDF
                       </button>
-                      <CsvDownload
-                        datas={procesarDatos(filteredUsers)}
-                        filename="datosUsuarios"
-                      >
-                        <button className="w-full text-left px-2 py-1 hover:bg-gray-200">
-                          CSV
-                        </button>
+                      <CsvDownload datas={filteredUsers} filename="datosUsuarios">
+                        <button className="w-full text-left px-2 py-1 hover:bg-gray-200">CSV</button>
                       </CsvDownload>
                     </div>
                   )}
                 </div>
               </div>
-              {/* Filtering columns */}
               {activateFiltersUsers && (
                 <>
-                  <div className="relative">
-                    <input
-                      pattern="^[^<>]*$"
-                      type="text"
-                      placeholder="Buscar compañias, ciudades, industria, RFC..."
-                      value={searchTermUser}
-                      onChange={(e) => setSearchTermUser(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                  <div className="relative mb-4">
+                    <input pattern="^[^<>]*$" type="text" placeholder="Buscar compañias, ciudades, industria, RFC..." value={searchTermUser} onChange={(e) => setSearchTermUser(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full" />
                     <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  </div>
-                  <p className="text-xl leading-relaxed mb-4">
-                    Filtra por columnas
-                  </p>
-                  <div className="flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap">
-                    <button
-                      onClick={() => setActiveColCompUsers(!activeColCompUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCompUsers
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Building2 className="w-5 h-5" />
-                      <span>Compañia</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveColDateUsers(!activeColDateUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColDateUsers
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Calendar className="w-5 h-5" />
-                      <span>Fecha Registro</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColIndustryUsers(!activeColIndustryUsers)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColIndustryUsers
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Factory className="w-5 h-5" />
-                      <span>Industria</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveColRFCUsers(!activeColRFCUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColRFCUsers
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <FileSignature className="w-5 h-5" />
-                      <span>RFC</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveColCityUsers(!activeColCityUsers)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCityUsers
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <MapPinned className="w-5 h-5" />
-                      <span>Ciudad</span>
-                    </button>
                   </div>
                 </>
               )}
-
-              {/* User list would go here */}
-              <div className="overflow-x-auto">
-                <table className="w-full" id="users">
-                  <thead>
-                    <tr className="text-left border-b border-gray-200">
-                      {activeColCompUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Compañia
-                        </th>
-                      )}
-                      {activeColDateUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Fecha Registro
-                        </th>
-                      )}
-                      {activeColIndustryUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Industria
-                        </th>
-                      )}
-                      {activeColRFCUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          RFC
-                        </th>
-                      )}
-                      {activeColCityUsers && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Ciudad
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        {activeColCompUsers && (
-                          <td className="py-4 px-1">
-                            <div className="flex items-center space-x-2">
-                              <Building2 className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">
-                                {user.company_name}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColDateUsers && (
-                          <td className="py-4 px-1">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">
-                                {user.created_at}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColIndustryUsers && (
-                          <td className="py-4 px-1">
-                            <div className="flex items-center space-x-2">
-                              <Factory className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">
-                                {user.industry}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColRFCUsers && (
-                          <td className="py-4 px-1">
-                            <div className="flex items-center space-x-2">
-                              <FileSignature className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">{user.rfc}</span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColCityUsers && (
-                          <td className="py-4 px-1">
-                            <div className="flex items-center space-x-2">
-                              <MapPinned className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">{user.city}</span>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table id="usersTable" data={filteredUsers} columns={userColumns} />
             </div>
           </div>
         )}
@@ -847,319 +876,56 @@ export const AdminDashboard = () => {
         {/* Bookings View */}
         {activeView === "bookings" && (
           <div className="space-y-6">
-            {/* Filters and Actions */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-6 flex-wrap space-y-2">
                 <div className="flex items">
-                  <button
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    onClick={() => setActivateFilters(!activateFilters)}
-                  >
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onClick={() => setActivateFilters(!activateFilters)}>
                     <SlidersHorizontal className="w-5 h-5" />
                     <span>Filtrar</span>
                   </button>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="relative flex items-center space-x-4">
-                    <button
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      onClick={() => setExportBookings(!exportBookings)}
-                    >
-                      <Download className="w-5 h-5" />
-                      <span>Exportar</span>
-                    </button>
-                    {exportBookings && (
-                      <div className="absolute font-semibold top-full  mt-2 z-20 bg-slate-100 shadow-lg rounded-lg w-24 flex flex-col p-2">
-                        <button
-                          className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200"
-                          onClick={exportPDF}
-                        >
-                          PDF
-                        </button>
-                        <CsvDownload
-                          datas={procesarDatos(filteredBookings)}
-                          filename="datosReservas"
-                        >
-                          <button className="w-full text-left px-2 py-1 hover:bg-gray-200">
-                            CSV
-                          </button>
-                        </CsvDownload>
-                      </div>
-                    )}
-                  </div>
+                <div className="relative flex items-center space-x-4">
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onClick={() => setExportBookings(!exportBookings)}>
+                    <Download className="w-5 h-5" />
+                    <span>Exportar</span>
+                  </button>
+                  {exportBookings && (
+                    <div className="absolute font-semibold top-full mt-2 z-20 bg-slate-100 shadow-lg rounded-lg w-24 flex flex-col p-2">
+                      <button className="w-full text-left px-2 py-1 border-b-2 hover:bg-gray-200" onClick={() => exportPDF("bookingsTable", "datosReservas.pdf")}>
+                        PDF
+                      </button>
+                      <CsvDownload datas={filteredBookings} filename="datosReservas">
+                        <button className="w-full text-left px-2 py-1 hover:bg-gray-200">CSV</button>
+                      </CsvDownload>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Filtering columns */}
               {activateFilters && (
                 <div className="duration-500 transition-all ease-in-out">
-                  <div className="flex items-center gap-x-4 gap-y-3 flex-wrap">
+                  <div className="flex items-center gap-x-4 gap-y-3 flex-wrap mb-4">
                     <div className="relative">
-                      <input
-                        pattern="^[^<>]*$"
-                        type="text"
-                        placeholder="Buscar por hotel, código o email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+                      <input pattern="^[^<>]*$" type="text" placeholder="Buscar por hotel, código o email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                       <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     </div>
                     <div className="flex-row flex justify-center items-center relative gap-x-3">
                       <p>Fecha de inicio</p>
-                      <input
-                        pattern="^[^<>]*$"
-                        type="date"
-                        placeholder="Ingresa fecha de fin"
-                        value={dateStart}
-                        onChange={(e) => setDateStart(e.target.value)}
-                        className="pl-5 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+                      <input pattern="^[^<>]*$" type="date" placeholder="Ingresa fecha de fin" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="pl-5 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
                     <div className="flex-row flex justify-center items-center relative gap-x-3">
                       <p>Fecha de fin</p>
-                      <input
-                        pattern="^[^<>]*$"
-                        type="date"
-                        placeholder="Ingresa fecha de fin"
-                        value={dateEnd}
-                        onChange={(e) => setDateEnd(e.target.value)}
-                        className="pl-5 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+                      <input pattern="^[^<>]*$" type="date" placeholder="Ingresa fecha de fin" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="pl-5 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                       <option value="all">Todos los estados</option>
                       <option value="pending">Pendientes</option>
                       <option value="completed">Completadas</option>
                       <option value="cancelled">Canceladas</option>
                     </select>
                   </div>
-                  <p className="text-xl leading-relaxed mb-4">
-                    Filtra por columnas
-                  </p>
-                  <div className="flex items-center justify-start gap-x-6 gap-y-3 mb-6 flex-wrap">
-                    <button
-                      onClick={() =>
-                        setActiveColCodeBookings(!activeColCodeBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColCodeBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Tag className="w-5 h-5" />
-                      <span>Código</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColHotelsBookings(!activeColHotelBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColHotelBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Hotel className="w-5 h-5" />
-                      <span>Hotel</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColUsersBookings(!activeColUsersBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColUsersBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Users className="w-5 h-5" />
-                      <span>Usuario</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColDateBookings(!activeColDateBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColDateBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Calendar className="w-5 h-5" />
-                      <span>Fechas</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColPriceBookings(!activeColPriceBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColPriceBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <DollarSign className="w-5 h-5" />
-                      <span>Precio</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColStatusBookings(!activeColStatusBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColStatusBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <Clock className="w-5 h-5" />
-                      <span>Estado</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveColActionsBookings(!activeColActionsBookings)
-                      }
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-slate-200 border-2 ${activeColActionsBookings
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                    >
-                      <FilePenLine className="w-5 h-5" />
-                      <span>Acciones</span>
-                    </button>
-                  </div>
                 </div>
               )}
-
-              {/* Bookings Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full" id="bookings">
-                  <thead>
-                    <tr className="text-left border-b border-gray-200">
-                      {activeColCodeBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Código
-                        </th>
-                      )}
-                      {activeColHotelBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Hotel
-                        </th>
-                      )}
-                      {activeColUsersBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Usuario
-                        </th>
-                      )}
-                      {activeColDateBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Fechas
-                        </th>
-                      )}
-                      {activeColPriceBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Precio
-                        </th>
-                      )}
-                      {activeColStatusBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Estado
-                        </th>
-                      )}
-                      {activeColActionsBookings && (
-                        <th className="pb-3 font-semibold text-gray-600">
-                          Acciones
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {Array.isArray(filteredBookings) && filteredBookings.map((booking) => (
-                      <tr key={booking.id} className="hover:bg-gray-50">
-                        {activeColCodeBookings && (
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <Tag className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">
-                                {booking.confirmation_code}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColHotelBookings && (
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <Hotel className="w-4 h-4 text-gray-400" />
-                              <span>{booking.hotel_name}</span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColUsersBookings && (
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <Users className="w-4 h-4 text-gray-400" />
-                              <span>
-                                {booking.company_profiles?.company_name}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColDateBookings && (
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <span>
-                                {new Date(
-                                  booking.check_in
-                                ).toLocaleDateString()}{" "}
-                                -
-                                {new Date(
-                                  booking.check_out
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColPriceBookings && (
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <DollarSign className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium">
-                                ${booking.total_price.toLocaleString()}
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {activeColStatusBookings && (
-                          <td className="py-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "Confirmada"
-                                ? "bg-green-100 text-green-800"
-                                : booking.status === "Pendiente"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                                }`}
-                            >
-                              {booking.status === "Confirmada" ? (
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                              ) : booking.status === "Pendiente" ? (
-                                <Clock className="w-4 h-4 mr-1" />
-                              ) : (
-                                <XCircle className="w-4 h-4 mr-1" />
-                              )}
-                              {booking.status}
-                            </span>
-                          </td>
-                        )}
-                        {activeColActionsBookings && (
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2"></div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table id="bookingsTable" data={filteredBookings} columns={bookingColumns} />
             </div>
           </div>
         )}
@@ -1168,82 +934,27 @@ export const AdminDashboard = () => {
         {activeView === "payments" && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Gestión de Pagos</h3>
+            </div>
+            <Table id="paymentsTable" data={filteredPayments} columns={paymentColumns} />
+          </div>
+        )}
+
+        {/* Invoices View */}
+        {activeView === "invoices" && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Gestión de Pagos
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Gestión de Facturas</h3>
                 <div className="flex items-center space-x-4">
                   <div className="relative">
-                    <input
-                      pattern="^[^<>]*$"
-                      type="text"
-                      placeholder="Buscar pagos..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    <input pattern="^[^<>]*$" type="text" placeholder="Buscar facturas..." className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                   </div>
                 </div>
               </div>
-              {/* Payments Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full" id="bookings">
-                  <thead>
-                    <tr className="text-left border-b border-gray-200">
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Monto
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Hotel
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Estatus
-                      </th>
-                      <th className="pb-3 font-semibold text-gray-600">
-                        Moneda
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredPaymets.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <DollarSign className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {payment.amount}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {payment.bookings?.hotel_name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {payment.status}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <Hotel className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">
-                              {payment.currency}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
+            <Table id="invoicesTable" data={filteredInvoices} columns={invoiceColumns} />
           </div>
         )}
       </div>
