@@ -8,6 +8,8 @@ const ROUTES = {
   },
   HOTELS: {
     SEARCH: "/hotels/search",
+    ID: "/hotels/:id",
+    ID_CREATE: (id: string) => `/hotels/${id}`,
   },
   FAQ: "/faq",
   DASHBOARD: "/dashboard",

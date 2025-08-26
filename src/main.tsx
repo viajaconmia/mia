@@ -21,6 +21,7 @@ import { Reserva } from "./pages/Reserva.tsx";
 import { Notification } from "./components/molecule/Notification.tsx";
 import { NotificationProvider } from "./hooks/useNotification.tsx";
 import { CartProvider } from "./context/cartContext.tsx";
+import { ManualReservationPage } from "./pages/ManualReservationPage.tsx";
 
 const RouteSecure: React.FC<{
   path: string;
@@ -64,6 +65,11 @@ createRoot(document.getElementById("root")!).render(
               restricted={true}
               component={HotelSearchPage}
               path={ROUTES.HOTELS.SEARCH}
+            />
+            <RouteSecure
+              restricted={true}
+              component={ManualReservationPage}
+              path={ROUTES.HOTELS.ID}
             />
             <RouteSecure
               restricted={true}

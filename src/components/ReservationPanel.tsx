@@ -10,7 +10,6 @@ import {
   ShoppingCartIcon,
 } from "lucide-react";
 import { useSolicitud } from "../hooks/useSolicitud";
-import { fetchPaymentMethods, fetchCreditAgent } from "../hooks/useFetch";
 import { Reservation } from "../types/chat";
 import { Hotel } from "../types/hotel";
 import { fetchHotelById } from "../services/database";

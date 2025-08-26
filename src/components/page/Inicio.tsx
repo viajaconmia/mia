@@ -238,15 +238,17 @@ const Inicio = () => {
           ) : (
             <div className="flex flex-col h-full border-r">
               {/* Manual Reservation Button */}
-              <div className="p-4 bg-white/10 backdrop-blur-sm">
-                <button
-                  // onClick={handleManualReservationClick}
-                  className="w-full flex items-center justify-center space-x-2 bg-white text-blue-600 px-6 py-3 rounded-xl font-medium hover:bg-blue-50 transition-all duration-300 shadow-lg"
+              <div className="p-4 bg-white/20 backdrop-blur-sm">
+                <NavigationLink
+                  className="text-blue-600"
+                  href={ROUTES.HOTELS.SEARCH}
+                  variant="secondary"
+                  size="full"
                 >
                   <Hotel className="w-5 h-5" />
                   <span>Crear Reserva Manualmente</span>
                   <ArrowRight className="w-5 h-5" />
-                </button>
+                </NavigationLink>
               </div>
 
               {/* Chat Messages Area */}
