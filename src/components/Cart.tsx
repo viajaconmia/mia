@@ -24,7 +24,6 @@ import { CartService } from "../services/CartService";
 import { formatNumberWithCommas } from "../utils/format";
 import { InputRadio } from "./atom/Input";
 import { useNotification } from "../hooks/useNotification";
-import { PagosService } from "../services/PagosService";
 import {
   CardElement,
   Elements,
@@ -45,6 +44,9 @@ import {
   UnionPayLogo,
 } from "./atom/Logo";
 import { API_KEY_STRIPE } from "../constants/apiConstant";
+import { UserSingleton } from "../services/UserSingleton";
+import { MetodosDePago } from "../types/newIndex";
+import { PagosService } from "../services/PagosService";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
@@ -285,14 +287,27 @@ type ViewsToPayment =
 
 const ContainerTerminalPago = ({ total }: { total: number }) => {
   const [view, setView] = useState<ViewsToPayment>("details");
+  const { saldos } = useCart();
 
   const views: Record<ViewsToPayment, ReactNode> = {
     details: <DetailsPago total={total} onProcedPayment={setView} />,
     forma_pago: <MetodosPago setView={setView} total={total} />,
-    credito: <></>,
+    credito: (
+      <PagoCredito
+        saldo={saldos?.credito || 0}
+        total={total}
+        setView={setView}
+      ></PagoCredito>
+    ),
     tarjeta: <PagoTarjeta setView={setView}></PagoTarjeta>,
-    wallet: <></>,
-    agregar_tarjeta: <MetodoTarjetaPago setView={setView} />,
+    wallet: (
+      <PagoSaldo
+        saldo={saldos?.wallet || 0}
+        total={total}
+        setView={setView}
+      ></PagoSaldo>
+    ),
+    agregar_tarjeta: <ViewGuardarTarjeta setView={setView} />,
   };
 
   return (
@@ -341,7 +356,6 @@ const DetailsPago = ({
   );
 };
 
-type MetodosDePago = "wallet" | "credito" | "tarjeta";
 const metodos_pago: {
   id: MetodosDePago;
   label: string;
@@ -380,29 +394,7 @@ const MetodosPago = ({
   setView: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
 }) => {
   const [selectedMetodo, setSelectedMetodo] = useState<MetodosDePago | "">("");
-  const [saldos, setSaldos] = useState<Record<
-    Exclude<MetodosDePago, "tarjeta">,
-    number
-  > | null>(null);
-
-  useEffect(() => {
-    PagosService.getInstance()
-      .getSaldosByMetodo()
-      .then((response) => {
-        const { data } = response;
-        if (data) {
-          setSaldos({
-            credito: Number(data.credito || 0),
-            wallet: Number(data.wallet || 0),
-          });
-        }
-      })
-      .catch((error) => {
-        console.error(
-          error.response || error.message || "Error en jalar saldos"
-        );
-      });
-  }, []);
+  const { saldos } = useCart();
 
   return (
     <div className="w-full">
@@ -452,7 +444,7 @@ const ButtonsHandlerFlow = ({
   nextTitle = "Continuar",
 }: {
   onPast: () => void;
-  pastTitle: string;
+  pastTitle?: string;
   onNext: () => void;
   disabled?: boolean;
   nextTitle?: string;
@@ -498,6 +490,14 @@ const PagoTarjeta = ({
 }) => {
   const [tarjetas, setTarjetas] = useState<PaymentMethod[]>([]);
   const [selectedTarjeta, setSelectedTarjeta] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const {
+    totalCart,
+    cart,
+    handleActualizarCarrito,
+    handleActualizarMetodosPago,
+  } = useCart();
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     StripeService.getInstance()
@@ -513,6 +513,38 @@ const PagoTarjeta = ({
         );
       });
   }, []);
+
+  const handlePagoConTarjeta = async () => {
+    try {
+      if (!selectedTarjeta)
+        throw new Error("No se ha seleccionado ninguna tarjeta");
+      const itemsCart = cart.filter((item) => item.selected);
+      const selectedCard = tarjetas.filter(
+        (card) => card.id === selectedTarjeta
+      );
+      if (itemsCart.length == 0)
+        throw new Error("No has seleccionado ningun item");
+      setLoading(true);
+      const { message } = await StripeService.getInstance().crearPago(
+        totalCart.toFixed(2),
+        selectedTarjeta,
+        itemsCart,
+        selectedCard[0]
+      );
+
+      showNotification("success", message);
+      handleActualizarCarrito();
+      handleActualizarMetodosPago();
+      setView("details");
+    } catch (error: any) {
+      showNotification("error", error.message || "Error al procesar el pago");
+      console.log(
+        error.response || error.message || "Error en procesar el pago"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -588,9 +620,9 @@ const PagoTarjeta = ({
       <ButtonsHandlerFlow
         onPast={() => setView("forma_pago")}
         pastTitle={"Regresar"}
-        onNext={() => setView("credito")}
+        onNext={handlePagoConTarjeta}
         nextTitle="Pagar"
-        disabled={!selectedTarjeta}
+        disabled={!selectedTarjeta || loading}
       />
     </div>
   );
@@ -621,7 +653,7 @@ const cardStyle = {
 
 let stripePromise = loadStripe(API_KEY_STRIPE);
 
-const MetodoTarjetaPago = ({
+const ViewGuardarTarjeta = ({
   setView,
 }: {
   setView: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
@@ -706,3 +738,159 @@ const CardStyle = ({
     </div>
   );
 };
+
+function PagoSaldo({
+  saldo,
+  total,
+  setView,
+}: {
+  saldo: number;
+  total: number;
+  setView: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
+}) {
+  const { cart, totalCart } = useCart();
+  const { showNotification } = useNotification();
+  const restante = saldo - total;
+
+  const handlePagarSaldo = async () => {
+    try {
+      if (restante < 0) throw new Error("No tienes saldo suficiente");
+      const itemsCart = cart.filter((item) => item.selected);
+      const id_agente = UserSingleton.getInstance().getUser()?.info?.id_agente;
+      if (!id_agente)
+        throw new Error(
+          "Ha ocurrido un error inesperado, intenta iniciar sesion de nuevo"
+        );
+      if (itemsCart.length == 0)
+        throw new Error("No has seleccionado ningun item");
+      console.log({ items: itemsCart, total: totalCart.toFixed(2), id_agente });
+    } catch (error: any) {
+      console.error(error);
+      showNotification("error", error.message);
+      alert(error.message || "Error al procesar el pago con saldo");
+    }
+  };
+
+  return (
+    <div className="w-full p-4 rounded-2xl text-gray-800 flex flex-col gap-2 pb-0">
+      <h2 className="text-lg font-semibold border-b">Tu saldo:</h2>
+
+      <ManejoPrecios
+        restante={restante}
+        saldo={saldo}
+        total={total}
+      ></ManejoPrecios>
+
+      <ButtonsHandlerFlow
+        onPast={() => {
+          setView("forma_pago");
+        }}
+        onNext={handlePagarSaldo}
+        nextTitle={"Pagar"}
+        disabled={restante < 0 || total <= 0}
+      ></ButtonsHandlerFlow>
+    </div>
+  );
+}
+function PagoCredito({
+  saldo,
+  total,
+  setView,
+}: {
+  saldo: number;
+  total: number;
+  setView: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
+}) {
+  const {
+    cart,
+    totalCart,
+    handleActualizarCarrito,
+    handleActualizarMetodosPago,
+  } = useCart();
+  const { showNotification } = useNotification();
+  const [loading, setLoading] = useState(false);
+  const restante = saldo - total;
+
+  const handlePagarConCredito = async () => {
+    try {
+      if (restante < 0) throw new Error("No tienes saldo suficiente");
+      const id_agente = UserSingleton.getInstance().getUser()?.info?.id_agente;
+      if (!id_agente)
+        throw new Error(
+          "Ha ocurrido un error inesperado, intenta iniciar sesion de nuevo"
+        );
+      const itemsCart = cart.filter((item) => item.selected);
+      if (itemsCart.length == 0)
+        throw new Error("No has seleccionado ningun item");
+      setLoading(true);
+      const { data, message } =
+        await PagosService.getInstance().pagarCarritoCredito(
+          totalCart.toFixed(2),
+          itemsCart
+        );
+      // console.log({ items: itemsCart, total: totalCart.toFixed(2), id_agente });
+      showNotification(
+        "success",
+        message + `\n Tu credito actual es de: ${data?.current_saldo}`
+      );
+      handleActualizarCarrito();
+      handleActualizarMetodosPago();
+      setView("details");
+    } catch (error: any) {
+      console.error(error.response || error.message || "Error");
+      showNotification("error", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full p-4 rounded-2xl text-gray-800 flex flex-col gap-2 pb-0">
+      <h2 className="text-lg font-semibold border-b">Tu credito:</h2>
+
+      <ManejoPrecios
+        restante={restante}
+        saldo={saldo}
+        total={total}
+      ></ManejoPrecios>
+
+      <ButtonsHandlerFlow
+        onPast={() => {
+          setView("forma_pago");
+        }}
+        onNext={handlePagarConCredito}
+        nextTitle={"Pagar"}
+        disabled={restante < 0 || total <= 0 || loading}
+      ></ButtonsHandlerFlow>
+    </div>
+  );
+}
+
+const ManejoPrecios = ({
+  saldo,
+  total,
+  restante,
+}: {
+  saldo: number;
+  total: number;
+  restante: number;
+}) => (
+  <>
+    <div className="flex justify-between items-center">
+      <span className="text-sm text-gray-400">Total:</span>
+      <span className="font-medium">{formatNumberWithCommas(saldo)}</span>
+    </div>
+    <div className="flex justify-between items-center">
+      <span className="text-sm text-gray-400">Gastado:</span>
+      <span className="font-medium text-red-400">
+        {formatNumberWithCommas(total)}
+      </span>
+    </div>
+    <div className="flex justify-between items-center border-t pt-2">
+      <span className="text-sm text-gray-400">Restante:</span>
+      <span className="font-bold text-green-400">
+        {formatNumberWithCommas(restante)}
+      </span>
+    </div>
+  </>
+);

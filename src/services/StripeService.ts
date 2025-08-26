@@ -1,6 +1,7 @@
 import { PaymentMethod } from "@stripe/stripe-js";
 import { ApiResponse, ApiService } from "./ApiService";
 import { UserSingleton } from "./UserSingleton";
+import { CartItem } from "../types";
 
 export class StripeService extends ApiService {
   private user: UserSingleton = UserSingleton.getInstance();
@@ -47,14 +48,23 @@ export class StripeService extends ApiService {
 
   public crearPago = async (
     amount: string,
-    paymentMethodId: string
+    paymentMethodId: string,
+    itemsCart: CartItem[],
+    selectedCard: PaymentMethod
   ): Promise<ApiResponse<{}>> =>
     this.post({
       path: this.formatPath(this.ENDPOINTS.POST.crear_pago),
       body: {
         amount: Number(amount) * 100,
         paymentMethodId,
+        itemsCart,
         id_agente: this.user.getUser()?.info?.id_agente,
+        id_viajero: this.user.getUser()?.info?.id_viajero,
+        card: {
+          brand: selectedCard.card?.brand,
+          last4: selectedCard.card?.last4,
+          funding: selectedCard.card?.funding,
+        },
       },
     });
 }

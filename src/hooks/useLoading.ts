@@ -1,14 +1,16 @@
 import { useCallback, useState } from "react";
 
-const useLoading = () => {
+export const useLoading = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleLoading = useCallback(async <T>(fn: () => Promise<T>) => {
     setLoading(true);
     try {
-      fn();
-    } catch (error) {}
-  });
+      return fn();
+    } catch (error) {
+      throw error;
+    }
+  }, []);
 
   return { loading, handleLoading };
 };
