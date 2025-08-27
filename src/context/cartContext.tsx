@@ -3,27 +3,67 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { CartItem } from "../types";
 import useAuth from "../hooks/useAuth";
 import { CartService } from "../services/CartService";
+import { PagosService } from "../services/PagosService";
+import { MetodosDePago } from "../types/newIndex";
+
+const inicialStateSaldos: Record<Exclude<MetodosDePago, "tarjeta">, number> = {
+  credito: 0,
+  wallet: 0,
+};
 
 const CartContext = createContext<{
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   totalCart: number;
   handleActualizarCarrito: () => void;
+  handleActualizarMetodosPago: () => void;
+  saldos?: Record<Exclude<MetodosDePago, "tarjeta">, number> | null;
 }>({
   cart: [],
   setCart: () => {},
   totalCart: 0,
   handleActualizarCarrito: () => {},
+  handleActualizarMetodosPago: () => {},
+  saldos: inicialStateSaldos,
 });
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [totalCart, setTotalCart] = useState<number>(0);
+  const [saldos, setSaldos] = useState<Record<
+    Exclude<MetodosDePago, "tarjeta">,
+    number
+  > | null>(inicialStateSaldos);
 
   useEffect(() => {
     handleActualizarCarrito();
+    handleActualizarMetodosPago();
   }, [user?.id]);
+  useEffect(() => {}, []);
+
+  const handleActualizarMetodosPago = () => {
+    if (!user) {
+      setSaldos(inicialStateSaldos);
+      return;
+    }
+    PagosService.getInstance()
+      .getSaldosByMetodo()
+      .then((response) => {
+        const { data } = response;
+        if (data) {
+          setSaldos({
+            credito: Number(data.credito || 0),
+            wallet: Number(data.wallet || 0),
+          });
+        }
+      })
+      .catch((error) => {
+        console.error(
+          error.response || error.message || "Error en jalar saldos"
+        );
+      });
+  };
 
   useEffect(() => {
     setTotalCart(
@@ -64,7 +104,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <CartContext.Provider
-      value={{ cart, setCart, totalCart, handleActualizarCarrito }}
+      value={{
+        cart,
+        setCart,
+        totalCart,
+        handleActualizarCarrito,
+        saldos,
+        handleActualizarMetodosPago,
+      }}
     >
       {children}
     </CartContext.Provider>

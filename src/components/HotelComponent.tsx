@@ -10,6 +10,8 @@ import {
   PawPrint,
   Briefcase,
 } from "lucide-react";
+import { NavigationLink } from "./atom/NavigationLink";
+import ROUTES from "../constants/routes";
 
 // --- INTERFAZ DE DATOS PARA EL HOTEL ---
 interface Hotel {
@@ -231,13 +233,15 @@ const HotelCard: FC<HotelCardProps> = ({ hotel, onReserve }) => {
         </div>
 
         <div className="mt-auto">
-          <button
-            onClick={() => onReserve(hotel)}
-            className="w-full mt-4 flex items-center justify-center space-x-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          <NavigationLink
+            href={ROUTES.HOTELS.ID_CREATE(hotel.id_hotel)}
+            variant="primary"
+            size="full"
+            // className="w-full mt-4 flex items-center justify-center space-x-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
             <CreditCard className="w-5 h-5" />
             <span>Reservar Ahora</span>
-          </button>
+          </NavigationLink>
         </div>
       </div>
     </div>

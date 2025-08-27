@@ -79,7 +79,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
     whitespace-nowrap
     ${
       disabled &&
-      "opacity-70 cursor-not-allowed hover:bg-gray-50 hover:text-gray-600 text-gray-500"
+      "opacity-70 cursor-not-allowed bg-gray-100 hover:text-gray-500 text-gray-500"
     }
   `;
 

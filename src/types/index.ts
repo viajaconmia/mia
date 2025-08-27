@@ -1,5 +1,5 @@
 // Existing types...
-
+//VIEJOS
 export interface UserPreferences {
   id: string;
   user_id: string;
@@ -128,4 +128,68 @@ export interface ReservationDetails {
   check_out: string; // ISO date string
   room: string;
   comentarios: string;
+}
+
+export interface HotelWithTarifas {
+  id_hotel: string;
+  nombre: string;
+  id_cadena: number;
+  correo: string;
+  telefono: string;
+  rfc: string;
+  razon_social: string;
+  direccion: string;
+  latitud: string;
+  longitud: string;
+  convenio: string;
+  descripcion: string;
+  calificacion: number | null;
+  tipo_hospedaje: string;
+  cuenta_de_deposito: string;
+  Estado: string;
+  Ciudad_Zona: string;
+  NoktosQ: number | null;
+  NoktosQQ: number | null;
+  MenoresEdad: string;
+  PaxExtraPersona: string;
+  DesayunoIncluido: string;
+  DesayunoComentarios: string;
+  DesayunoPrecioPorPersona: string;
+  tiene_transportacion: string;
+  Transportacion: string;
+  TransportacionComentarios: string;
+  acepta_mascotas: string;
+  mascotas: string;
+  salones: string;
+  URLImagenHotel: string;
+  URLImagenHotelQ: string;
+  URLImagenHotelQQ: string;
+  Activo: number;
+  Comentarios: string;
+  Id_Sepomex: number | null;
+  CodigoPostal: string;
+  Id_hotel_excel: number;
+  Colonia: string;
+  tipo_negociacion: string;
+  vigencia_convenio: string; // ISO date string
+  hay_convenio: string;
+  comentario_vigencia: string;
+  tipo_pago: string;
+  disponibilidad_precio: string;
+  contacto_convenio: string;
+  contacto_recepcion: string;
+  iva: string;
+  ish: string;
+  otros_impuestos: string;
+  otros_impuestos_porcentaje: string;
+  comentario_pago: string;
+  precio_sencilla: string;
+  costo_sencilla: string;
+  desayuno_sencilla: number;
+  precio_doble: string;
+  costo_doble: string;
+  precio_persona_extra: string;
+  desayuno_doble: number;
+  pais: string;
+  score_operaciones: number | null;
 }
