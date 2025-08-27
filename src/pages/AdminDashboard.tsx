@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 import CsvDownload from "react-csv-downloader";
 import { URL, API_KEY } from "../constants/apiConstant";
+import NavContainerModal from "../components/organism/detalles";
 import {
   Users,
   Hotel,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { Table } from "../components/atom/table"; // Import the new Table component
-
+const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 interface DashboardStats {
   totalUsers: number;
   totalBookings: number;

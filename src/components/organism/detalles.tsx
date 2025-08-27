@@ -4,29 +4,38 @@
 import { Suspense, useState } from "react";
 import Button from "../atom/Button";
 import { ScrollArea } from "../atom/scroll-area";
-import { ArrowIcon, MiaIcon, BookingsIcon, PaymentIcon, InvoicesIcon } from "lucide-react"; // Asegúrate de tener estos íconos
-import Link from "next/link"; // Asegúrate de tener Link de next/link
+import {
+  ArrowUpRight as ArrowIcon,
+  CalendarDays as BookingsIcon,
+  CreditCard as PaymentIcon,
+  FileText as InvoicesIcon,
+} from "lucide-react";
+import Link from "next/link";
 
-// Define la interfaz para las propiedades del componente
-interface ClientLayoutProps {
-  tabs?: {
-    title: string;
-    tab: string;
-    icon: React.ElementType;
-    component?: React.ReactNode;
-  }[];
+// Interfaces para las propiedades
+interface Tab {
   title: string;
+  tab: string;
+  icon: React.ElementType;
+  component?: React.ReactNode;
+}
+
+interface NavLink {
+  href: string;
+  title: string;
+  icon: React.ElementType;
+}
+
+interface ClientLayoutProps {
+  tabs?: Tab[];
+  title?: string;
   defaultTab?: string;
-  links?: {
-    href: string;
-    title: string;
-    icon: React.ElementType;
-  }[];
+  links?: NavLink[];
   children?: React.ReactNode;
 }
 
 // Datos de ejemplo para los tabs
-const sampleTabs = [
+const sampleTabs: Tab[] = [
   {
     title: "Reservas",
     tab: "bookings",
@@ -62,19 +71,26 @@ const sampleTabs = [
   },
 ];
 
+// Componente para el ícono de Mia (reemplazar con el componente real)
+const MiaIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+    <circle cx="12" cy="12" r="4" fill="currentColor" />
+  </svg>
+);
+
 export default function NavContainerModal({
-  tabs = sampleTabs, // Usamos los datos de ejemplo por defecto
+  tabs = sampleTabs,
   title = "Detalles",
   links = [],
   children,
 }: ClientLayoutProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isHover, setIsHover] = useState(false);
-  const [currentTab, setCurrentTab] = useState(
-    tabs.length > 0 ? tabs[0].tab : ""
-  );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [currentTab, setCurrentTab] = useState(tabs[0]?.tab || "");
 
+  // Si el modal está cerrado, mostrar solo el botón para abrirlo
   if (!isModalOpen) {
     return (
       <Button onClick={() => setIsModalOpen(true)}>
@@ -83,9 +99,13 @@ export default function NavContainerModal({
     );
   }
 
+  // Determinar si la barra lateral está expandida
+  const isSidebarExpanded = isSidebarOpen || isSidebarHovered;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="relative w-full h-[80vh] max-w-4xl rounded-xl overflow-hidden bg-white shadow-lg">
+        {/* Botón de cerrar */}
         <Button
           variant="ghost"
           size="icon"
@@ -94,74 +114,73 @@ export default function NavContainerModal({
         >
           <ArrowIcon className="rotate-90" />
         </Button>
+
         <div className="flex h-full w-full min-w-[85vw]">
           {/* Sidebar */}
           <div
-            className={`relative h-full bg-white/70 transition-all duration-300 ${isOpen || isHover ? "w-52" : "w-16"
+            className={`relative h-full bg-white/70 transition-all duration-300 ${isSidebarExpanded ? "w-52" : "w-16"
               }`}
           >
+            {/* Botón para expandir/contraer sidebar */}
             <Button
               variant="ghost"
               size="icon"
               className="absolute w-full right-0 top-0 z-40 h-12 flex justify-end pr-5 items-center"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
               <ArrowIcon
-                className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                className={`transition-transform ${isSidebarOpen ? "rotate-180" : ""
+                  }`}
               />
             </Button>
-            {/* Sidebar Content */}
+
+            {/* Contenido del Sidebar */}
             <ScrollArea
               className="h-full py-6"
-              onMouseOver={() => {
-                setIsHover(true);
-              }}
-              onMouseOut={() => {
-                setIsHover(false);
-              }}
+              onMouseOver={() => setIsSidebarHovered(true)}
+              onMouseOut={() => setIsSidebarHovered(false)}
             >
               <div className="space-y-4">
                 <div className="px-3 py-2">
                   <div className="space-y-1">
+                    {/* Logo y título */}
                     <div className="flex gap-2 h-fit items-center mb-8 mt-4">
-                      <span>
-                        <MiaIcon />
-                      </span>
-                      {(isOpen || isHover) && (
-                        <span>
-                          <h2 className="text-xl font-semibold transition-all">
-                            {title}
-                          </h2>
-                        </span>
+                      <MiaIcon />
+                      {isSidebarExpanded && (
+                        <h2 className="text-xl font-semibold transition-all">
+                          {title}
+                        </h2>
                       )}
                     </div>
+
+                    {/* Navegación */}
                     <nav className="space-y-2">
+                      {/* Enlaces */}
                       {links.map((item) => (
                         <Link
                           href={item.href}
                           key={item.href}
-                          className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900`}
+                          className="flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900"
                         >
                           <item.icon className="h-4 w-4" />
-                          {(isOpen || isHover) && (
+                          {isSidebarExpanded && (
                             <span className="whitespace-nowrap">{item.title}</span>
                           )}
                         </Link>
                       ))}
+
+                      {/* Pestañas */}
                       {tabs.map((item) => (
                         <button
-                          onClick={() => {
-                            setCurrentTab(item.tab);
-                          }}
+                          onClick={() => setCurrentTab(item.tab)}
                           key={item.tab}
-                          className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900",
-                            ${currentTab === item.tab
-                              ? "bg-blue-100 text-blue-900"
-                              : "text-gray-500"
+                          className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900 ${currentTab === item.tab
+                            ? "bg-blue-100 text-blue-900"
+                            : "text-gray-500"
                             }`}
                         >
                           <item.icon className="h-4 w-4" />
-                          {(isOpen || isHover) && (
+                          {isSidebarExpanded && (
                             <span className="whitespace-nowrap">{item.title}</span>
                           )}
                         </button>
@@ -173,15 +192,16 @@ export default function NavContainerModal({
             </ScrollArea>
           </div>
 
-          {/* Main Content */}
+          {/* Contenido Principal */}
           <div className="flex-1 overflow-y-auto min-h-[600px] border-l">
             {children}
-            {tabs.length != 0 && (
+
+            {tabs.length > 0 && (
               <Suspense
                 fallback={
-                  <>
+                  <div className="p-6">
                     <h1>Cargando tu contenido...</h1>
-                  </>
+                  </div>
                 }
               >
                 {tabs
