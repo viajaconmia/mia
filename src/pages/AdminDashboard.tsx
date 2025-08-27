@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import CsvDownload from "react-csv-downloader";
 import { URL, API_KEY } from "../constants/apiConstant";
 import {
   Users,
   Hotel,
-  CreditCard,
   BarChart3,
   Calendar,
   DollarSign,
@@ -14,8 +12,6 @@ import {
   CheckCircle,
   XCircle,
   Search,
-  Download,
-  RefreshCw,
   Building2,
   Tag,
   FilePenLine,
@@ -23,7 +19,6 @@ import {
   FileSignature,
   MapPinned,
   SlidersHorizontal,
-  User2,
   CreditCardIcon,
   File,
 } from "lucide-react";
@@ -212,7 +207,6 @@ export const AdminDashboard = () => {
   const [activateFilters, setActivateFilters] = useState(false);
   const [activateFiltersUsers, setActivateFiltersUsers] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -253,21 +247,18 @@ export const AdminDashboard = () => {
 
   const fetchInvoices = async () => {
     try {
-      const invoicesData = await getfacturasByAgente(
-        user?.info?.id_agente || ""
-      );
-      if (invoicesData) {
-        setInvoices(invoicesData);
-        setFilteredInvoices(invoicesData);
+      const apiData = await getfacturasByAgente(user?.info?.id_agente || "");
+
+      // Asegúrate de que apiData y apiData.data existen y que apiData.data es un array
+      if (apiData && Array.isArray(apiData.data)) {
+        setInvoices(apiData.data);
       } else {
-        console.error("No Tiene facturas.");
+        console.error("No se encontraron facturas o el formato es incorrecto.");
         setInvoices([]);
-        setFilteredInvoices([]);
       }
     } catch (error) {
       console.error("Error al obtener facturas:", error);
       setInvoices([]);
-      setFilteredInvoices([]);
     }
   };
 
@@ -367,17 +358,16 @@ export const AdminDashboard = () => {
             image_url: item.URLImagenHotel,
             created_at: item.created_at,
             viajero: item.nombre_viajero_reservacion,
-            acompañantes: item.nombre_viajero_reservacion,
+            acompañantes: item.nombres_viajeros_acompañantes,
             company_profiles: {
               company_name: item.quien_reservó,
             },
           })
         );
-        const completedBookings = transformedBookings.filter(
-          (booking) => booking.status === "Confirmada"
-        );
-        setBookings(completedBookings);
-        setFilteredBookings(completedBookings);
+
+        // Store all bookings and apply the filter afterward
+        setBookings(transformedBookings);
+        setFilteredBookings(transformedBookings);
       } else {
         setBookings([]);
         setFilteredBookings([]);
@@ -618,21 +608,39 @@ export const AdminDashboard = () => {
 
   const invoiceColumns = [
     {
-      key: "issue_date",
+      key: "fecha_emision",
       header: "Fecha Facturación",
       renderer: ({ value }: { value: string }) => (
         <span>{formatDate(value)}</span>
       ),
     },
-    { key: "subtotal", header: "Subtotal" }, // Asume que existe una propiedad "subtotal" en tu data
-    { key: "iva", header: "IVA" }, // Asume que existe una propiedad "iva" en tu data
     {
-      key: "amount",
-      header: "Total",
-      renderer: ({ value }: { value: number }) => (
+      key: "subtotal",
+      header: "Subtotal",
+      renderer: ({ value }: { value: string }) => (
         <div className="flex items-center space-x-2">
           <DollarSign className="w-4 h-4 text-gray-400" />
-          <span>{formatCurrency(value)}</span>
+          <span>{formatCurrency(parseFloat(value))}</span>
+        </div>
+      ),
+    },
+    {
+      key: "impuestos",
+      header: "IVA",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span>{formatCurrency(parseFloat(value))}</span>
+        </div>
+      ),
+    },
+    {
+      key: "total",
+      header: "Total",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span>{formatCurrency(parseFloat(value))}</span>
         </div>
       ),
     },
@@ -1037,7 +1045,7 @@ export const AdminDashboard = () => {
               </div>
               <Table<Invoice>
                 id="invoicesTable"
-                data={filteredInvoices}
+                data={invoices}
                 columns={invoiceColumns}
               />
             </div>
