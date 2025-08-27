@@ -47,6 +47,7 @@ import { API_KEY_STRIPE } from "../constants/apiConstant";
 import { UserSingleton } from "../services/UserSingleton";
 import { MetodosDePago } from "../types/newIndex";
 import { PagosService } from "../services/PagosService";
+import { ProtectedComponent } from "../middleware/ProtectedComponent";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
@@ -258,24 +259,34 @@ export const Cart = () => {
   }
 
   return (
-    // Tu componente de carrito con la lógica de scroll
-    <div
-      ref={refContainer}
-      className="mx-auto relative h-full flex flex-col @container w-full bg-gray-100" // 👈 Cambios: flex flex-col
+    <ProtectedComponent
+      admit={{
+        administrador: true,
+        reservante: false,
+        viajero: false,
+        consultor: false,
+        "no-rol": false,
+      }}
     >
-      {/* Contenedor de los items, adaptable a diferentes tamaños de pantalla */}
-      <div className="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-4 p-4 overflow-y-auto pb-14 flex-grow">
-        {cart.map((item) => (
-          <CartItemComponent
-            key={item.id}
-            item={item}
-            onSelect={handleSelectCart}
-            onDelete={handleDeleteCart}
-          />
-        ))}
+      // Tu componente de carrito con la lógica de scroll
+      <div
+        ref={refContainer}
+        className="mx-auto relative h-full flex flex-col @container w-full bg-gray-100" // 👈 Cambios: flex flex-col
+      >
+        {/* Contenedor de los items, adaptable a diferentes tamaños de pantalla */}
+        <div className="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-4 p-4 overflow-y-auto pb-14 flex-grow">
+          {cart.map((item) => (
+            <CartItemComponent
+              key={item.id}
+              item={item}
+              onSelect={handleSelectCart}
+              onDelete={handleDeleteCart}
+            />
+          ))}
+        </div>
+        <ContainerTerminalPago total={totalCart}></ContainerTerminalPago>
       </div>
-      <ContainerTerminalPago total={totalCart}></ContainerTerminalPago>
-    </div>
+    </ProtectedComponent>
   );
 };
 

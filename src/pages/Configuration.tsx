@@ -479,14 +479,16 @@ export const Configuration = () => {
                                   >
                                     Editar rol
                                   </Button> */}
-                                    <Button
-                                      onClick={() => {
-                                        setSelectedViajero(employee);
-                                      }}
-                                      variant="secondary"
-                                    >
-                                      Definir rol
-                                    </Button>
+                                    {!employee.rol && (
+                                      <Button
+                                        onClick={() => {
+                                          setSelectedViajero(employee);
+                                        }}
+                                        variant="secondary"
+                                      >
+                                        Definir rol
+                                      </Button>
+                                    )}
                                   </ProtectedComponent>
                                 )}
                               </td>
