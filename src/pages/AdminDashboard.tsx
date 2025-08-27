@@ -26,6 +26,8 @@ import {
 import useAuth from "../hooks/useAuth";
 import { Table } from "../components/atom/table"; // Import the new Table component
 import { TabsList } from "../components/molecule/TabsList";
+import { formatCurrency, formatDate } from "../utils/format";
+import { TabSelected } from "../components/molecule/TabSelected";
 
 interface DashboardStats {
   totalUsers: number;
@@ -77,6 +79,8 @@ interface Payment {
     hotel_name: string;
   };
 }
+
+
 
 interface Invoice {
   id: string;
@@ -180,7 +184,11 @@ type ViewsConsultas =
   | "Pagos"
   | "Facturas";
 
+type ModalType = "payment" | "invoice";
+
+
 export const AdminDashboard = () => {
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalBookings: 0,
@@ -195,20 +203,23 @@ export const AdminDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<ViewsConsultas>("Vista general");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchTermUser, setSearchTermUser] = useState("");
-  const [dateStart, setDateStart] = useState("");
-  const [dateEnd, setDateEnd] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [activateFilters, setActivateFilters] = useState(false);
-  const [activateFiltersUsers, setActivateFiltersUsers] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { user } = useAuth();
+
+  // Nuevo estado para controlar el modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<ModalType | null>(null);
+
+  // Nueva función para abrir el modal
+  const openDetails = (itemId: string, itemType: ModalType) => {
+    setSelectedItemId(itemId);
+    setSelectedItemType(itemType);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -231,14 +242,6 @@ export const AdminDashboard = () => {
       fetchPayments();
     }
   }, [activeView]);
-
-  useEffect(() => {
-    filterBookings();
-  }, [searchTerm, statusFilter, bookings, dateEnd, dateStart]);
-
-  useEffect(() => {
-    filterUsers();
-  }, [searchTermUser]);
 
   useEffect(() => {
     if (activeView === "Facturas") {
@@ -300,44 +303,6 @@ export const AdminDashboard = () => {
     }
   };
 
-  const filterBookings = () => {
-    let filtered = [...bookings];
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (booking) =>
-          booking.hotel_name.toLowerCase().includes(searchLower) ||
-          booking.confirmation_code.toLowerCase().includes(searchLower)
-      );
-    }
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((booking) => booking.status === statusFilter);
-    }
-    if (dateEnd != "" && dateStart != "") {
-      filtered = filtered.filter(
-        (booking) =>
-          Date.parse(booking.check_in) >= Date.parse(dateStart) &&
-          Date.parse(booking.check_out) <= Date.parse(dateEnd)
-      );
-    }
-    setFilteredBookings(filtered);
-  };
-
-  const filterUsers = () => {
-    let filtered = [...users];
-    if (searchTermUser) {
-      const searchLower = searchTermUser.toLowerCase();
-      filtered = filtered.filter(
-        (user) =>
-          user.company_name.toLowerCase().includes(searchLower) ||
-          user.industry?.toLowerCase().includes(searchLower) ||
-          user.city?.toLowerCase().includes(searchLower) ||
-          user.rfc?.toLowerCase().includes(searchLower)
-      );
-    }
-    setFilteredUsers(filtered);
-  };
-
   const fetchBookings = async () => {
     try {
       if (!user?.info?.id_agente) {
@@ -368,15 +333,12 @@ export const AdminDashboard = () => {
 
         // Store all bookings and apply the filter afterward
         setBookings(transformedBookings);
-        setFilteredBookings(transformedBookings);
       } else {
         setBookings([]);
-        setFilteredBookings([]);
       }
     } catch (error) {
       console.error("Error fetching bookings:", error);
       setBookings([]);
-      setFilteredBookings([]);
     }
   };
 
@@ -386,7 +348,6 @@ export const AdminDashboard = () => {
         throw new Error("No hay usuario autenticado");
       }
       setUsers([]);
-      setFilteredUsers([]);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -413,86 +374,51 @@ export const AdminDashboard = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    }).format(amount);
+  const views: Record<ViewsConsultas, React.ReactNode> = {
+    Facturas: <InvoicesView invoices={invoices} />,
+    "Vista general": <OverviewView stats={stats} />,
+    Usuarios: <UsersView users={users} />,
+    Pagos: <PaymentsView filteredPayments={filteredPayments} />,
+    Reservaciones: <BookingsView bookings={bookings} openDetails={openDetails} />, // Pasa openDetails aquí
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("es-MX", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  return (
+    <>
+      <div className="max-w-7xl mx-auto mt-4 bg-gray-100 rounded-md space-y-4">
+        <TabsList
+          tabs={[
+            { icon: BarChart3, tab: "Vista general" },
+            { icon: Users, tab: "Usuarios" },
+            { icon: Building2, tab: "Reservaciones" },
+            { icon: CreditCardIcon, tab: "Pagos" },
+            { icon: File, tab: "Facturas" },
+          ]}
+          onChange={(tab) => {
+            setActiveView(tab as ViewsConsultas);
+          }}
+          activeTab={activeView}
+        />
+        <div>
+          <TabSelected tabs={views} selected={activeView}></TabSelected>
+        </div>
+      </div>
+      {isModalOpen && selectedItemId && selectedItemType && (
+        <NavContainerModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          agentId={user?.info?.id_agente || ""} // ID del agente, no del item
+          initialItemId={selectedItemId} // ID del item seleccionado
+          items={([])} // Función para obtener los items
+          itemType={selectedItemType}
+        />
+      )}
+    </>
+  );
+};
 
-  // Column definitions for each view
-  const userColumns = [
-    {
-      key: "company_name",
-      header: "Compañia",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Building2 className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "created_at",
-      header: "Fecha Registro",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
-        </div>
-      ),
-    },
-    {
-      key: "industry",
-      header: "Industria",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Factory className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "rfc",
-      header: "RFC",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <FileSignature className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "city",
-      header: "Ciudad",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <MapPinned className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-  ];
-
+const BookingsView = ({ bookings, openDetails }: { bookings: Booking[], openDetails: (id: string, type: ModalType) => void }) => {
   const bookingColumns = [
-    {
-      key: "created_at",
-      header: "Fecha Creación",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
-        </div>
-      ),
-    },
+
     {
       key: "hotel_name",
       header: "Hotel",
@@ -561,7 +487,7 @@ export const AdminDashboard = () => {
           <button
             className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
             title="Ver detalle"
-            onClick={() => console.log(item)}
+            onClick={() => openDetails(item.id, "payment")} // Usa la función openDetails de las props
           >
             <FilePenLine className="w-5 h-5" />
           </button>
@@ -570,6 +496,23 @@ export const AdminDashboard = () => {
     },
   ];
 
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <Table<Booking>
+          id="bookingsTable"
+          data={bookings}
+          columns={bookingColumns}
+        />
+      </div>
+    </div>
+  );
+};
+const PaymentsView = ({
+  filteredPayments,
+}: {
+  filteredPayments: Payment[];
+}) => {
   const paymentColumns = [
     {
       key: "created_at",
@@ -607,6 +550,22 @@ export const AdminDashboard = () => {
     },
   ];
 
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Gestión de Pagos
+        </h3>
+      </div>
+      <Table
+        id="paymentsTable"
+        data={filteredPayments}
+        columns={paymentColumns}
+      />
+    </div>
+  );
+};
+const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   const invoiceColumns = [
     {
       key: "fecha_emision",
@@ -663,394 +622,304 @@ export const AdminDashboard = () => {
   ];
 
   return (
-    <>
-      <div className="max-w-7xl mx-auto mt-4 bg-gray-100 rounded-md space-y-4">
-        <TabsList
-          tabs={[
-            { icon: BarChart3, tab: "Vista general" },
-            { icon: Users, tab: "Usuarios" },
-            { icon: Building2, tab: "Reservaciones" },
-            { icon: CreditCardIcon, tab: "Pagos" },
-            { icon: File, tab: "Facturas" },
-          ]}
-          onChange={(tab) => {
-            setActiveView(tab as ViewsConsultas);
-          }}
-          activeTab={activeView}
-        />
-        <div>
-          {/* Overview */}
-          {activeView === "Vista general" && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Stats Grid */}
-              </div>
-              {/* Recent Activity */}
-            </div>
-          )}
-
-          {/* Overview */}
-          {activeView === "Vista general" && (
-            <div className="space-y-8 p-4">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Total Users */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Total de Usuarios</p>
-                      <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                        {stats.totalUsers}
-                      </h3>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-                      <Users className="w-6 h-6 text-blue-600" />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center text-sm text-green-600">
-                    <ArrowUpRight className="w-4 h-4 mr-1" />
-                    <span>12% más que el mes pasado</span>
-                  </div>
-                </div>
-
-                {/* Total Bookings */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Total de Reservas</p>
-                      <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                        {stats.totalBookings}
-                      </h3>
-                    </div>
-                    <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-indigo-600" />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center text-sm text-green-600">
-                    <ArrowUpRight className="w-4 h-4 mr-1" />
-                    <span>8% más que el mes pasado</span>
-                  </div>
-                </div>
-
-                {/* Total Revenue */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Ingresos Totales</p>
-                      <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                        {formatCurrency(stats.totalRevenue)}
-                      </h3>
-                    </div>
-                    <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
-                      <DollarSign className="w-6 h-6 text-green-600" />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center text-sm text-red-600">
-                    <ArrowDownRight className="w-4 h-4 mr-1" />
-                    <span>3% menos que el mes pasado</span>
-                  </div>
-                </div>
-
-                {/* Active Bookings */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Reservas Activas</p>
-                      <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                        {stats.activeBookings}
-                      </h3>
-                    </div>
-                    <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center">
-                      <Clock className="w-6 h-6 text-yellow-600" />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center text-sm text-green-600">
-                    <ArrowUpRight className="w-4 h-4 mr-1" />
-                    <span>5% más que el mes pasado</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Recent Users */}
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Usuarios Recientes
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {stats.recentUsers.map((user: any) => (
-                      <div key={user.id} className="px-6 py-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {user.company_name}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {user.industry}
-                            </p>
-                          </div>
-                          <span className="text-sm text-gray-500">
-                            {formatDate(user.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Recent Bookings */}
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Reservas Recientes
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {stats.recentBookings.map((booking: any) => (
-                      <div key={booking.id} className="px-6 py-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {booking.hotel_name}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {booking.confirmation_code}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : booking.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                                }`}
-                            >
-                              {booking.status === "completed" ? (
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                              ) : booking.status === "pending" ? (
-                                <Clock className="w-4 h-4 mr-1" />
-                              ) : (
-                                <XCircle className="w-4 h-4 mr-1" />
-                              )}
-                              {booking.status}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {formatCurrency(booking.total_price)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Payments */}
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Pagos Recientes
-                  </h3>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {stats.recentPayments.map((payment: any) => (
-                    <div key={payment.id} className="px-6 py-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {payment.bookings?.hotel_name || "Hotel"}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {payment.bookings?.confirmation_code || "N/A"}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : payment.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                              }`}
-                          >
-                            {payment.status}
-                          </span>
-                          <span className="font-medium text-gray-900">
-                            {formatCurrency(payment.amount)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Users View */}
-          {activeView === "Usuarios" && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items">
-                    <button
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                      onClick={() =>
-                        setActivateFiltersUsers(!activateFiltersUsers)
-                      }
-                    >
-                      <SlidersHorizontal className="w-5 h-5" />
-                      <span>Filtrar</span>
-                    </button>
-                  </div>
-                </div>
-                {activateFiltersUsers && (
-                  <>
-                    <div className="relative mb-4">
-                      <input
-                        pattern="^[^<>]*$"
-                        type="text"
-                        placeholder="Buscar compañias, ciudades, industria, RFC..."
-                        value={searchTermUser}
-                        onChange={(e) => setSearchTermUser(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                      <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    </div>
-                  </>
-                )}
-                <Table
-                  id="usersTable"
-                  data={filteredUsers}
-                  columns={userColumns}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Bookings View */}
-          {activeView === "Reservaciones" && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6 flex-wrap space-y-2">
-                  <div className="flex items">
-                    <button
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                      onClick={() => setActivateFilters(!activateFilters)}
-                    >
-                      <SlidersHorizontal className="w-5 h-5" />
-                      <span>Filtrar</span>
-                    </button>
-                  </div>
-                </div>
-                {activateFilters && (
-                  <div className="duration-500 transition-all ease-in-out">
-                    <div className="flex items-center gap-x-4 gap-y-3 flex-wrap mb-4">
-                      <div className="relative">
-                        <input
-                          pattern="^[^<>]*$"
-                          type="text"
-                          placeholder="Buscar por hotel, código o email..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      </div>
-                      <div className="flex-row flex justify-center items-center relative gap-x-3">
-                        <p>Fecha de inicio</p>
-                        <input
-                          pattern="^[^<>]*$"
-                          type="date"
-                          placeholder="Ingresa fecha de fin"
-                          value={dateStart}
-                          onChange={(e) => setDateStart(e.target.value)}
-                          className="pl-5 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div className="flex-row flex justify-center items-center relative gap-x-3">
-                        <p>Fecha de fin</p>
-                        <input
-                          pattern="^[^<>]*$"
-                          type="date"
-                          placeholder="Ingresa fecha de fin"
-                          value={dateEnd}
-                          onChange={(e) => setDateEnd(e.target.value)}
-                          className="pl-5 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="all">Todos los estados</option>
-                        <option value="pending">Pendientes</option>
-                        <option value="completed">Completadas</option>
-                        <option value="cancelled">Canceladas</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-                <Table<Booking>
-                  id="bookingsTable"
-                  data={filteredBookings}
-                  columns={bookingColumns}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Payments View */}
-          {activeView === "Pagos" && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Gestión de Pagos
-                </h3>
-              </div>
-              <Table
-                id="paymentsTable"
-                data={filteredPayments}
-                columns={paymentColumns}
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Gestión de Facturas
+          </h3>
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <input
+                pattern="^[^<>]*$"
+                type="text"
+                placeholder="Buscar facturas..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
             </div>
-          )}
-
-          {/* Invoices View */}
-          {activeView === "Facturas" && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Gestión de Facturas
-                  </h3>
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <input
-                        pattern="^[^<>]*$"
-                        type="text"
-                        placeholder="Buscar facturas..."
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <Table<Invoice>
-                id="invoicesTable"
-                data={invoices}
-                columns={invoiceColumns}
-              />
-            </div>
-          )}
+          </div>
         </div>
       </div>
-    </>
+      <Table<Invoice>
+        id="invoicesTable"
+        data={invoices}
+        columns={invoiceColumns}
+      />
+    </div>
+  );
+};
+const UsersView = ({ users }: { users: User[] }) => {
+  const userColumns = [
+    {
+      key: "company_name",
+      header: "Compañia",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <Building2 className="w-4 h-4 text-gray-400" />
+          <span>{value}</span>
+        </div>
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Fecha Registro",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          <span>{formatDate(value)}</span>
+        </div>
+      ),
+    },
+    {
+      key: "industry",
+      header: "Industria",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <Factory className="w-4 h-4 text-gray-400" />
+          <span>{value}</span>
+        </div>
+      ),
+    },
+    {
+      key: "rfc",
+      header: "RFC",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <FileSignature className="w-4 h-4 text-gray-400" />
+          <span>{value}</span>
+        </div>
+      ),
+    },
+    {
+      key: "city",
+      header: "Ciudad",
+      renderer: ({ value }: { value: string }) => (
+        <div className="flex items-center space-x-2">
+          <MapPinned className="w-4 h-4 text-gray-400" />
+          <span>{value}</span>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <Table id="usersTable" data={users} columns={userColumns} />
+      </div>
+    </div>
+  );
+};
+const OverviewView = ({ stats }: { stats: DashboardStats }) => {
+  return (
+    <div>
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Stats Grid */}
+        </div>
+        {/* Recent Activity */}
+      </div>
+
+      <div className="space-y-8 p-4">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Users */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total de Usuarios</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                  {stats.totalUsers}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-green-600">
+              <ArrowUpRight className="w-4 h-4 mr-1" />
+              <span>12% más que el mes pasado</span>
+            </div>
+          </div>
+
+          {/* Total Bookings */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total de Reservas</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                  {stats.totalBookings}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-indigo-600" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-green-600">
+              <ArrowUpRight className="w-4 h-4 mr-1" />
+              <span>8% más que el mes pasado</span>
+            </div>
+          </div>
+
+          {/* Total Revenue */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Ingresos Totales</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                  {formatCurrency(stats.totalRevenue)}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-red-600">
+              <ArrowDownRight className="w-4 h-4 mr-1" />
+              <span>3% menos que el mes pasado</span>
+            </div>
+          </div>
+
+          {/* Active Bookings */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Reservas Activas</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                  {stats.activeBookings}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-green-600">
+              <ArrowUpRight className="w-4 h-4 mr-1" />
+              <span>5% más que el mes pasado</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Users */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Usuarios Recientes
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {stats.recentUsers.map((user: any) => (
+                <div key={user.id} className="px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {user.company_name}
+                      </p>
+                      <p className="text-sm text-gray-500">{user.industry}</p>
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      {formatDate(user.created_at)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Bookings */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Reservas Recientes
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {stats.recentBookings.map((booking: any) => (
+                <div key={booking.id} className="px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {booking.hotel_name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {booking.confirmation_code}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "completed"
+                          ? "bg-green-100 text-green-800"
+                          : booking.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                          }`}
+                      >
+                        {booking.status === "completed" ? (
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                        ) : booking.status === "pending" ? (
+                          <Clock className="w-4 h-4 mr-1" />
+                        ) : (
+                          <XCircle className="w-4 h-4 mr-1" />
+                        )}
+                        {booking.status}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {formatCurrency(booking.total_price)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Payments */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Pagos Recientes
+            </h3>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {stats.recentPayments.map((payment: any) => (
+              <div key={payment.id} className="px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {payment.bookings?.hotel_name || "Hotel"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {payment.bookings?.confirmation_code || "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : payment.status === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                        }`}
+                    >
+                      {payment.status}
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {formatCurrency(payment.amount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
+
+    </div>
   );
 };
