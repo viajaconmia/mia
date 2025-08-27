@@ -27,7 +27,6 @@ import useAuth from "../hooks/useAuth";
 import { Table } from "../components/atom/table"; // Import the new Table component
 import { TabsList } from "../components/molecule/TabsList";
 
-const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 interface DashboardStats {
   totalUsers: number;
   totalBookings: number;

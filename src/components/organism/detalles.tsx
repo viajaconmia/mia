@@ -1,7 +1,7 @@
 // src/components/NavContainerModal.tsx
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState, Suspense } from "react";
 import Button from "../atom/Button";
 import { ScrollArea } from "../atom/scroll-area";
 import {
@@ -10,7 +10,6 @@ import {
   CreditCard as PaymentIcon,
   FileText as InvoicesIcon,
 } from "lucide-react";
-import Link from "next/link";
 
 // Interfaces para las propiedades
 interface Tab {
@@ -20,87 +19,47 @@ interface Tab {
   component?: React.ReactNode;
 }
 
-interface NavLink {
-  href: string;
-  title: string;
-  icon: React.ElementType;
-}
-
-interface ClientLayoutProps {
-  tabs?: Tab[];
+interface NavContainerModalProps {
+  isOpen: boolean; // Controla si el modal está abierto
+  onClose: () => void; // Función para cerrar el modal
+  tabs: Tab[]; // Los tabs que se mostrarán en la barra lateral
   title?: string;
-  defaultTab?: string;
-  links?: NavLink[];
-  children?: React.ReactNode;
 }
-
-// Datos de ejemplo para los tabs
-const sampleTabs: Tab[] = [
-  {
-    title: "Reservas",
-    tab: "bookings",
-    icon: BookingsIcon,
-    component: (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Detalles de Reservas</h2>
-        <p className="text-gray-600">Aquí se muestran todas las reservas de tu cuenta.</p>
-      </div>
-    ),
-  },
-  {
-    title: "Pagos",
-    tab: "payments",
-    icon: PaymentIcon,
-    component: (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Historial de Pagos</h2>
-        <p className="text-gray-600">Revisa tu historial de transacciones y pagos.</p>
-      </div>
-    ),
-  },
-  {
-    title: "Facturas",
-    tab: "invoices",
-    icon: InvoicesIcon,
-    component: (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Facturas Pendientes</h2>
-        <p className="text-gray-600">Descarga o visualiza tus facturas de servicios.</p>
-      </div>
-    ),
-  },
-];
 
 // Componente para el ícono de Mia (reemplazar con el componente real)
 const MiaIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
     <circle cx="12" cy="12" r="4" fill="currentColor" />
   </svg>
 );
 
 export default function NavContainerModal({
-  tabs = sampleTabs,
+  isOpen,
+  onClose,
+  tabs,
   title = "Detalles",
-  links = [],
-  children,
-}: ClientLayoutProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+}: NavContainerModalProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [currentTab, setCurrentTab] = useState(tabs[0]?.tab || "");
 
-  // Si el modal está cerrado, mostrar solo el botón para abrirlo
-  if (!isModalOpen) {
-    return (
-      <Button onClick={() => setIsModalOpen(true)}>
-        Abrir Detalles
-      </Button>
-    );
+  // Si el modal no está abierto, no renderizar nada
+  if (!isOpen) {
+    return null;
   }
 
   // Determinar si la barra lateral está expandida
   const isSidebarExpanded = isSidebarOpen || isSidebarHovered;
+
+  // Encontrar el componente del tab actual
+  const activeTabComponent = tabs.find((item) => item.tab === currentTab)?.component;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -110,7 +69,7 @@ export default function NavContainerModal({
           variant="ghost"
           size="icon"
           className="absolute top-4 right-4 z-50"
-          onClick={() => setIsModalOpen(false)}
+          onClick={onClose} // Usa la prop onClose
         >
           <ArrowIcon className="rotate-90" />
         </Button>
@@ -153,23 +112,8 @@ export default function NavContainerModal({
                       )}
                     </div>
 
-                    {/* Navegación */}
+                    {/* Navegación - Pestañas */}
                     <nav className="space-y-2">
-                      {/* Enlaces */}
-                      {links.map((item) => (
-                        <Link
-                          href={item.href}
-                          key={item.href}
-                          className="flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900"
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {isSidebarExpanded && (
-                            <span className="whitespace-nowrap">{item.title}</span>
-                          )}
-                        </Link>
-                      ))}
-
-                      {/* Pestañas */}
                       {tabs.map((item) => (
                         <button
                           onClick={() => setCurrentTab(item.tab)}
@@ -181,7 +125,9 @@ export default function NavContainerModal({
                         >
                           <item.icon className="h-4 w-4" />
                           {isSidebarExpanded && (
-                            <span className="whitespace-nowrap">{item.title}</span>
+                            <span className="whitespace-nowrap">
+                              {item.title}
+                            </span>
                           )}
                         </button>
                       ))}
@@ -194,9 +140,8 @@ export default function NavContainerModal({
 
           {/* Contenido Principal */}
           <div className="flex-1 overflow-y-auto min-h-[600px] border-l">
-            {children}
-
-            {tabs.length > 0 && (
+            {/* Solo renderiza el componente del tab activo */}
+            {activeTabComponent && (
               <Suspense
                 fallback={
                   <div className="p-6">
@@ -204,13 +149,9 @@ export default function NavContainerModal({
                   </div>
                 }
               >
-                {tabs
-                  .filter((item) => item.tab === currentTab)
-                  .map((item) => (
-                    <div className="h-[600px] overflow-y-auto" key={item.tab}>
-                      {item.component}
-                    </div>
-                  ))}
+                <div className="h-full overflow-y-auto">
+                  {activeTabComponent}
+                </div>
               </Suspense>
             )}
           </div>
