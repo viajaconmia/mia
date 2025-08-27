@@ -84,7 +84,7 @@ createRoot(document.getElementById("root")!).render(
             <RouteSecure
               restricted={true}
               component={AdminDashboard}
-              path={ROUTES.CONSULTAS}
+              path={ROUTES.CONSULTAS.HOME}
             />
             <RouteSecure
               restricted={true}

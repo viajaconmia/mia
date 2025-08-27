@@ -16,7 +16,9 @@ const ROUTES = {
   PROFILE: "/profile",
   SETTINGS: "/settings",
   NOT_FOUND: "/404",
-  CONSULTAS: "/consultas",
+  CONSULTAS: {
+    HOME: "/consultas",
+  },
   BOOKINGS: {
     HOME: "/bookings",
     ID: "/bookings/:id",
