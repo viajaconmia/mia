@@ -6,7 +6,7 @@ export const ENDPOINTS = {
       method: "GET",
       endpoint: "/clients",
     },
-    getClientesPorRfc: {
+    getClientesPorRfc: {  
       method: "GET",
       endpoint: "/clients/rfc",
     },
@@ -39,6 +39,9 @@ export const ENDPOINTS = {
 export const URL = import.meta.env.VITE_URL;
 
 export const API_KEY_STRIPE = import.meta.env.VITE_STRIPE;
+
+export const API_KEY: string =
+  "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
 
 export const ROUTES = {
   stripe: "/v1/stripe",
