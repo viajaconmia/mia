@@ -248,12 +248,14 @@ export const AdminDashboard = () => {
 
   const fetchInvoices = async () => {
     try {
-      const invoicesData = await getfacturasByAgente(user?.info?.id_agente || "");
-      if (invoicesData) {
-        setInvoices(invoicesData);
-        setFilteredInvoices(invoicesData);
+      const apiData = await getfacturasByAgente(user?.info?.id_agente || "");
+
+      // Asegúrate de que apiData y apiData.data existen y que apiData.data es un array
+      if (apiData && Array.isArray(apiData.data)) {
+        setInvoices(apiData.data);
+        setFilteredInvoices(apiData.data);
       } else {
-        console.error("No Tiene facturas.");
+        console.error("No se encontraron facturas o el formato es incorrecto.");
         setInvoices([]);
         setFilteredInvoices([]);
       }
@@ -352,14 +354,15 @@ export const AdminDashboard = () => {
           image_url: item.URLImagenHotel,
           created_at: item.created_at,
           viajero: item.nombre_viajero_reservacion,
-          acompañantes: item.nombre_viajero_reservacion,
+          acompañantes: item.nombres_viajeros_acompañantes,
           company_profiles: {
             company_name: item.quien_reservó,
           },
         }));
-        const completedBookings = transformedBookings.filter(booking => booking.status === "Confirmada");
-        setBookings(completedBookings);
-        setFilteredBookings(completedBookings);
+
+        // Store all bookings and apply the filter afterward
+        setBookings(transformedBookings);
+        setFilteredBookings(transformedBookings);
       } else {
         setBookings([]);
         setFilteredBookings([]);
@@ -532,22 +535,43 @@ export const AdminDashboard = () => {
   ];
 
   const invoiceColumns = [
-    { key: "issue_date", header: "Fecha Facturación", renderer: ({ value }: { value: string }) => <span>{formatDate(value)}</span> },
-    { key: "subtotal", header: "Subtotal" }, // Asume que existe una propiedad "subtotal" en tu data
-    { key: "iva", header: "IVA" }, // Asume que existe una propiedad "iva" en tu data
     {
-      key: "amount", header: "Total", renderer: ({ value }: { value: number }) => (
-        <div className="flex items-center space-x-2"><DollarSign className="w-4 h-4 text-gray-400" /><span>{formatCurrency(value)}</span></div>
-      )
+      key: "fecha_emision", header: "Fecha Facturación", renderer: ({ value }) => (
+        <span>{formatDate(value)}</span>
+      ),
     },
     {
-      key: "actions", header: "Acciones", renderer: ({ item }: { item: Payment }) => (
+      key: "subtotal", header: "Subtotal", renderer: ({ value }) => (
+        <div className="flex items-center space-x-2">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span>{formatCurrency(parseFloat(value))}</span>
+        </div>
+      ),
+    },
+    {
+      key: "impuestos", header: "IVA", renderer: ({ value }) => (
+        <div className="flex items-center space-x-2">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span>{formatCurrency(parseFloat(value))}</span>
+        </div>
+      ),
+    },
+    {
+      key: "total", header: "Total", renderer: ({ value }) => (
+        <div className="flex items-center space-x-2">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span>{formatCurrency(parseFloat(value))}</span>
+        </div>
+      ),
+    },
+    {
+      key: "actions", header: "Acciones", renderer: ({ item }) => (
         <div className="flex items-center space-x-2">
           <button className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors" title="Ver detalle">
             <FilePenLine className="w-5 h-5" />
           </button>
         </div>
-      )
+      ),
     },
   ];
 
