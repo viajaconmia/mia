@@ -25,3 +25,42 @@ export interface Reserva {
   id_facturama: string | null;
   nombres_viajeros_acompañantes?: string | null; // opcional
 }
+
+export interface MovimientoPago {
+  tipo: string;
+  monto: number;
+  id_pago: string | null;
+  items_del_pago: string | null;
+  id_saldo_a_favor: number | null;
+}
+
+export interface Invoice {
+  id_factura: string;
+  fecha_emision: string; // ISO string
+  estado: string;
+  usuario_creador: string;
+  total: string; // viene como string con decimales
+  subtotal: string;
+  impuestos: string;
+  saldo: string;
+  created_at: string; // ISO string
+  updated_at: string; // ISO string
+  id_facturama: string | null;
+  rfc: string;
+  id_empresa: string;
+  uuid_factura: string;
+  rfc_emisor: string;
+  url_pdf: string;
+  url_xml: string;
+  id_agente: string;
+  nombre_agente: string;
+  items_asociados: string | null;
+  reservas_asociadas: string | null;
+  pagos_asociados: string | null;
+  saldos_a_favor_asociados: string | null;
+  monto_pago_directo: string;
+  monto_prepago_wallet: string;
+  monto_ajuste_devolucion: string;
+  monto_total_relacionado: string;
+  movimientos_pago: MovimientoPago[];
+}

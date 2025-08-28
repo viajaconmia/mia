@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { URL, API_KEY } from "../constants/apiConstant";
 import {
   Users,
   Hotel,
@@ -11,7 +10,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Search,
   Building2,
   Tag,
   FilePenLine,
@@ -29,6 +27,8 @@ import { TabSelected } from "../components/molecule/TabSelected";
 import { PagosService, Payment } from "../services/PagosService";
 import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
+import { Invoice, Reserva } from "../types/services";
+import { BookingService } from "../services/BookingService";
 
 interface DashboardStats {
   totalUsers: number;
@@ -43,23 +43,6 @@ interface DashboardStats {
   monthlyRevenue: any[];
 }
 
-interface Booking {
-  id: string;
-  confirmation_code: string;
-  user_id: string;
-  hotel_name: string;
-  check_in: string;
-  check_out: string;
-  room_type: string;
-  total_price: number;
-  status: string;
-  image_url?: string;
-  created_at: string;
-  company_profiles?: {
-    company_name: string;
-  };
-}
-
 interface User {
   id: string;
   company_name: string;
@@ -68,75 +51,6 @@ interface User {
   city: string;
   created_at: string;
 }
-
-interface Invoice {
-  id: string;
-  invoice_number: string;
-  booking_id: string;
-  company_name: string;
-  rfc: string;
-  amount: number;
-  currency: string;
-  status: string;
-  issue_date: string;
-  due_date: string;
-  bookings?: {
-    hotel_name: string;
-    confirmation_code: string;
-  };
-}
-
-const getReservasByAgente = async (id_agente: string) => {
-  try {
-    const response = await fetch(
-      `${URL}/v1/mia/reservasClient/get_reservasClient_by_id_agente?user_id=${id_agente}`,
-      {
-        method: "GET",
-        headers: {
-          "x-api-key": API_KEY || "",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      }
-    );
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log("Reservas obtenidas:", data);
-    return data;
-  } catch (error) {
-    console.error("Error al obtener reservas:", error);
-    return null;
-  }
-};
-
-const getfacturasByAgente = async (id_agente: string) => {
-  try {
-    const response = await fetch(
-      `${URL}/v1/mia/factura/get_agente_facturas?id_agente=${id_agente}`,
-      {
-        method: "GET",
-        headers: {
-          "x-api-key": API_KEY || "",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      }
-    );
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log("facturas obtenidas:", data);
-    return data;
-  } catch (error) {
-    console.error("Error al obtener reservas:", error);
-    return null;
-  }
-};
 
 type ViewsConsultas =
   | "Vista general"
@@ -159,7 +73,7 @@ export const AdminDashboard = () => {
     monthlyRevenue: [],
   });
   const [activeView, setActiveView] = useState<ViewsConsultas>("Vista general");
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<Reserva[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -167,40 +81,25 @@ export const AdminDashboard = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDataPage();
   }, []);
 
-  useEffect(() => {
-    if (activeView === "Reservaciones") {
-      fetchBookings();
-    }
-  }, [activeView]);
-
-  useEffect(() => {
-    if (activeView === "Usuarios") {
-      fetchUsers();
-    }
-  }, [activeView]);
-
-  useEffect(() => {
-    if (activeView === "Pagos") {
-      fetchPayments();
-    }
-  }, [activeView]);
-
-  useEffect(() => {
-    if (activeView === "Facturas") {
-      fetchInvoices();
-    }
-  }, [activeView]);
+  const fetchDataPage = () => {
+    fetchDashboardData();
+    fetchBookings();
+    fetchUsers();
+    fetchPayments();
+    fetchInvoices();
+  };
 
   const fetchInvoices = async () => {
     try {
       const { data } = await FacturaService.getInstance().getFacturasByAgente();
-      setPayments(data || []);
+      console.log(data);
+      setInvoices(data || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
-      setPayments([]);
+      setInvoices([]);
       showNotification("error", error.message || "");
     }
   };
@@ -215,43 +114,14 @@ export const AdminDashboard = () => {
       showNotification("error", error.message || "");
     }
   };
-
   const fetchBookings = async () => {
     try {
-      if (!user?.info?.id_agente) {
-        throw new Error("No user authenticated or user ID is missing.");
-      }
-      const apiData = await getReservasByAgente(user.info.id_agente || "");
-      if (apiData && Array.isArray(apiData.data)) {
-        const transformedBookings: Booking[] = apiData.data.map(
-          (item: any) => ({
-            id: item.id_booking,
-            confirmation_code: item.confirmation_code,
-            user_id: item.user_id,
-            hotel_name: item.hotel,
-            check_in: item.check_in,
-            check_out: item.check_out,
-            room_type: item.room,
-            total_price: parseFloat(item.total),
-            status: item.status_reserva,
-            image_url: item.URLImagenHotel,
-            created_at: item.created_at,
-            viajero: item.nombre_viajero_reservacion,
-            acompañantes: item.nombres_viajeros_acompañantes,
-            company_profiles: {
-              company_name: item.quien_reservó,
-            },
-          })
-        );
-
-        // Store all bookings and apply the filter afterward
-        setBookings(transformedBookings);
-      } else {
-        setBookings([]);
-      }
-    } catch (error) {
+      const { data } = await BookingService.getInstance().getReservas();
+      setBookings(data || []);
+    } catch (error: any) {
       console.error("Error fetching bookings:", error);
       setBookings([]);
+      showNotification("error", error.message || "");
     }
   };
 
@@ -317,8 +187,8 @@ export const AdminDashboard = () => {
   );
 };
 
-const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
-  const bookingColumns = [
+const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
+  const bookingColumns: ColumnsTable<Reserva>[] = [
     {
       key: "created_at",
       header: "Fecha Creación",
@@ -330,7 +200,7 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
       ),
     },
     {
-      key: "hotel_name",
+      key: "hotel",
       header: "Hotel",
       renderer: ({ value }: { value: string }) => (
         <div className="flex items-center space-x-2">
@@ -340,7 +210,7 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
       ),
     },
     {
-      key: "viajero",
+      key: "nombre_viajero_reservacion",
       header: "Viajero",
       renderer: ({ value }: { value: string }) => (
         <div className="flex items-center space-x-2">
@@ -370,7 +240,7 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
       ),
     },
     {
-      key: "room_type",
+      key: "room",
       header: "Cuarto",
       renderer: ({ value }: { value: string }) => (
         <div className="flex items-center space-x-2">
@@ -380,7 +250,7 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
       ),
     },
     {
-      key: "total_price",
+      key: "total",
       header: "Precio",
       renderer: ({ value }: { value: number }) => (
         <div className="flex items-center space-x-2">
@@ -390,9 +260,9 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
       ),
     },
     {
-      key: "actions",
+      key: null,
       header: "Acciones",
-      renderer: ({ item }: { item: Booking }) => (
+      renderer: ({ item }: { item: Reserva }) => (
         <div className="flex items-center space-x-2">
           <button
             className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
@@ -408,7 +278,7 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
 
   return (
     <div className="">
-      <Table<Booking>
+      <Table<Reserva>
         id="bookingsTable"
         data={bookings}
         columns={bookingColumns}
@@ -461,7 +331,7 @@ const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   );
 };
 const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
-  const invoiceColumns = [
+  const invoiceColumns: ColumnsTable<Invoice>[] = [
     {
       key: "fecha_emision",
       header: "Fecha Facturación",
@@ -500,7 +370,7 @@ const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
       ),
     },
     {
-      key: "actions",
+      key: null,
       header: "Acciones",
       renderer: ({ item }: { item: Invoice }) => (
         <div className="flex items-center space-x-2">
@@ -527,7 +397,7 @@ const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   );
 };
 const UsersView = ({ users }: { users: User[] }) => {
-  const userColumns = [
+  const userColumns: ColumnsTable<User>[] = [
     {
       key: "company_name",
       header: "Compañia",

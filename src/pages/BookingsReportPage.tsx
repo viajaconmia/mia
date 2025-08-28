@@ -56,8 +56,7 @@ export const BookingsReportPage = () => {
   };
 
   useEffect(() => {
-    const booking = new BookingService();
-    booking
+    BookingService.getInstance()
       .getReservas()
       .then((response) => {
         console.log(response);

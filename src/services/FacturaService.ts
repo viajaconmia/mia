@@ -1,3 +1,4 @@
+import { Invoice } from "../types/services";
 import { ApiResponse, ApiService } from "./ApiService";
 import { UserSingleton } from "./UserSingleton";
 
@@ -20,10 +21,8 @@ export class FacturaService extends ApiService {
     return this.instance;
   };
 
-  public getFacturasByAgente = (): Promise<
-    ApiResponse<{ credito: string; wallet: string }>
-  > =>
-    this.get<{ credito: string; wallet: string }>({
+  public getFacturasByAgente = (): Promise<ApiResponse<Invoice[]>> =>
+    this.get<Invoice[]>({
       path: this.formatPath(this.ENDPOINTS.GET.FACTURAS_BY_AGENTE),
       params: { id_agente: this.user.getUser()?.info?.id_agente },
     });
