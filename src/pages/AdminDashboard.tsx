@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { URL, API_KEY } from "../constants/apiConstant";
+import NavContainerModal from "../components/organism/detalles";
 import {
   Users,
   Hotel,
@@ -67,6 +68,18 @@ interface User {
   industry: string;
   city: string;
   created_at: string;
+}
+
+interface Payment {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  bookings?: {
+    hotel_name: string;
+  };
 }
 
 interface Invoice {
@@ -145,7 +158,11 @@ type ViewsConsultas =
   | "Pagos"
   | "Facturas";
 
+type ModalType = "payment" | "invoice";
+
+
 export const AdminDashboard = () => {
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalBookings: 0,
@@ -165,6 +182,18 @@ export const AdminDashboard = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { showNotification } = useNotification();
   const { user } = useAuth();
+
+  // Nuevo estado para controlar el modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<ModalType | null>(null);
+
+  // Nueva función para abrir el modal
+  const openDetails = (itemId: string, itemType: ModalType) => {
+    setSelectedItemId(itemId);
+    setSelectedItemType(itemType);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -289,8 +318,10 @@ export const AdminDashboard = () => {
     Facturas: <InvoicesView invoices={invoices} />,
     "Vista general": <OverviewView stats={stats} />,
     Usuarios: <UsersView users={users} />,
-    Pagos: <PaymentsView payments={payments} />,
-    Reservaciones: <BookingsView bookings={bookings} />,
+
+    Pagos: <PaymentsView filteredPayments={filteredPayments} />,
+    Reservaciones: <BookingsView bookings={bookings} openDetails={openDetails} />, // Pasa openDetails aquí
+
   };
 
   return (
@@ -313,22 +344,23 @@ export const AdminDashboard = () => {
           <TabSelected tabs={views} selected={activeView}></TabSelected>
         </div>
       </div>
+      {isModalOpen && selectedItemId && selectedItemType && (
+        <NavContainerModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          agentId={user?.info?.id_agente || ""} // ID del agente, no del item
+          initialItemId={selectedItemId} // ID del item seleccionado
+          items={([])} // Función para obtener los items
+          itemType={selectedItemType}
+        />
+      )}
     </>
   );
 };
 
-const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
+const BookingsView = ({ bookings, openDetails }: { bookings: Booking[], openDetails: (id: string, type: ModalType) => void }) => {
   const bookingColumns = [
-    {
-      key: "created_at",
-      header: "Fecha Creación",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
-        </div>
-      ),
-    },
+
     {
       key: "hotel_name",
       header: "Hotel",
@@ -397,7 +429,7 @@ const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
           <button
             className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
             title="Ver detalle"
-            onClick={() => console.log(item)}
+            onClick={() => openDetails(item.id, "payment")} // Usa la función openDetails de las props
           >
             <FilePenLine className="w-5 h-5" />
           </button>
@@ -725,13 +757,12 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          booking.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : booking.status === "pending"
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "completed"
+                          ? "bg-green-100 text-green-800"
+                          : booking.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {booking.status === "completed" ? (
                           <CheckCircle className="w-4 h-4 mr-1" />
@@ -774,13 +805,12 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
                   </div>
                   <div className="flex items-center space-x-4">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        payment.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : payment.status === "pending"
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : payment.status === "pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : "bg-red-100 text-red-800"
-                      }`}
+                        }`}
                     >
                       {payment.status}
                     </span>
@@ -794,6 +824,9 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
           </div>
         </div>
       </div>
+
+
+
     </div>
   );
 };
