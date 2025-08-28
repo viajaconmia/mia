@@ -313,7 +313,7 @@ const BookingsView = ({ bookings, openDetails }: { bookings: Reserva[], openDeta
           <button
             className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
             title="Ver detalle"
-            onClick={() => openDetails(item.id, "payment")} // Usa la función openDetails de las props
+            onClick={() => openDetails(item.id_booking || "", "payment")} // Usa la función openDetails de las props
           >
             <FilePenLine className="w-5 h-5" />
           </button>
@@ -351,14 +351,14 @@ const PaymentsView = ({
 }) => {
   const paymentColumns: ColumnsTable<Payment>[] = [
     {
-      key: "created_at",
+      key: "fecha_pago",
       header: "Fecha de Pago",
       renderer: ({ value }: { value: string }) => (
         <span>{formatDate(value)}</span>
       ),
     },
     {
-      key: "amount",
+      key: "monto",
       header: "Monto",
       renderer: ({ value }: { value: number }) => (
         <div className="flex items-center space-x-2">
@@ -367,10 +367,10 @@ const PaymentsView = ({
         </div>
       ),
     },
-    { key: "forma_pago", header: "Forma de Pago" }, // Asume que existe una propiedad "forma_pago" en tu data
-    { key: "tipo_tarjeta", header: "Tipo de Tarjeta" }, // Asume que existe una propiedad "tipo_tarjeta" en tu data
+    { key: "metodo", header: "Forma de Pago" }, // Asume que existe una propiedad "forma_pago" en tu data
+    { key: "tipo", header: "Tipo de Tarjeta" }, // Asume que existe una propiedad "tipo_tarjeta" en tu data
     {
-      key: "actions",
+      key: null,
       header: "Acciones",
       renderer: ({ item }: { item: Payment }) => (
         <div className="flex items-center space-x-2">
