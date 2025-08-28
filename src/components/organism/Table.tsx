@@ -10,7 +10,7 @@ import Loader from "../atom/Loader";
 import React from "react";
 
 export interface ColumnsTable<T> {
-  key: keyof T | string;
+  key: keyof T | null;
   header: string;
   renderer?: React.FC<{ value: any; item: T; index: number }>;
 }
