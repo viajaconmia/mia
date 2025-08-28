@@ -23,7 +23,6 @@ import ShareButton from "../components/ShareButton";
 import { BookingService } from "../services/BookingService";
 import { Reserva } from "../types/services";
 import ROUTES from "../constants/routes";
-import ProtectedRoute from "../middleware/ProtectedRoute";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 
 interface InvoiceData {

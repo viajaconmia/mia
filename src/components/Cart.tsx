@@ -48,6 +48,7 @@ import { UserSingleton } from "../services/UserSingleton";
 import { MetodosDePago } from "../types/newIndex";
 import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
+import { SolicitudService } from "../services/SolicitudService";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
@@ -758,11 +759,18 @@ function PagoSaldo({
   total: number;
   setView: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
 }) {
-  const { cart, totalCart } = useCart();
+  const {
+    cart,
+    totalCart,
+    handleActualizarCarrito,
+    handleActualizarMetodosPago,
+  } = useCart();
   const { showNotification } = useNotification();
+  const [loading, setLoading] = useState<boolean>(false);
   const restante = saldo - total;
 
   const handlePagarSaldo = async () => {
+    setLoading(true);
     try {
       if (restante < 0) throw new Error("No tienes saldo suficiente");
       const itemsCart = cart.filter((item) => item.selected);
@@ -773,11 +781,21 @@ function PagoSaldo({
         );
       if (itemsCart.length == 0)
         throw new Error("No has seleccionado ningun item");
-      console.log({ items: itemsCart, total: totalCart.toFixed(2), id_agente });
+      const { message, data } =
+        await SolicitudService.getInstance().PagarSolicitudesConWallet({
+          items: itemsCart,
+          total: totalCart.toFixed(2),
+        });
+      console.log(data);
+      showNotification("success", message);
+      handleActualizarCarrito();
+      handleActualizarMetodosPago();
+      setView("details");
     } catch (error: any) {
-      console.error(error);
+      console.error(error.response || error.message || "Error");
       showNotification("error", error.message);
-      alert(error.message || "Error al procesar el pago con saldo");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -797,7 +815,7 @@ function PagoSaldo({
         }}
         onNext={handlePagarSaldo}
         nextTitle={"Pagar"}
-        disabled={restante < 0 || total <= 0}
+        disabled={restante < 0 || total <= 0 || loading}
       ></ButtonsHandlerFlow>
     </div>
   );
