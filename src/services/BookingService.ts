@@ -4,14 +4,22 @@ import { UserSingleton } from "./UserSingleton";
 
 export class BookingService extends ApiService {
   private user: UserSingleton = UserSingleton.getInstance();
+  private static instance: BookingService;
   private ENDPOINTS = {
     GET: {
       RESERVAS: "/get_reservasClient_by_id_agente",
     },
   };
-  constructor() {
+  private constructor() {
     super("/v1/mia/reservasClient");
     this.user = UserSingleton.getInstance();
+  }
+
+  static getInstance() {
+    if (!this.instance) {
+      this.instance = new BookingService();
+    }
+    return this.instance;
   }
 
   async getReservas() {
