@@ -1,16 +1,7 @@
-import React, { useState, useEffect } from "react";
-import {
-  Search,
-  Hotel,
-  ArrowLeft,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  Shield as Child,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Hotel, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchHoteles } from "../hooks/useFetch";
 import HotelCard from "../components/HotelComponent";
-import ProtectedRoute from "../middleware/ProtectedRoute";
 
 interface Hotel {
   id_hotel: string;
@@ -78,7 +69,6 @@ interface Hotel {
 
 export const HotelSearchPage = () => {
   const [hotels, setHotels] = useState<Hotel[]>([]);
-  const [filteredHotels, setFilteredHotels] = useState<Hotel[]>([]);
   const [displayedHotels, setDisplayedHotels] = useState<Hotel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,7 +103,6 @@ export const HotelSearchPage = () => {
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
 
-      setFilteredHotels(data || []);
       setDisplayedHotels(randomHotels);
 
       // Extract unique values for filters
@@ -199,7 +188,7 @@ export const HotelSearchPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Search Section */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">

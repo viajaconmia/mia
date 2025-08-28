@@ -21,7 +21,6 @@ import { formatNumberWithCommas } from "../utils/format";
 import { CartService } from "../services/CartService";
 import { useNotification } from "../hooks/useNotification";
 import { useCart } from "../context/cartContext";
-import PageContainer from "../components/atom/PageContainer";
 
 const { crearSolicitud } = useSolicitud();
 
@@ -39,6 +38,7 @@ interface ReservationData {
 
 export const ManualReservationPage = () => {
   const { id } = useParams();
+  const [loadingHotel, setLoadingHotel] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const { showNotification } = useNotification();
   const { handleActualizarCarrito } = useCart();
@@ -62,12 +62,16 @@ export const ManualReservationPage = () => {
   const user = UserSingleton.getInstance().getUser();
 
   useEffect(() => {
+    setLoadingHotel(true);
     HotelService.getInstance()
       .getHotelById(id)
       .then(({ data }) => setHotel(data))
       .catch((error) =>
         console.error(error.response || error.message || "error")
-      );
+      )
+      .finally(() => {
+        setLoadingHotel(false);
+      });
 
     const fetchViajero = async () => {
       const data = await fetchViajerosCompanies();
@@ -164,9 +168,22 @@ export const ManualReservationPage = () => {
     }
   };
 
+  if (loadingHotel) {
+    return (
+      <>
+        <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Cargando datos del hotel
+            </h2>
+          </div>
+        </div>
+      </>
+    );
+  }
   if (!hotel) {
     return (
-      <PageContainer>
+      <>
         <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -174,12 +191,12 @@ export const ManualReservationPage = () => {
             </h2>
           </div>
         </div>
-      </PageContainer>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Hotel Header */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
