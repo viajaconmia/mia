@@ -29,6 +29,7 @@ import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
 import { Invoice, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
+import NavContainerModal from "../components/organism/detalles";
 
 interface DashboardStats {
   totalUsers: number;
@@ -59,6 +60,8 @@ type ViewsConsultas =
   | "Pagos"
   | "Facturas";
 
+type ModalType = "payment" | "invoice";
+
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -79,6 +82,20 @@ export const AdminDashboard = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { showNotification } = useNotification();
   const { user } = useAuth();
+
+  // Nuevo estado para controlar el modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<ModalType | null>(
+    null
+  );
+
+  // Nueva función para abrir el modal
+  const openDetails = (itemId: string, itemType: ModalType) => {
+    setSelectedItemId(itemId);
+    setSelectedItemType(itemType);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchDataPage();
@@ -159,8 +176,11 @@ export const AdminDashboard = () => {
     Facturas: <InvoicesView invoices={invoices} />,
     "Vista general": <OverviewView stats={stats} />,
     Usuarios: <UsersView users={users} />,
+
     Pagos: <PaymentsView payments={payments} />,
-    Reservaciones: <BookingsView bookings={bookings} />,
+    Reservaciones: (
+      <BookingsView bookings={bookings} openDetails={openDetails} />
+    ), // Pasa openDetails aquí
   };
 
   return (
@@ -183,6 +203,16 @@ export const AdminDashboard = () => {
           <TabSelected tabs={views} selected={activeView}></TabSelected>
         </div>
       </div>
+      {isModalOpen && selectedItemId && selectedItemType && (
+        <NavContainerModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          agentId={user?.info?.id_agente || ""} // ID del agente, no del item
+          initialItemId={selectedItemId} // ID del item seleccionado
+          items={[]} // Función para obtener los items
+          itemType={selectedItemType}
+        />
+      )}
     </>
   );
 };
@@ -267,7 +297,7 @@ const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
           <button
             className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
             title="Ver detalle"
-            onClick={() => console.log(item)}
+            onClick={() => openDetails(item.id, "payment")} // Usa la función openDetails de las props
           >
             <FilePenLine className="w-5 h-5" />
           </button>
