@@ -19,15 +19,17 @@ import {
   Factory,
   FileSignature,
   MapPinned,
-  SlidersHorizontal,
   CreditCardIcon,
   File,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
-import { Table } from "../components/atom/table"; // Import the new Table component
+import { ColumnsTable, Table } from "../components/atom/table"; // Import the new Table component
 import { TabsList } from "../components/molecule/TabsList";
 import { formatCurrency, formatDate } from "../utils/format";
 import { TabSelected } from "../components/molecule/TabSelected";
+import { PagosService, Payment } from "../services/PagosService";
+import { useNotification } from "../hooks/useNotification";
+import { FacturaService } from "../services/FacturaService";
 
 interface DashboardStats {
   totalUsers: number;
@@ -80,8 +82,6 @@ interface Payment {
   };
 }
 
-
-
 interface Invoice {
   id: string;
   invoice_number: string;
@@ -98,32 +98,6 @@ interface Invoice {
     confirmation_code: string;
   };
 }
-
-const get_pagos_prepago_by_ID = async (id_agente: string) => {
-  try {
-    const response = await fetch(
-      `${URL}/v1/mia/pagos/get_pagos_prepago_by_ID?id_agente=${id_agente}`,
-      {
-        method: "GET",
-        headers: {
-          "x-api-key": API_KEY || "",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      }
-    );
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log("Pagos obtenidos:", data);
-    return data;
-  } catch (error) {
-    console.error("Error al obtener reservas:", error);
-    return null;
-  }
-};
 
 const getReservasByAgente = async (id_agente: string) => {
   try {
@@ -169,7 +143,7 @@ const getfacturasByAgente = async (id_agente: string) => {
       throw new Error(`Error HTTP: ${response.status}`);
     }
     const data = await response.json();
-    console.log("Reservas obtenidas:", data);
+    console.log("facturas obtenidas:", data);
     return data;
   } catch (error) {
     console.error("Error al obtener reservas:", error);
@@ -201,12 +175,12 @@ export const AdminDashboard = () => {
     recentPayments: [],
     monthlyRevenue: [],
   });
-  const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<ViewsConsultas>("Vista general");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const { showNotification } = useNotification();
   const { user } = useAuth();
 
   // Nuevo estado para controlar el modal
@@ -251,55 +225,23 @@ export const AdminDashboard = () => {
 
   const fetchInvoices = async () => {
     try {
-      const apiData = await getfacturasByAgente(user?.info?.id_agente || "");
-
-      // Asegúrate de que apiData y apiData.data existen y que apiData.data es un array
-      if (apiData && Array.isArray(apiData.data)) {
-        setInvoices(apiData.data);
-      } else {
-        console.error("No se encontraron facturas o el formato es incorrecto.");
-        setInvoices([]);
-      }
-    } catch (error) {
-      console.error("Error al obtener facturas:", error);
-      setInvoices([]);
+      const { data } = await FacturaService.getInstance().getFacturasByAgente();
+      setPayments(data || []);
+    } catch (error: any) {
+      console.error("Error fetching payments:", error);
+      setPayments([]);
+      showNotification("error", error.message || "");
     }
   };
 
   const fetchPayments = async () => {
     try {
-      if (!user?.info?.id_agente) {
-        throw new Error("No hay ID de agente disponible");
-      }
-      const apiData = await get_pagos_prepago_by_ID(user.info.id_agente);
-      if (apiData && Array.isArray(apiData.data)) {
-        const transformedPayments: Payment[] = apiData.data.map(
-          (item: any) => ({
-            id: item.id_movimiento || "",
-            amount: parseFloat(item.monto) || 0,
-            currency: item.moneda || "MXN",
-            status: item.estatus || "pending",
-            forma_pago: item.metodo,
-            tipo_tarjeta: item.tipo || "",
-            created_at:
-              item.fecha_emision || new Date().toISOString().split("T")[0],
-            updated_at:
-              item.fecha_vencimiento ||
-              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .split("T")[0],
-            bookings: {
-              hotel_name: item.nombre_hotel || "Hotel no especificado",
-            },
-          })
-        );
-        setFilteredPayments(transformedPayments);
-      } else {
-        setFilteredPayments([]);
-      }
-    } catch (error) {
+      const { data } = await PagosService.getInstance().getPagosConsultas();
+      setPayments(data?.pagos || []);
+    } catch (error: any) {
       console.error("Error fetching payments:", error);
-      setFilteredPayments([]);
+      setPayments([]);
+      showNotification("error", error.message || "");
     }
   };
 
@@ -369,8 +311,6 @@ export const AdminDashboard = () => {
       });
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -378,13 +318,15 @@ export const AdminDashboard = () => {
     Facturas: <InvoicesView invoices={invoices} />,
     "Vista general": <OverviewView stats={stats} />,
     Usuarios: <UsersView users={users} />,
+
     Pagos: <PaymentsView filteredPayments={filteredPayments} />,
     Reservaciones: <BookingsView bookings={bookings} openDetails={openDetails} />, // Pasa openDetails aquí
+
   };
 
   return (
     <>
-      <div className="max-w-7xl mx-auto mt-4 bg-gray-100 rounded-md space-y-4">
+      <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-gray-50 rounded-md space-y-4">
         <TabsList
           tabs={[
             { icon: BarChart3, tab: "Vista general" },
@@ -497,32 +439,26 @@ const BookingsView = ({ bookings, openDetails }: { bookings: Booking[], openDeta
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <Table<Booking>
-          id="bookingsTable"
-          data={bookings}
-          columns={bookingColumns}
-        />
-      </div>
+    <div className="">
+      <Table<Booking>
+        id="bookingsTable"
+        data={bookings}
+        columns={bookingColumns}
+      />
     </div>
   );
 };
-const PaymentsView = ({
-  filteredPayments,
-}: {
-  filteredPayments: Payment[];
-}) => {
-  const paymentColumns = [
+const PaymentsView = ({ payments }: { payments: Payment[] }) => {
+  const paymentColumns: ColumnsTable<Payment>[] = [
     {
-      key: "created_at",
+      key: "fecha_creacion",
       header: "Fecha de Pago",
       renderer: ({ value }: { value: string }) => (
         <span>{formatDate(value)}</span>
       ),
     },
     {
-      key: "amount",
+      key: "monto",
       header: "Monto",
       renderer: ({ value }: { value: number }) => (
         <div className="flex items-center space-x-2">
@@ -531,10 +467,10 @@ const PaymentsView = ({
         </div>
       ),
     },
-    { key: "forma_pago", header: "Forma de Pago" }, // Asume que existe una propiedad "forma_pago" en tu data
-    { key: "tipo_tarjeta", header: "Tipo de Tarjeta" }, // Asume que existe una propiedad "tipo_tarjeta" en tu data
+    { key: "metodo", header: "Forma de Pago" }, // Asume que existe una propiedad "forma_pago" en tu data
+    { key: "tipo", header: "Tipo de Tarjeta" }, // Asume que existe una propiedad "tipo_tarjeta" en tu data
     {
-      key: "actions",
+      key: null,
       header: "Acciones",
       renderer: ({ item }: { item: Payment }) => (
         <div className="flex items-center space-x-2">
@@ -551,17 +487,8 @@ const PaymentsView = ({
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Gestión de Pagos
-        </h3>
-      </div>
-      <Table
-        id="paymentsTable"
-        data={filteredPayments}
-        columns={paymentColumns}
-      />
+    <div className="">
+      <Table id="paymentsTable" data={payments} columns={paymentColumns} />
     </div>
   );
 };
@@ -622,25 +549,7 @@ const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Gestión de Facturas
-          </h3>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <input
-                pattern="^[^<>]*$"
-                type="text"
-                placeholder="Buscar facturas..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="">
       <Table<Invoice>
         id="invoicesTable"
         data={invoices}
@@ -704,10 +613,8 @@ const UsersView = ({ users }: { users: User[] }) => {
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <Table id="usersTable" data={users} columns={userColumns} />
-      </div>
+    <div className="">
+      <Table id="usersTable" data={users} columns={userColumns} />
     </div>
   );
 };

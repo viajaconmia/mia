@@ -268,7 +268,6 @@ export const Cart = () => {
         "no-rol": false,
       }}
     >
-      // Tu componente de carrito con la lógica de scroll
       <div
         ref={refContainer}
         className="mx-auto relative h-full flex flex-col @container w-full bg-gray-100" // 👈 Cambios: flex flex-col

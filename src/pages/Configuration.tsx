@@ -36,7 +36,6 @@ import { useNotification } from "../hooks/useNotification";
 import { UserSingleton } from "../services/UserSingleton";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { InputRadio, InputText } from "../components/atom/Input";
-import PageContainer from "../components/atom/PageContainer";
 import { TabsList } from "../components/molecule/TabsList";
 
 export const Configuration = () => {
@@ -222,7 +221,7 @@ export const Configuration = () => {
   };
 
   return (
-    <PageContainer>
+    <>
       <>
         {/* // <div className="min-h-screen bg-gray-50 pt-12">
     //   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"> */}
@@ -527,7 +526,7 @@ export const Configuration = () => {
           ></DefinirRol>
         </Modal>
       </>
-    </PageContainer>
+    </>
   );
 };
 

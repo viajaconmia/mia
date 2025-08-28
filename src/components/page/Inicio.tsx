@@ -22,7 +22,6 @@ import { NavigationLink } from "../atom/NavigationLink";
 import ROUTES from "../../constants/routes";
 import { ProtectedComponent } from "../../middleware/ProtectedComponent";
 import { TabsList } from "../molecule/TabsList";
-import PageContainer from "../atom/PageContainer";
 import { Cart } from "../Cart";
 
 const Inicio = () => {
@@ -112,7 +111,7 @@ const Inicio = () => {
   const promptLimitReached = !authState.isAuthenticated && promptCount >= 2;
 
   return (
-    <PageContainer>
+    <>
       {/* Chat Panel - Left Side */}
       <div className="flex justify-end">
         <div
@@ -354,7 +353,7 @@ const Inicio = () => {
           </div>
         )}
       </div>
-    </PageContainer>
+    </>
   );
 };
 
