@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import TwoColumnDropdown from "../components/molecule/TwoColumnDropdown";
 import {
   Users,
   Hotel,
@@ -20,7 +21,7 @@ import {
   File,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
-import { ColumnsTable, Table } from "../components/atom/table"; // Import the new Table component
+import { ColumnsTable, Table } from "../components/organism/Table"; // Import the new Table component
 import { TabsList } from "../components/molecule/TabsList";
 import { formatCurrency, formatDate } from "../utils/format";
 import { TabSelected } from "../components/molecule/TabSelected";
@@ -80,7 +81,6 @@ export const AdminDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const { showNotification } = useNotification();
   const { user } = useAuth();
 
   // Nuevo estado para controlar el modal
@@ -89,6 +89,7 @@ export const AdminDashboard = () => {
   const [selectedItemType, setSelectedItemType] = useState<ModalType | null>(
     null
   );
+  const { showNotification } = useNotification();
 
   // Nueva función para abrir el modal
   const openDetails = (itemId: string, itemType: ModalType) => {
@@ -180,12 +181,12 @@ export const AdminDashboard = () => {
     Pagos: <PaymentsView payments={payments} />,
     Reservaciones: (
       <BookingsView bookings={bookings} openDetails={openDetails} />
-    ), // Pasa openDetails aquí
+    ),
   };
 
   return (
     <>
-      <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-gray-50 rounded-md space-y-4">
+      <div className="max-w-7xl mx-auto mt-4 bg-gray-100 rounded-md space-y-4">
         <TabsList
           tabs={[
             { icon: BarChart3, tab: "Vista general" },
@@ -217,18 +218,33 @@ export const AdminDashboard = () => {
   );
 };
 
-const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
-  const bookingColumns: ColumnsTable<Reserva>[] = [
-    {
-      key: "created_at",
-      header: "Fecha Creación",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
+
+const BookingsView = ({ bookings, openDetails }: { bookings: Reserva[], openDetails: (id: string, type: ModalType) => void }) => {
+
+  const renderExpandedContent = (booking: Reserva) => (
+    <TwoColumnDropdown
+      leftContent={
+        <div>
+          {/* <h4 className="font-semibold mb-2">Información del Hotel</h4>
+            <p><strong>Hotel:</strong> {booking.hotel_name}</p>
+            <p><strong>Tipo de habitación:</strong> {booking.room_type}</p>
+            <p><strong>Código de confirmación:</strong> {booking.confirmation_code}</p> */}
         </div>
-      ),
-    },
+      }
+      rightContent={
+        <div>
+          {/* <h4 className="font-semibold mb-2">Detalles de la Reserva</h4>
+            <p><strong>Check-in:</strong> {formatDate(booking.check_in)}</p>
+            <p><strong>Check-out:</strong> {formatDate(booking.check_out)}</p>
+            <p><strong>Precio total:</strong> {formatCurrency(booking.total_price)}</p>
+            <p><strong>Estado:</strong> {booking.status}</p> */}
+        </div>
+      }
+    />
+  );
+
+  const bookingColumns: ColumnsTable<Reserva>[] = [
+
     {
       key: "hotel",
       header: "Hotel",
@@ -297,10 +313,11 @@ const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
           <button
             className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
             title="Ver detalle"
-            onClick={() => openDetails(item.id, "payment")} // Usa la función openDetails de las props
+            onClick={() => openDetails(item.id_booking || "", "payment")} // Usa la función openDetails de las props
           >
             <FilePenLine className="w-5 h-5" />
           </button>
+
         </div>
       ),
     },
@@ -313,13 +330,28 @@ const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
         data={bookings}
         columns={bookingColumns}
       />
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <Table<Reserva>
+            id="bookingsTable"
+            data={bookings}
+            columns={bookingColumns}
+            expandableContent={renderExpandedContent} // Pasa la función de contenido expandible
+          />
+        </div>
+      </div>
     </div>
   );
 };
-const PaymentsView = ({ payments }: { payments: Payment[] }) => {
+
+const PaymentsView = ({
+  payments,
+}: {
+  payments: Payment[];
+}) => {
   const paymentColumns: ColumnsTable<Payment>[] = [
     {
-      key: "fecha_creacion",
+      key: "fecha_pago",
       header: "Fecha de Pago",
       renderer: ({ value }: { value: string }) => (
         <span>{formatDate(value)}</span>
@@ -355,8 +387,17 @@ const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   ];
 
   return (
-    <div className="">
-      <Table id="paymentsTable" data={payments} columns={paymentColumns} />
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Gestión de Pagos
+        </h3>
+      </div>
+      <Table
+        id="paymentsTable"
+        data={payments}
+        columns={paymentColumns}
+      />
     </div>
   );
 };
@@ -418,6 +459,7 @@ const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
 
   return (
     <div className="">
+
       <Table<Invoice>
         id="invoicesTable"
         data={invoices}
@@ -481,8 +523,10 @@ const UsersView = ({ users }: { users: User[] }) => {
   ];
 
   return (
-    <div className="">
-      <Table id="usersTable" data={users} columns={userColumns} />
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <Table id="usersTable" data={users} columns={userColumns} />
+      </div>
     </div>
   );
 };
@@ -625,13 +669,12 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          booking.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : booking.status === "pending"
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === "completed"
+                          ? "bg-green-100 text-green-800"
+                          : booking.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {booking.status === "completed" ? (
                           <CheckCircle className="w-4 h-4 mr-1" />
@@ -674,13 +717,12 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
                   </div>
                   <div className="flex items-center space-x-4">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        payment.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : payment.status === "pending"
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : payment.status === "pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : "bg-red-100 text-red-800"
-                      }`}
+                        }`}
                     >
                       {payment.status}
                     </span>
