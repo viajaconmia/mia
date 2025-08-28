@@ -200,7 +200,7 @@ export default function NavContainerModal({
       <div className="relative w-full h-[80vh] max-w-4xl rounded-xl overflow-hidden bg-white shadow-lg">
         <Button
           variant="ghost"
-          size="icon"
+          size="md"
           className="absolute top-4 right-4 z-50"
           onClick={onClose}
         >
@@ -214,7 +214,7 @@ export default function NavContainerModal({
           >
             <Button
               variant="ghost"
-              size="icon"
+              size="md"
               className="absolute w-full right-0 top-0 z-40 h-12 flex justify-end pr-5 items-center"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
