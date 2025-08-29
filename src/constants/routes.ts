@@ -17,7 +17,9 @@ const ROUTES = {
   SETTINGS: "/settings",
   NOT_FOUND: "/404",
   CONSULTAS: {
-    HOME: "/consultas",
+    REDIRECT: "/consultas/:subpath",
+    HOME: "/consultas/general",
+    SUBPATH: (path: string) => `/consultas/${path}`,
   },
   BOOKINGS: {
     HOME: "/bookings",
