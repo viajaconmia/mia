@@ -1,7 +1,5 @@
 import React, { useState, useEffect, ReactNode } from "react";
 import { Building, BarChart, Calendar, DollarSign, Clock } from "lucide-react";
-import { Barchart } from "../components/Chart";
-import { ChartLine } from "../components/LineChart";
 import { Link } from "wouter";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { useUser } from "../context/userContext";
@@ -45,68 +43,67 @@ const Navigation: React.FC<{
   selectedYear,
   setSelectedYear,
 }) => (
-  <nav className="bg-white shadow-md p-4">
-    <div className="flex items-center gap-2">
-      <Link href="/">
-        <svg
-          className="h-8 w-auto"
-          viewBox="0 0 1152 539"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <g>
-            <path
-              className="fill-blue-600"
-              d="M209.06,500.55s-.04.03-.06.02c-64.5-64.5-133.27-131.46-133.27-209.51,0-86.62,84.17-157.09,187.63-157.09s187.63,70.47,187.63,157.09c0,74.79-63.42,139.58-150.8,154.08-.02,0-.05-.01-.05-.04l-8.8-53.12c61.28-10.16,105.76-52.6,105.76-100.92,0-56.91-60-103.2-133.74-103.2s-133.74,46.3-133.74,103.2c0,49.8,48,93.56,111.66,101.79,0,0,.01,0,.01.02l-32.23,107.69Z"
-            />
-            <ellipse
-              className="fill-gray-800"
-              cx="215.01"
-              cy="277.85"
-              rx="28.37"
-              ry="37.7"
-            />
-            <ellipse
-              className="fill-gray-800"
-              cx="317.34"
-              cy="277.85"
-              rx="28.37"
-              ry="37.7"
-            />
-            <path
-              className="fill-blue-600"
-              d="M344.98,125.54c-2.9,0-5.84-.69-8.58-2.14-70.29-37.27-135.91-1.73-138.67-.2-8.84,4.91-20.01,1.76-24.95-7.07-4.94-8.82-1.84-19.96,6.96-24.93,3.45-1.95,85.44-47.12,173.85-.23,8.95,4.75,12.36,15.86,7.62,24.81-3.29,6.21-9.65,9.76-16.23,9.76Z"
-            />
-          </g>
-        </svg>
-      </Link>
-      {buttons.map((button) => (
-        <button
-          key={button.id}
-          onClick={() => onSelect(button.id)}
-          className={`px-4 pl-2 flex gap-2 py-2 rounded-lg transition-colors ${
-            selectedDashboard === button.id
+    <nav className="bg-white shadow-md p-4">
+      <div className="flex items-center gap-2">
+        <Link href="/">
+          <svg
+            className="h-8 w-auto"
+            viewBox="0 0 1152 539"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g>
+              <path
+                className="fill-blue-600"
+                d="M209.06,500.55s-.04.03-.06.02c-64.5-64.5-133.27-131.46-133.27-209.51,0-86.62,84.17-157.09,187.63-157.09s187.63,70.47,187.63,157.09c0,74.79-63.42,139.58-150.8,154.08-.02,0-.05-.01-.05-.04l-8.8-53.12c61.28-10.16,105.76-52.6,105.76-100.92,0-56.91-60-103.2-133.74-103.2s-133.74,46.3-133.74,103.2c0,49.8,48,93.56,111.66,101.79,0,0,.01,0,.01.02l-32.23,107.69Z"
+              />
+              <ellipse
+                className="fill-gray-800"
+                cx="215.01"
+                cy="277.85"
+                rx="28.37"
+                ry="37.7"
+              />
+              <ellipse
+                className="fill-gray-800"
+                cx="317.34"
+                cy="277.85"
+                rx="28.37"
+                ry="37.7"
+              />
+              <path
+                className="fill-blue-600"
+                d="M344.98,125.54c-2.9,0-5.84-.69-8.58-2.14-70.29-37.27-135.91-1.73-138.67-.2-8.84,4.91-20.01,1.76-24.95-7.07-4.94-8.82-1.84-19.96,6.96-24.93,3.45-1.95,85.44-47.12,173.85-.23,8.95,4.75,12.36,15.86,7.62,24.81-3.29,6.21-9.65,9.76-16.23,9.76Z"
+              />
+            </g>
+          </svg>
+        </Link>
+        {buttons.map((button) => (
+          <button
+            key={button.id}
+            onClick={() => onSelect(button.id)}
+            className={`px-4 pl-2 flex gap-2 py-2 rounded-lg transition-colors ${selectedDashboard === button.id
               ? "bg-blue-600 text-white"
               : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-          }`}
-        >
-          {button.icon ? <button.icon /> : <></>}
-          {button.label}
-        </button>
-      ))}
-      <div className="flex gap-3 w-full justify-end">
-        <MonthSelector
-          selectedMonth={selectedMonth}
-          onChange={(month) => setSelectedMonth(Number(month))}
-        />
-        <YearSelector
-          selectedYear={selectedYear}
-          onChange={(year) => setSelectedYear(year)}
-        />
+              }`}
+          >
+            {button.icon ? <button.icon /> : <></>}
+            {button.label}
+          </button>
+        ))}
+        <div className="flex gap-3 w-full justify-end">
+          <MonthSelector
+            selectedMonth={selectedMonth}
+            onChange={(month) => setSelectedMonth(Number(month))}
+          />
+          <YearSelector
+            selectedYear={selectedYear}
+            onChange={(year) => setSelectedYear(year)}
+          />
+        </div>
       </div>
-    </div>
-  </nav>
-);
+    </nav>
+  );
 // Componente Selector de Mes
 const MonthSelector: React.FC<{
   selectedMonth: number;
@@ -177,12 +174,13 @@ const GraphContainer = ({
 }) => {
   const { authState } = useUser();
   const [data, setData] = useState([]);
+  console.log("info", authState)
 
   useEffect(() => {
     const fetchMonthlyStats = async () => {
       try {
         const response = await fetch(
-          `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${authState?.user?.id}&mes=${selectedMonth}`,
+          `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${authState?.user?.info?.id_agente}&mes=${selectedMonth}`,
           {
             method: "GET",
             headers: HEADERS_API,
@@ -386,7 +384,7 @@ export function Dashboard() {
         />
         {authState?.user ? (
           <DashboardGrid
-            id_user={authState.user.id}
+            id_user={authState.user?.info?.id_agente || ""}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
           />

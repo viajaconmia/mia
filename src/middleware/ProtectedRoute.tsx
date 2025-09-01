@@ -3,6 +3,7 @@ import useAuth from "../hooks/useAuth";
 import { ReactNode } from "react";
 import ROUTES from "../constants/routes";
 import Loader from "../components/atom/Loader";
+import PageContainer from "../components/atom/PageContainer";
 
 const ProtectedRoute = ({
   children,
@@ -31,11 +32,11 @@ const ProtectedRoute = ({
         </>
       );
     } else {
-      return <>{children}</>;
+      return <PageContainer>{children}</PageContainer>;
     }
   }
 
-  return <>{children}</>;
+  return <PageContainer>{children}</PageContainer>;
 };
 
 export default ProtectedRoute;

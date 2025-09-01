@@ -9,7 +9,7 @@ export const formatCurrency = (amount: number) => {
 export const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString("es-MX", {
     year: "numeric",
-    month: "long",
+    month: "2-digit",
     day: "numeric",
   });
 };
