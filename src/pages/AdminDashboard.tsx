@@ -62,6 +62,8 @@ type ModalTypeMap = {
 };
 
 // Componente global para contenido expandible
+// Reemplaza el componente ExpandedContentRenderer con esta versión corregida:
+
 const ExpandedContentRenderer = ({
   item,
   itemType,
@@ -71,23 +73,23 @@ const ExpandedContentRenderer = ({
   itemType: ModalType;
   openDetails: (id: string | null, type: ModalType) => void;
 }) => {
-  const renderTypes = typesModal.filter((type) => type != itemType);
+  const renderTypes = typesModal.filter((type) => type !== itemType);
 
+  // Verifica la estructura real de tus datos
+  console.log("Item data:", item);
+  console.log("Item type:", itemType);
+
+  // Define las columnas para cada tipo
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
       component: "button",
       componentProps: {
-        newValue: ["id_pago"],
+        newValue: ["id_hospedaje"],
         variant: "ghost",
-        onClick: (
-          item: Payment & { id_pago: string | null; id_saldo: string | null }
-        ) =>
-          openDetails(
-            item.id_saldo ? item.id_saldo : item.id_pago || "",
-            "payment"
-          ),
+        onClick: (booking: Reserva) =>
+          openDetails(booking.id_hospedaje || booking.id_reservacion || "", "booking"),
       },
     },
     {
@@ -101,9 +103,8 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-  const payment_columns: ColumnsTable<
-    Payment & { id_pago: string | null; id_saldo: string | null }
-  >[] = [
+
+  const payment_columns: ColumnsTable<Payment>[] = [
     {
       key: "id_pago",
       header: "ID",
@@ -111,13 +112,8 @@ const ExpandedContentRenderer = ({
       componentProps: {
         newValue: ["id_pago"],
         variant: "ghost",
-        onClick: (
-          item: Payment & { id_pago: string | null; id_saldo: string | null }
-        ) =>
-          openDetails(
-            item.id_saldo ? item.id_saldo : item.id_pago || "",
-            "payment"
-          ),
+        onClick: (payment: Payment) =>
+          openDetails(payment.id_saldo || payment.id_pago || "", "payment"),
       },
     },
     {
@@ -126,6 +122,7 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
+
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
@@ -133,13 +130,8 @@ const ExpandedContentRenderer = ({
       component: "button",
       componentProps: {
         variant: "ghost",
-        onClick: (
-          item: Payment & { id_pago: string | null; id_saldo: string | null }
-        ) =>
-          openDetails(
-            item.id_saldo ? item.id_saldo : item.id_pago || "",
-            "payment"
-          ),
+        onClick: (invoice: Invoice) =>
+          openDetails(invoice.id_factura || "", "invoice"),
       },
     },
     {
@@ -149,59 +141,84 @@ const ExpandedContentRenderer = ({
     },
   ];
 
-  const renderData: {
-    [K in ModalType]: {
-      columns: ColumnsTable<ModalTypeMap[K]>[];
-      title: string;
-      data: ModalTypeMap[K][];
-    };
-  } = {
-    booking: {
-      columns: booking_columns,
-      title: "Reservas asociadas",
-      data:
-        itemType == "invoice" || itemType == "payment"
-          ? item.reservas_asociadas || []
-          : [],
-    },
-    payment: {
-      columns: payment_columns,
-      title: "Pagos asociados",
-      data:
-        itemType == "invoice" || itemType == "booking"
-          ? item.pagos_asociados || []
-          : [],
-    },
-    invoice: {
-      columns: invoice_columns,
-      title: "Facturas asociadas",
-      data:
-        itemType == "payment" || itemType == "booking"
-          ? item.facturas_asociadas || []
-          : [],
-    },
+  // Determina qué datos mostrar basado en el tipo del item principal
+  const getRelatedData = () => {
+    switch (itemType) {
+      case "booking":
+        return {
+          left: {
+            columns: invoice_columns,
+            title: "Facturas asociadas",
+            data: item.facturas || item.facturas_asociadas || [],
+          },
+          right: {
+            columns: payment_columns,
+            title: "Pagos asociados",
+            data: item.pagos || item.pagos_asociados || [],
+          }
+        };
+      case "payment":
+        return {
+          left: {
+            columns: invoice_columns,
+            title: "Facturas asociadas",
+            data: item.facturas || item.facturas_asociadas || [],
+          },
+          right: {
+            columns: booking_columns,
+            title: "Reservas asociadas",
+            data: item.reservas || item.reservas_asociadas || [],
+          }
+        };
+      case "invoice":
+        return {
+          left: {
+            columns: payment_columns,
+            title: "Pagos asociados",
+            data: item.pagos || item.pagos_asociados || [],
+          },
+          right: {
+            columns: booking_columns,
+            title: "Reservas asociadas",
+            data: item.reservas || item.reservas_asociadas || [],
+          }
+        };
+      default:
+        return {
+          left: { columns: [], title: "", data: [] },
+          right: { columns: [], title: "", data: [] }
+        };
+    }
   };
-  const left = renderData[renderTypes[0]];
-  const right = renderData[renderTypes[1]];
+
+  const { left, right } = getRelatedData();
 
   return (
     <TwoColumnDropdown
       leftContent={
         <div className="space-y-2">
-          <h1>{left.title}</h1>
-          <Table<(typeof left.data)[0]>
-            data={left.data}
-            columns={left.columns as ColumnsTable<(typeof left.data)[0]>[]}
-          />
+          <h1 className="font-semibold">{left.title}</h1>
+          {left.data.length > 0 ? (
+            <Table
+              data={left.data}
+              columns={left.columns}
+            />
+          ) : (
+            <p className="text-gray-500">No hay {left.title.toLowerCase()}</p>
+          )}
         </div>
       }
       rightContent={
         <div className="space-y-2">
-          <h1>{right.title}</h1>
-          <Table<(typeof right.data)[0]>
-            data={right.data}
-            columns={right.columns as ColumnsTable<(typeof right.data)[0]>[]}
-          />
+          <h1 className="font-semibold">{right.title}</h1>
+          {right.data.length > 0 ? (
+            <Table
+              data={right.data}
+              columns={right.columns}
+            />
+          ) : (
+            <p className="text-gray-500">No hay {right.title.toLowerCase()}</p>
+          )}
         </div>
       }
     />
@@ -272,6 +289,36 @@ export const AdminDashboard = () => {
       showNotification("error", error.message || "");
     }
   };
+
+  // Definir la interfaz ListItem localmente si no está importada
+  interface ListItem {
+    id: string;
+    title: string;
+  }
+
+  // Función para obtener y transformar los items según el tipo
+  const getItemsByType = (type: ModalType): ListItem[] => {
+    switch (type) {
+      case 'booking':
+        return bookings.map(booking => ({
+          id: booking.id_reservacion || '',
+          title: `Reserva ${booking.codigo_reservacion_hotel || booking.id_reservacion || ''}`
+        }));
+      case 'payment':
+        return payments.map(payment => ({
+          id: payment.id_pago || payment.id_saldo || '',
+          title: `Pago ${payment.id_pago || payment.id_saldo || ''}`
+        }));
+      case 'invoice':
+        return invoices.map(invoice => ({
+          id: invoice.id_factura || '',
+          title: `Factura ${invoice.id_factura || ''}`
+        }));
+      default:
+        return [];
+    }
+  };
+
 
   const fetchPayments = async () => {
     try {
@@ -374,6 +421,7 @@ export const AdminDashboard = () => {
           onClose={() => setIsModalOpen(false)}
           agentId={user?.info?.id_agente || ""}
           initialItemId={selectedItemId}
+          //items={getItemsByType(selectedItemType)} Aquí pasamos los items transformados
           items={[]}
           itemType={selectedItemType}
         />
@@ -572,9 +620,8 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
             )}
           </div>
           <div
-            className={`w-12 h-12 ${
-              colorClasses[color as keyof typeof colorClasses]
-            } rounded-full flex items-center justify-center`}
+            className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]
+              } rounded-full flex items-center justify-center`}
           >
             <Icon className="w-6 h-6" />
           </div>
