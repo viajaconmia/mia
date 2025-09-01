@@ -9,6 +9,7 @@ import {
   CreditCard as PaymentIcon,
   FileText as InvoicesIcon,
 } from "lucide-react";
+import { ModalType } from "../../types/services";
 
 // Interfaces para los items de la lista (Pagos o Facturas)
 interface ListItem {
@@ -22,7 +23,7 @@ interface NavContainerModalProps {
   agentId: string;
   initialItemId: string;
   items: ListItem[];
-  itemType: "payment" | "invoice";
+  itemType: ModalType;
   title?: string;
 }
 
@@ -56,7 +57,7 @@ const paymentExamples: PaymentDetails[] = [
     fecha_emision: "15/03/2023",
     estado: "Completado",
     metodo_pago: "Transferencia bancaria",
-    referencia: "REF7890123"
+    referencia: "REF7890123",
   },
   {
     id_movimiento: "PAY-002",
@@ -64,7 +65,7 @@ const paymentExamples: PaymentDetails[] = [
     fecha_emision: "22/03/2023",
     estado: "Completado",
     metodo_pago: "Tarjeta de crédito",
-    referencia: "REF3456789"
+    referencia: "REF3456789",
   },
   {
     id_movimiento: "PAY-003",
@@ -72,8 +73,8 @@ const paymentExamples: PaymentDetails[] = [
     fecha_emision: "05/04/2023",
     estado: "Pendiente",
     metodo_pago: "PayPal",
-    referencia: "REF9012345"
-  }
+    referencia: "REF9012345",
+  },
 ];
 
 // Datos de ejemplo para facturas
@@ -85,7 +86,7 @@ const invoiceExamples: InvoiceDetails[] = [
     fecha_emision: "10/03/2023",
     fecha_vencimiento: "10/04/2023",
     estado: "Pagada",
-    concepto: "Servicios de consultoría marzo"
+    concepto: "Servicios de consultoría marzo",
   },
   {
     id_factura: "INV-2023-002",
@@ -94,7 +95,7 @@ const invoiceExamples: InvoiceDetails[] = [
     fecha_emision: "15/03/2023",
     fecha_vencimiento: "15/04/2023",
     estado: "Pagada",
-    concepto: "Licencias de software"
+    concepto: "Licencias de software",
   },
   {
     id_factura: "INV-2023-003",
@@ -103,8 +104,8 @@ const invoiceExamples: InvoiceDetails[] = [
     fecha_emision: "22/03/2023",
     fecha_vencimiento: "22/04/2023",
     estado: "Pendiente",
-    concepto: "Desarrollo de aplicación móvil"
-  }
+    concepto: "Desarrollo de aplicación móvil",
+  },
 ];
 
 const MiaIcon = () => (
@@ -132,58 +133,73 @@ export default function NavContainerModal({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [currentItemId, setCurrentItemId] = useState(initialItemId);
-  const [details, setDetails] = useState<PaymentDetails | InvoiceDetails | null>(null);
+  const [details, setDetails] = useState<
+    PaymentDetails | InvoiceDetails | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const isSidebarExpanded = isSidebarOpen || isSidebarHovered;
 
-  const fetchDetails = useCallback(async (itemId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      let url = "";
-      if (itemType === "payment") {
-        url = `/v1/mia/pagos/get_pago_details?id_agente=${agentId}&id_pago=${itemId}`;
-      } else if (itemType === "invoice") {
-        url = `/v1/mia/factura/get_factura_details?id_agente=${agentId}&id_factura=${itemId}`;
-      }
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Error al obtener los detalles de ${itemType}`);
-      }
-      const data = await response.json();
-
-      // Si no hay datos, usar datos de ejemplo
-      if (!data.data) {
+  const fetchDetails = useCallback(
+    async (itemId: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        let url = "";
         if (itemType === "payment") {
-          const examplePayment = paymentExamples.find(p => p.id_movimiento === itemId) || paymentExamples[0];
+          url = `/v1/mia/pagos/get_pago_details?id_agente=${agentId}&id_pago=${itemId}`;
+        } else if (itemType === "invoice") {
+          url = `/v1/mia/factura/get_factura_details?id_agente=${agentId}&id_factura=${itemId}`;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Error al obtener los detalles de ${itemType}`);
+        }
+        const data = await response.json();
+
+        // Si no hay datos, usar datos de ejemplo
+        if (!data.data) {
+          if (itemType === "payment") {
+            const examplePayment =
+              paymentExamples.find((p) => p.id_movimiento === itemId) ||
+              paymentExamples[0];
+            setDetails(examplePayment);
+          } else {
+            const exampleInvoice =
+              invoiceExamples.find((i) => i.id_factura === itemId) ||
+              invoiceExamples[0];
+            setDetails(exampleInvoice);
+          }
+        } else {
+          setDetails(data.data);
+        }
+      } catch (err) {
+        // En caso de error, usar datos de ejemplo pero mantener el mensaje de error
+        setError(
+          `Error al cargar los detalles de ${itemType}. Mostrando datos de ejemplo.`
+        );
+        console.error(err);
+
+        // Usar datos de ejemplo como respaldo
+        if (itemType === "payment") {
+          const examplePayment =
+            paymentExamples.find((p) => p.id_movimiento === itemId) ||
+            paymentExamples[0];
           setDetails(examplePayment);
         } else {
-          const exampleInvoice = invoiceExamples.find(i => i.id_factura === itemId) || invoiceExamples[0];
+          const exampleInvoice =
+            invoiceExamples.find((i) => i.id_factura === itemId) ||
+            invoiceExamples[0];
           setDetails(exampleInvoice);
         }
-      } else {
-        setDetails(data.data);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      // En caso de error, usar datos de ejemplo pero mantener el mensaje de error
-      setError(`Error al cargar los detalles de ${itemType}. Mostrando datos de ejemplo.`);
-      console.error(err);
-
-      // Usar datos de ejemplo como respaldo
-      if (itemType === "payment") {
-        const examplePayment = paymentExamples.find(p => p.id_movimiento === itemId) || paymentExamples[0];
-        setDetails(examplePayment);
-      } else {
-        const exampleInvoice = invoiceExamples.find(i => i.id_factura === itemId) || invoiceExamples[0];
-        setDetails(exampleInvoice);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [agentId, itemType]);
+    },
+    [agentId, itemType]
+  );
 
   useEffect(() => {
     if (isOpen && currentItemId) {
@@ -209,8 +225,9 @@ export default function NavContainerModal({
 
         <div className="flex h-full w-full min-w-[85vw]">
           <div
-            className={`relative h-full bg-white/70 transition-all duration-300 ${isSidebarExpanded ? "w-52" : "w-16"
-              }`}
+            className={`relative h-full bg-white/70 transition-all duration-300 ${
+              isSidebarExpanded ? "w-52" : "w-16"
+            }`}
           >
             <Button
               variant="ghost"
@@ -219,7 +236,9 @@ export default function NavContainerModal({
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
               <ArrowIcon
-                className={`transition-transform ${isSidebarOpen ? "rotate-180" : ""}`}
+                className={`transition-transform ${
+                  isSidebarOpen ? "rotate-180" : ""
+                }`}
               />
             </Button>
 
@@ -245,10 +264,11 @@ export default function NavContainerModal({
                         <button
                           onClick={() => setCurrentItemId(item.id)}
                           key={item.id}
-                          className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900 ${currentItemId === item.id
-                            ? "bg-blue-100 text-blue-900"
-                            : "text-gray-500"
-                            }`}
+                          className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900 ${
+                            currentItemId === item.id
+                              ? "bg-blue-100 text-blue-900"
+                              : "text-gray-500"
+                          }`}
                         >
                           {itemType === "payment" ? (
                             <PaymentIcon className="h-4 w-4" />
@@ -292,35 +312,58 @@ export default function NavContainerModal({
 
                   {itemType === "payment" && details && (
                     <div>
-                      <h2 className="text-2xl font-bold mb-4">Detalles del Pago</h2>
+                      <h2 className="text-2xl font-bold mb-4">
+                        Detalles del Pago
+                      </h2>
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-gray-500">ID de Movimiento</p>
-                            <p className="font-medium">{(details as PaymentDetails).id_movimiento}</p>
+                            <p className="text-sm text-gray-500">
+                              ID de Movimiento
+                            </p>
+                            <p className="font-medium">
+                              {(details as PaymentDetails).id_movimiento}
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Monto</p>
-                            <p className="font-medium text-green-600">{(details as PaymentDetails).monto}</p>
+                            <p className="font-medium text-green-600">
+                              {(details as PaymentDetails).monto}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">Fecha de Emisión</p>
-                            <p className="font-medium">{(details as PaymentDetails).fecha_emision}</p>
+                            <p className="text-sm text-gray-500">
+                              Fecha de Emisión
+                            </p>
+                            <p className="font-medium">
+                              {(details as PaymentDetails).fecha_emision}
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Estado</p>
-                            <p className="font-medium">{(details as PaymentDetails).estado || "Completado"}</p>
+                            <p className="font-medium">
+                              {(details as PaymentDetails).estado ||
+                                "Completado"}
+                            </p>
                           </div>
                           {(details as PaymentDetails).metodo_pago && (
                             <div>
-                              <p className="text-sm text-gray-500">Método de Pago</p>
-                              <p className="font-medium">{(details as PaymentDetails).metodo_pago}</p>
+                              <p className="text-sm text-gray-500">
+                                Método de Pago
+                              </p>
+                              <p className="font-medium">
+                                {(details as PaymentDetails).metodo_pago}
+                              </p>
                             </div>
                           )}
                           {(details as PaymentDetails).referencia && (
                             <div>
-                              <p className="text-sm text-gray-500">Referencia</p>
-                              <p className="font-medium">{(details as PaymentDetails).referencia}</p>
+                              <p className="text-sm text-gray-500">
+                                Referencia
+                              </p>
+                              <p className="font-medium">
+                                {(details as PaymentDetails).referencia}
+                              </p>
                             </div>
                           )}
                         </div>
@@ -330,41 +373,65 @@ export default function NavContainerModal({
 
                   {itemType === "invoice" && details && (
                     <div>
-                      <h2 className="text-2xl font-bold mb-4">Detalles de la Factura</h2>
+                      <h2 className="text-2xl font-bold mb-4">
+                        Detalles de la Factura
+                      </h2>
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-gray-500">ID de Factura</p>
-                            <p className="font-medium">{(details as InvoiceDetails).id_factura}</p>
+                            <p className="text-sm text-gray-500">
+                              ID de Factura
+                            </p>
+                            <p className="font-medium">
+                              {(details as InvoiceDetails).id_factura}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">Número de Factura</p>
-                            <p className="font-medium">{(details as InvoiceDetails).invoice_number}</p>
+                            <p className="text-sm text-gray-500">
+                              Número de Factura
+                            </p>
+                            <p className="font-medium">
+                              {(details as InvoiceDetails).invoice_number}
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Total</p>
-                            <p className="font-medium text-blue-600">{(details as InvoiceDetails).total}</p>
+                            <p className="font-medium text-blue-600">
+                              {(details as InvoiceDetails).total}
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Estado</p>
-                            <p className="font-medium">{(details as InvoiceDetails).estado || "Pagada"}</p>
+                            <p className="font-medium">
+                              {(details as InvoiceDetails).estado || "Pagada"}
+                            </p>
                           </div>
                           {(details as InvoiceDetails).fecha_emision && (
                             <div>
-                              <p className="text-sm text-gray-500">Fecha de Emisión</p>
-                              <p className="font-medium">{(details as InvoiceDetails).fecha_emision}</p>
+                              <p className="text-sm text-gray-500">
+                                Fecha de Emisión
+                              </p>
+                              <p className="font-medium">
+                                {(details as InvoiceDetails).fecha_emision}
+                              </p>
                             </div>
                           )}
                           {(details as InvoiceDetails).fecha_vencimiento && (
                             <div>
-                              <p className="text-sm text-gray-500">Fecha de Vencimiento</p>
-                              <p className="font-medium">{(details as InvoiceDetails).fecha_vencimiento}</p>
+                              <p className="text-sm text-gray-500">
+                                Fecha de Vencimiento
+                              </p>
+                              <p className="font-medium">
+                                {(details as InvoiceDetails).fecha_vencimiento}
+                              </p>
                             </div>
                           )}
                           {(details as InvoiceDetails).concepto && (
                             <div className="col-span-2">
                               <p className="text-sm text-gray-500">Concepto</p>
-                              <p className="font-medium">{(details as InvoiceDetails).concepto}</p>
+                              <p className="font-medium">
+                                {(details as InvoiceDetails).concepto}
+                              </p>
                             </div>
                           )}
                         </div>

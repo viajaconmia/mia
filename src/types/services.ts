@@ -1,5 +1,6 @@
 export interface Reserva {
   id_credito: string | null;
+  id_hospedaje: string | null;
   id_pago: string | null;
   id_booking: string | null;
   pendiente_por_cobrar: string | null;
@@ -64,3 +65,5 @@ export interface Invoice {
   monto_total_relacionado: string;
   movimientos_pago: MovimientoPago[];
 }
+
+export type ModalType = "payment" | "invoice" | "booking";

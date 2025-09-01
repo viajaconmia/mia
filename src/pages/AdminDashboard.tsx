@@ -1,37 +1,28 @@
 import { useState, useEffect } from "react";
 import TwoColumnDropdown from "../components/molecule/TwoColumnDropdown";
-import { StatCard } from "../components/atom/StatCard";
 import Donut from "../components/Donut";
 import {
   Users,
-  Hotel,
   BarChart3,
   Calendar,
   DollarSign,
-  Clock,
-  XCircle,
   Building2,
-  Tag,
-  FilePenLine,
-  Factory,
-  FileSignature,
-  MapPinned,
   CreditCardIcon,
   File,
-  CheckCircle,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
-import { ColumnsTable, Table } from "../components/organism/Table";
 import { TabsList } from "../components/molecule/TabsList";
-import { formatCurrency, formatDate } from "../utils/format";
-import { TabSelected } from "../components/molecule/TabSelected";
 import { PagosService, Payment } from "../services/PagosService";
 import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
-import { Invoice, Reserva } from "../types/services";
+import { Invoice, ModalType, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
 import NavContainerModal from "../components/organism/detalles";
-import { HEADERS_API, URL } from "../constants/apiConstant";
+import { useSearch } from "../hooks/useSearch";
+import { Redirect, Route, Switch, useLocation } from "wouter";
+import ROUTES from "../constants/routes";
+import { ColumnsTable, Table } from "../components/atom/table";
+import { HEADERS_API } from "../constants/apiConstant";
 
 interface DashboardStats {
   totalUsers: number;
@@ -56,142 +47,165 @@ interface User {
 }
 
 type ViewsConsultas =
-  | "Vista general"
-  | "Usuarios"
-  | "Reservaciones"
-  | "Pagos"
-  | "Facturas";
+  | "general"
+  | "usuarios"
+  | "reservaciones"
+  | "pagos"
+  | "facturas";
 
-type ModalType = "payment" | "invoice";
+const typesModal: ModalType[] = ["payment", "invoice", "booking"];
+
+type ModalTypeMap = {
+  booking: Reserva;
+  payment: Payment & { id_pago: string | null; id_saldo: string | null };
+  invoice: Invoice;
+};
 
 // Componente global para contenido expandible
-const ExpandedContentRenderer = ({ item, itemType }: { item: any; itemType: string }) => {
-  // Función para renderizar múltiples elementos de un arreglo
-  const renderArrayItems = (array: any[], title: string, renderFunction: (item: any, index: number) => JSX.Element) => {
-    if (!array || array.length === 0) {
-      return (
-        <div>
-          <h4 className="font-semibold mb-2">{title}</h4>
-          <p className="text-gray-500">No hay información disponible</p>
-        </div>
-      );
-    }
+const ExpandedContentRenderer = ({
+  item,
+  itemType,
+  openDetails,
+}: {
+  item: any;
+  itemType: ModalType;
+  openDetails: (id: string | null, type: ModalType) => void;
+}) => {
+  const renderTypes = typesModal.filter((type) => type != itemType);
 
-    return (
-      <div>
-        <h4 className="font-semibold mb-2">{title}</h4>
-        {array.map((arrayItem, index) => (
-          <div key={index} className={index > 0 ? "mt-3 pt-3 border-t border-gray-100" : ""}>
-            {renderFunction(arrayItem, index)}
-          </div>
-        ))}
-      </div>
-    );
+  const booking_columns: ColumnsTable<Reserva>[] = [
+    {
+      key: "codigo_reservacion_hotel",
+      header: "ID",
+      component: "button",
+      componentProps: {
+        newValue: ["id_pago"],
+        variant: "ghost",
+        onClick: (
+          item: Payment & { id_pago: string | null; id_saldo: string | null }
+        ) =>
+          openDetails(
+            item.id_saldo ? item.id_saldo : item.id_pago || "",
+            "payment"
+          ),
+      },
+    },
+    {
+      key: "hotel",
+      header: "Hotel",
+      component: "text",
+    },
+    {
+      key: "total",
+      header: "Total",
+      component: "precio",
+    },
+  ];
+  const payment_columns: ColumnsTable<
+    Payment & { id_pago: string | null; id_saldo: string | null }
+  >[] = [
+    {
+      key: "id_pago",
+      header: "ID",
+      component: "button",
+      componentProps: {
+        newValue: ["id_pago"],
+        variant: "ghost",
+        onClick: (
+          item: Payment & { id_pago: string | null; id_saldo: string | null }
+        ) =>
+          openDetails(
+            item.id_saldo ? item.id_saldo : item.id_pago || "",
+            "payment"
+          ),
+      },
+    },
+    {
+      key: "monto",
+      header: "Total",
+      component: "precio",
+    },
+  ];
+  const invoice_columns: ColumnsTable<Invoice>[] = [
+    {
+      key: "id_factura",
+      header: "ID",
+      component: "button",
+      componentProps: {
+        variant: "ghost",
+        onClick: (
+          item: Payment & { id_pago: string | null; id_saldo: string | null }
+        ) =>
+          openDetails(
+            item.id_saldo ? item.id_saldo : item.id_pago || "",
+            "payment"
+          ),
+      },
+    },
+    {
+      key: "total",
+      header: "Total",
+      component: "precio",
+    },
+  ];
+
+  const renderData: {
+    [K in ModalType]: {
+      columns: ColumnsTable<ModalTypeMap[K]>[];
+      title: string;
+      data: ModalTypeMap[K][];
+    };
+  } = {
+    booking: {
+      columns: booking_columns,
+      title: "Reservas asociadas",
+      data:
+        itemType == "invoice" || itemType == "payment"
+          ? item.reservas_asociadas || []
+          : [],
+    },
+    payment: {
+      columns: payment_columns,
+      title: "Pagos asociados",
+      data:
+        itemType == "invoice" || itemType == "booking"
+          ? item.pagos_asociados || []
+          : [],
+    },
+    invoice: {
+      columns: invoice_columns,
+      title: "Facturas asociadas",
+      data:
+        itemType == "payment" || itemType == "booking"
+          ? item.facturas_asociadas || []
+          : [],
+    },
   };
+  const left = renderData[renderTypes[0]];
+  const right = renderData[renderTypes[1]];
 
-  switch (itemType) {
-    case "booking":
-      return (
-        <TwoColumnDropdown
-          leftContent={
-            <div>
-              <h4 className="font-semibold mb-2">Información del Hotel</h4>
-              <p><strong>Hotel:</strong> {item.hotel_name}</p>
-              <p><strong>Tipo de habitación:</strong> {item.room_type}</p>
-              <p><strong>Código de confirmación:</strong> {item.confirmation_code}</p>
-            </div>
-          }
-          rightContent={
-            <div>
-              <h4 className="font-semibold mb-2">Detalles de la Reserva</h4>
-              <p><strong>Check-in:</strong> {formatDate(item.check_in)}</p>
-              <p><strong>Check-out:</strong> {formatDate(item.check_out)}</p>
-              <p><strong>Precio total:</strong> {formatCurrency(item.total_price)}</p>
-              <p><strong>Estado:</strong> {item.status}</p>
-            </div>
-          }
-        />
-      );
-
-    case "payment":
-      // Obtener información relacionada (puede ser arreglos)
-      const relatedBookings = item.booking_info || [];
-      const relatedInvoices = item.invoice_info || [];
-
-      return (
-        <TwoColumnDropdown
-          leftContent={renderArrayItems(
-            relatedBookings,
-            "Información de Reserva",
-            (booking) => (
-              <>
-                <p><strong>Hotel:</strong> {booking.hotel_name}</p>
-                <p><strong>Check-in:</strong> {formatDate(booking.check_in)}</p>
-                <p><strong>Check-out:</strong> {formatDate(booking.check_out)}</p>
-                <p><strong>Viajero:</strong> {booking.nombre_viajero_reservacion}</p>
-                {booking.confirmation_code && (
-                  <p><strong>Código confirmación:</strong> {booking.confirmation_code}</p>
-                )}
-              </>
-            )
-          )}
-          rightContent={renderArrayItems(
-            relatedInvoices,
-            "Información de Factura",
-            (invoice) => (
-              <>
-                <p><strong>Fecha factura:</strong> {formatDate(invoice.fecha_emision)}</p>
-                <p><strong>Subtotal:</strong> {formatCurrency(parseFloat(invoice.subtotal || 0))}</p>
-                <p><strong>IVA:</strong> {formatCurrency(parseFloat(invoice.impuestos || 0))}</p>
-                <p><strong>Total:</strong> {formatCurrency(parseFloat(invoice.total || 0))}</p>
-                {invoice.folio && <p><strong>Folio:</strong> {invoice.folio}</p>}
-              </>
-            )
-          )}
-        />
-      );
-
-    case "invoice":
-      // Obtener información relacionada (puede ser arreglos)
-      const invoiceBookings = item.reservas_asociadas || [];
-      const invoicePayments = item.movimientos_pago || [];
-
-      return (
-        <TwoColumnDropdown
-          leftContent={renderArrayItems(
-            invoiceBookings,
-            "Información de Reservas",
-            (booking) => (
-              <>
-                <p><strong>Hotel:</strong> {booking.hotel_name}</p>
-                <p><strong>Check-in:</strong> {formatDate(booking.check_in)}</p>
-                <p><strong>Check-out:</strong> {formatDate(booking.check_out)}</p>
-                <p><strong>Habitación:</strong> {booking.room_type}</p>
-                {booking.confirmation_code && (
-                  <p><strong>Código confirmación:</strong> {booking.confirmation_code}</p>
-                )}
-              </>
-            )
-          )}
-          rightContent={renderArrayItems(
-            invoicePayments,
-            "Información de Pagos",
-            (payment) => (
-              <>
-                <p><strong>Fecha pago:</strong> {formatDate(payment.fecha_pago)}</p>
-                <p><strong>Monto:</strong> {formatCurrency(payment.monto || 0)}</p>
-                <p><strong>Método:</strong> {payment.tipo}</p>
-                <p><strong>Tipo tarjeta:</strong> {payment.metodo}</p>
-                {payment.referencia && <p><strong>Referencia:</strong> {payment.referencia}</p>}
-              </>
-            )
-          )}
-        />
-      );
-
-    default:
-      return <div>Información no disponible</div>;
-  }
+  return (
+    <TwoColumnDropdown
+      leftContent={
+        <div className="space-y-2">
+          <h1>{left.title}</h1>
+          <Table<(typeof left.data)[0]>
+            data={left.data}
+            columns={left.columns as ColumnsTable<(typeof left.data)[0]>[]}
+          />
+        </div>
+      }
+      rightContent={
+        <div className="space-y-2">
+          <h1>{right.title}</h1>
+          <Table<(typeof right.data)[0]>
+            data={right.data}
+            columns={right.columns as ColumnsTable<(typeof right.data)[0]>[]}
+          />
+        </div>
+      }
+    />
+  );
 };
 
 export const AdminDashboard = () => {
@@ -207,7 +221,7 @@ export const AdminDashboard = () => {
     recentPayments: [],
     monthlyRevenue: [],
   });
-  const [activeView, setActiveView] = useState<ViewsConsultas>("Vista general");
+  const [location, setLocation] = useLocation();
   const [bookings, setBookings] = useState<Reserva[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -223,10 +237,16 @@ export const AdminDashboard = () => {
   const { showNotification } = useNotification();
 
   // Nueva función para abrir el modal
-  const openDetails = (itemId: string, itemType: ModalType) => {
-    setSelectedItemId(itemId);
-    setSelectedItemType(itemType);
-    setIsModalOpen(true);
+  const openDetails = (itemId: string | null, itemType: ModalType) => {
+    try {
+      if (!itemId) throw new Error("No hay id");
+
+      setSelectedItemId(itemId);
+      setSelectedItemType(itemType);
+      setIsModalOpen(true);
+    } catch (error: any) {
+      console.error(error.message);
+    }
   };
 
   useEffect(() => {
@@ -308,33 +328,44 @@ export const AdminDashboard = () => {
   };
 
   const views: Record<ViewsConsultas, React.ReactNode> = {
-    Facturas: <InvoicesView invoices={invoices} openDetails={openDetails} />,
-    "Vista general": <OverviewView stats={stats} />,
-    Usuarios: <UsersView users={users} />,
-    Pagos: <PaymentsView payments={payments} openDetails={openDetails} />,
-    Reservaciones: (
+    general: <OverviewView stats={stats} />,
+    facturas: <InvoicesView invoices={invoices} openDetails={openDetails} />,
+    usuarios: <UsersView users={users} />,
+    pagos: <PaymentsView payments={payments} openDetails={openDetails} />,
+    reservaciones: (
       <BookingsView bookings={bookings} openDetails={openDetails} />
     ),
   };
 
   return (
     <>
-      <div className="max-w-7xl mx-auto mt-4 bg-gray-100 rounded-md space-y-4">
+      <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
         <TabsList
           tabs={[
-            { icon: BarChart3, tab: "Vista general" },
-            { icon: Users, tab: "Usuarios" },
-            { icon: Building2, tab: "Reservaciones" },
-            { icon: CreditCardIcon, tab: "Pagos" },
-            { icon: File, tab: "Facturas" },
+            { icon: BarChart3, tab: "general" },
+            { icon: Users, tab: "usuarios" },
+            { icon: Building2, tab: "reservaciones" },
+            { icon: CreditCardIcon, tab: "pagos" },
+            { icon: File, tab: "facturas" },
           ]}
           onChange={(tab) => {
-            setActiveView(tab as ViewsConsultas);
+            setLocation(ROUTES.CONSULTAS.SUBPATH(tab));
           }}
-          activeTab={activeView}
+          activeTab={
+            (location.split("/").at(-1) as ViewsConsultas) || "general"
+          }
         />
         <div>
-          <TabSelected tabs={views} selected={activeView}></TabSelected>
+          <Switch>
+            {Object.entries(views).map(([key, Component]) => (
+              <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
+                {Component}
+              </Route>
+            ))}
+            <Route path="*">
+              <Redirect to={ROUTES.CONSULTAS.SUBPATH(Object.keys(views)[0])} />
+            </Route>
+          </Switch>
         </div>
       </div>
       {isModalOpen && selectedItemId && selectedItemType && (
@@ -351,217 +382,131 @@ export const AdminDashboard = () => {
   );
 };
 
-const BookingsView = ({ bookings, openDetails }: { bookings: Reserva[], openDetails: (id: string, type: ModalType) => void }) => {
+const BookingsView = ({
+  bookings,
+  openDetails,
+}: {
+  bookings: Reserva[];
+  openDetails: (id: string | null, type: ModalType) => void;
+}) => {
+  const response = useSearch();
+  console.log(response);
+
   const bookingColumns: ColumnsTable<Reserva>[] = [
     {
       key: "hotel",
       header: "Hotel",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Hotel className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
+      component: "text",
     },
     {
       key: "nombre_viajero_reservacion",
       header: "Viajero",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Users className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
+      component: "text",
     },
     {
       key: "check_in",
       header: "Check-in",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
-        </div>
-      ),
+      component: "date",
     },
     {
       key: "check_out",
       header: "Check-out",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
-        </div>
-      ),
+      component: "date",
     },
     {
       key: "room",
       header: "Cuarto",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Tag className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
+      component: "text",
     },
     {
       key: "total",
       header: "Precio",
-      renderer: ({ value }: { value: number }) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-400" />
-          <span>{formatCurrency(value)}</span>
-        </div>
-      ),
-    },
-    {
-      key: null,
-      header: "Acciones",
-      renderer: ({ item }: { item: Reserva }) => (
-        <div className="flex items-center space-x-2">
-          <button
-            className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
-            title="Ver detalle"
-            onClick={() => openDetails(item.id_booking || "", "payment")}
-          >
-            <FilePenLine className="w-5 h-5" />
-          </button>
-        </div>
-      ),
+      component: "text",
     },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <Table<Reserva>
-          id="bookingsTable"
-          data={bookings}
-          columns={bookingColumns}
-          expandableContent={(booking) => (
-            <ExpandedContentRenderer item={booking} itemType="booking" />
-          )}
-        />
-      </div>
-    </div>
-  );
-};
-
-const PaymentsView = ({
-  payments,
-  openDetails
-}: {
-  payments: Payment[];
-  openDetails: (id: string, type: ModalType) => void;
-}) => {
-  const paymentColumns: ColumnsTable<Payment>[] = [
-    {
-      key: "fecha_pago",
-      header: "Fecha de Pago",
-      renderer: ({ value }: { value: string }) => (
-        <span>{formatDate(value)}</span>
-      ),
-    },
-    {
-      key: "monto",
-      header: "Monto",
-      renderer: ({ value }: { value: number }) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-400" />
-          <span>{formatCurrency(value)}</span>
-        </div>
-      ),
-    },
-    { key: "metodo", header: "Forma de Pago" },
-    { key: "tipo", header: "Tipo de Tarjeta" },
-    {
-      key: null,
-      header: "Acciones",
-      renderer: ({ item }: { item: Payment }) => (
-        <div className="flex items-center space-x-2">
-          <button
-            className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
-            title="Ver detalle"
-            onClick={() => openDetails(item.raw_id || "", "payment")}
-          >
-            <FilePenLine className="w-5 h-5" />
-          </button>
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Gestión de Pagos
-        </h3>
-      </div>
-      <Table
-        id="paymentsTable"
-        data={payments}
-        columns={paymentColumns}
-        expandableContent={(payment) => (
-          <ExpandedContentRenderer item={payment} itemType="payment" />
+    <div className="">
+      <Table<Reserva>
+        id="bookingsTable"
+        data={bookings}
+        columns={bookingColumns}
+        expandableContent={(booking) => (
+          <ExpandedContentRenderer
+            openDetails={openDetails}
+            item={booking}
+            itemType="booking"
+          />
         )}
       />
     </div>
   );
 };
 
-const InvoicesView = ({ invoices, openDetails }: { invoices: Invoice[], openDetails: (id: string, type: ModalType) => void }) => {
+const PaymentsView = ({
+  payments,
+  openDetails,
+}: {
+  payments: Payment[];
+  openDetails: (id: string | null, type: ModalType) => void;
+}) => {
+  const paymentColumns: ColumnsTable<Payment>[] = [
+    { key: "fecha_pago", header: "Fecha de Pago", component: "date" },
+    { key: "monto", header: "Monto", component: "precio" },
+    { key: "metodo", header: "Forma de Pago", component: "text" },
+    { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
+  ];
+
+  return (
+    <div className="">
+      <Table<Payment>
+        id="paymentsTable"
+        data={payments}
+        columns={paymentColumns}
+        expandableContent={(payment) => (
+          <ExpandedContentRenderer
+            openDetails={openDetails}
+            item={payment}
+            itemType="payment"
+          />
+        )}
+      />
+    </div>
+  );
+};
+
+const InvoicesView = ({
+  invoices,
+  openDetails,
+}: {
+  invoices: Invoice[];
+  openDetails: (id: string | null, type: ModalType) => void;
+}) => {
   const invoiceColumns: ColumnsTable<Invoice>[] = [
+    {
+      key: "id_factura",
+      header: "Fecha Facturación",
+      component: "text",
+    },
     {
       key: "fecha_emision",
       header: "Fecha Facturación",
-      renderer: ({ value }: { value: string }) => (
-        <span>{formatDate(value)}</span>
-      ),
+      component: "date",
     },
     {
       key: "subtotal",
       header: "Subtotal",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-400" />
-          <span>{formatCurrency(parseFloat(value))}</span>
-        </div>
-      ),
+      component: "precio",
     },
     {
       key: "impuestos",
       header: "IVA",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-400" />
-          <span>{formatCurrency(parseFloat(value))}</span>
-        </div>
-      ),
+      component: "precio",
     },
     {
       key: "total",
       header: "Total",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-400" />
-          <span>{formatCurrency(parseFloat(value))}</span>
-        </div>
-      ),
-    },
-    {
-      key: null,
-      header: "Acciones",
-      renderer: ({ item }: { item: Invoice }) => (
-        <div className="flex items-center space-x-2">
-          <button
-            className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
-            title="Ver detalle"
-            onClick={() => openDetails(item.id_factura || "", "invoice")}
-          >
-            <FilePenLine className="w-5 h-5" />
-          </button>
-        </div>
-      ),
+      component: "precio",
     },
   ];
 
@@ -572,7 +517,11 @@ const InvoicesView = ({ invoices, openDetails }: { invoices: Invoice[], openDeta
         data={invoices}
         columns={invoiceColumns}
         expandableContent={(invoice) => (
-          <ExpandedContentRenderer item={invoice} itemType="invoice" />
+          <ExpandedContentRenderer
+            openDetails={openDetails}
+            item={invoice}
+            itemType="invoice"
+          />
         )}
       />
     </div>
@@ -580,64 +529,11 @@ const InvoicesView = ({ invoices, openDetails }: { invoices: Invoice[], openDeta
 };
 
 const UsersView = ({ users }: { users: User[] }) => {
-  const userColumns: ColumnsTable<User>[] = [
-    {
-      key: "company_name",
-      header: "Compañia",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Building2 className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "created_at",
-      header: "Fecha Registro",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{formatDate(value)}</span>
-        </div>
-      ),
-    },
-    {
-      key: "industry",
-      header: "Industria",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <Factory className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "rfc",
-      header: "RFC",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <FileSignature className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "city",
-      header: "Ciudad",
-      renderer: ({ value }: { value: string }) => (
-        <div className="flex items-center space-x-2">
-          <MapPinned className="w-4 h-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-  ];
+  const userColumns: ColumnsTable<User>[] = [];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <Table id="usersTable" data={users} columns={userColumns} />
-      </div>
+    <div className="">
+      <Table id="usersTable" data={users} columns={userColumns} />
     </div>
   );
 };
@@ -662,7 +558,7 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
       green: "bg-green-50 text-green-600",
       yellow: "bg-yellow-50 text-yellow-600",
       red: "bg-red-50 text-red-600",
-      purple: "bg-purple-50 text-purple-600"
+      purple: "bg-purple-50 text-purple-600",
     };
 
     return (
@@ -671,9 +567,15 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
           <div>
             <p className="text-sm text-gray-500">{title}</p>
             <h3 className="text-2xl font-bold text-gray-900 mt-1">{value}</h3>
-            {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+            {subtitle && (
+              <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+            )}
           </div>
-          <div className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]} rounded-full flex items-center justify-center`}>
+          <div
+            className={`w-12 h-12 ${
+              colorClasses[color as keyof typeof colorClasses]
+            } rounded-full flex items-center justify-center`}
+          >
             <Icon className="w-6 h-6" />
           </div>
         </div>
@@ -772,7 +674,18 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
 
   // Componente para mostrar las gráficas
   const GraphContainer = () => {
-    const [data, setData] = useState([]);
+    interface MonthlyStat {
+      hotel: string;
+      mes: string;
+      total_gastado: number;
+      visitas: number;
+      total: number;
+      check_in?: string;
+      check_out?: string;
+      id_pago?: string | null;
+      id_credito?: string | null;
+    }
+    const [data, setData] = useState<MonthlyStat[]>([]);
 
     useEffect(() => {
       const fetchMonthlyStats = async () => {
@@ -807,7 +720,8 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
           .map((obj, index) => ({
             name: obj.hotel,
             amount: Number(obj.total_gastado),
-            color: `bg-cyan-${index + 1}00`,
+            href: "#",
+            borderColor: `bg-cyan-${index + 1}00`,
           })),
       },
     ];
@@ -820,7 +734,8 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
           .map((obj, index) => ({
             name: obj.hotel,
             amount: obj.visitas,
-            color: `bg-cyan-${index + 1}00`,
+            href: "#",
+            borderColor: `bg-cyan-${index + 1}00`,
           })),
       },
     ];
@@ -840,6 +755,7 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
             summary={summary1}
             titulo="Gráfica por noches"
             subtitulo="Aquí verás cuántas noches por mes reservaron"
+            simbol={""}
           />
         </div>
       </div>
@@ -850,14 +766,20 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
   const fechaHoy = new Date();
   fechaHoy.setHours(0, 0, 0, 0);
 
-  const activeBookings = monthlyStats.filter((obj: any) =>
-    new Date(obj.check_in) <= fechaHoy && new Date(obj.check_out) > fechaHoy
-  ).length || "0";
-  const upcomingBookings = monthlyStats.filter((obj: any) => new Date(obj.check_in) > fechaHoy).length || "0";
-  const monthlySpending = monthlyStats.reduce(
-    (accumulator: number, currentValue: any) => accumulator + Number(currentValue.total),
-    0
-  ) || 0;
+  const activeBookings =
+    monthlyStats.filter(
+      (obj: any) =>
+        new Date(obj.check_in) <= fechaHoy && new Date(obj.check_out) > fechaHoy
+    ).length || "0";
+  const upcomingBookings =
+    monthlyStats.filter((obj: any) => new Date(obj.check_in) > fechaHoy)
+      .length || "0";
+  const monthlySpending =
+    monthlyStats.reduce(
+      (accumulator: number, currentValue: any) =>
+        accumulator + Number(currentValue.total),
+      0
+    ) || 0;
 
   const cards = [
     {
@@ -865,28 +787,28 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
       value: activeBookings,
       icon: Calendar,
       subtitle: "Este mes",
-      color: "indigo"
+      color: "indigo",
     },
     {
       title: "Próximas Reservas",
       value: upcomingBookings,
       icon: Building2,
       subtitle: "Este mes",
-      color: "yellow"
+      color: "yellow",
     },
     {
       title: "Total de Reservas",
       value: stats.totalBookings || "0",
       icon: Calendar,
       subtitle: "Historial completo",
-      color: "indigo"
+      color: "indigo",
     },
     {
       title: "Gasto Mensual",
       value: `$${monthlySpending.toLocaleString("es-MX")}`,
       icon: DollarSign,
       subtitle: "Este mes",
-      color: "green"
+      color: "green",
     },
   ];
 
@@ -908,7 +830,9 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
       {/* Selectores de mes y año */}
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Panel de Control</h2>
+          <h2 className="text-xl font-semibold text-gray-800">
+            Panel de Control
+          </h2>
           <div className="flex gap-3">
             <MonthSelector
               selectedMonth={selectedMonth}
@@ -922,10 +846,12 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
         </div>
         {/* Gráficas */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen Anual</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Resumen Anual
+          </h3>
           <GraphContainer />
         </div>
       </div>
-    </div >
+    </div>
   );
 };
