@@ -23,7 +23,7 @@ function createComponents<T>() {
       ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
     >;
   } = {
-    text: ({ value }) => <span>{value}</span>,
+    text: ({ value }) => <span className="text-sm">{value}</span>,
     number: ({ value }) => <strong>{value}</strong>,
     button: ({ item, onClick, value, variant }) => (
       <div className="w-full flex justify-center items-center">
@@ -170,13 +170,13 @@ export const Table = <T extends Record<string, any>>({
                 <th
                   key={String(column.key)}
                   onClick={() => handleSort(String(column.key))}
-                  className={`px-6 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider ${
+                  className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${
                     column.key !== "__expand__"
                       ? "cursor-pointer"
                       : "cursor-default"
                   }`}
                 >
-                  <div className="flex items-center justify-center space-x-2">
+                  <div className="flex items-center justify-start space-x-2">
                     <span>{column.header}</span>
                     {currentSort.key === column.key &&
                       column.key !== "__expand__" && (
@@ -228,7 +228,7 @@ export const Table = <T extends Record<string, any>>({
                       return (
                         <td
                           key={`${index}-${columnKey}`}
-                          className="px-2 py-2 whitespace-nowrap text-sm text-gray-800 text-center"
+                          className="px-2 py-2 whitespace-nowrap text-sm text-gray-800 text-left"
                         >
                           <button
                             onClick={() => toggleRowExpansion(index)}
@@ -248,7 +248,7 @@ export const Table = <T extends Record<string, any>>({
                     return (
                       <td
                         key={`${index}-${columnKey}`}
-                        className="px-6 py-2 whitespace-nowrap text-sm text-gray-800 text-center"
+                        className="px-6 py-2 whitespace-nowrap text-sm text-gray-800 text-left"
                       >
                         {column.component ? (
                           <Comp {...baseProps} />
@@ -267,7 +267,7 @@ export const Table = <T extends Record<string, any>>({
                   <tr>
                     <td
                       colSpan={tableColumns.length}
-                      className="p-2 py-4 bg-gray-500"
+                      className="p-2 py-4 bg-blue-100"
                     >
                       <div className=" rounded-lg shadow-sm border">
                         {expandableContent(item)}
