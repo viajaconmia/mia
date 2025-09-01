@@ -12,6 +12,7 @@ export const TabsList = ({ onChange, tabs, activeTab }: TabsListProps) => {
       <nav className="-mb-px flex">
         {tabs.map(({ tab, icon }) => (
           <Button
+            key={tab}
             variant="ghost"
             size="full"
             onClick={() => onChange(tab)}

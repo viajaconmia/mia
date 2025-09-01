@@ -26,6 +26,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     isLoading: true,
   });
 
+  // useEffect(() => {
+  //   console.log(authState);
+  // }, [authState]);
+
   useEffect(() => {
     const fetchInfo = async (session: Session) => {
       const info = await SupabaseClient.getInstance().getInfo(session.user.id); // aquí pasas solo el user.id

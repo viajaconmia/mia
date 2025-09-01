@@ -250,7 +250,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
               Mi Perfil
             </NavigationLink>
             <NavigationLink
-              href={ROUTES.CONSULTAS}
+              href={ROUTES.CONSULTAS.HOME}
               icon={BookOpen}
               className="!justify-start !items-start"
               onClick={handleClose}
