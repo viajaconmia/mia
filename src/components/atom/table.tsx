@@ -1,9 +1,11 @@
-import { ArrowDown, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Loader from "../atom/Loader";
 import React from "react";
 import Button from "./Button";
 import { formatDate, formatNumberWithCommas } from "../../utils/format";
+import { copyToClipboard } from "../../utils";
+import { useNotification } from "../../hooks/useNotification";
 
 type ComponentPropsMap<T> = {
   text: { value: string };
@@ -16,27 +18,14 @@ type ComponentPropsMap<T> = {
   };
   date: { value: string };
   precio: { value: number | string | null | undefined };
-};
-function createComponents<T>() {
-  const map: {
-    [K in keyof ComponentPropsMap<T>]: React.FC<
-      ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
-    >;
-  } = {
-    text: ({ value }) => <span className="text-sm">{value}</span>,
-    number: ({ value }) => <strong>{value}</strong>,
-    button: ({ item, onClick, value, variant }) => (
-      <div className="w-full flex justify-center items-center">
-        <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
-          {String(value)}
-        </Button>
-      </div>
-    ),
-    date: ({ value }) => <span>{formatDate(value)}</span>,
-    precio: ({ value }) => <span>{formatNumberWithCommas(value)}</span>,
+  copiar_and_button: {
+    item: T;
+    onClick?: (item: T) => void;
+    value: string;
+    variant?: "primary" | "secondary" | "ghost" | "warning";
   };
-  return map;
-}
+};
+
 export interface ColumnsTable<
   T,
   K extends keyof ComponentPropsMap<T> = keyof ComponentPropsMap<T>
@@ -84,6 +73,53 @@ export const Table = <T extends Record<string, any>>({
     }
   );
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const { showNotification } = useNotification();
+
+  function createComponents<T>() {
+    const map: {
+      [K in keyof ComponentPropsMap<T>]: React.FC<
+        ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
+      >;
+    } = {
+      text: ({ value }) => <span className="text-sm">{value}</span>,
+      number: ({ value }) => <strong>{value}</strong>,
+      button: ({ item, onClick, value, variant }) => (
+        <div className="w-full flex justify-center items-center">
+          <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
+            {String(value)}
+          </Button>
+        </div>
+      ),
+      date: ({ value }) => <span>{formatDate(value)}</span>,
+      precio: ({ value }) => <span>{formatNumberWithCommas(value)}</span>,
+      copiar_and_button: ({ item, onClick, value, variant }) => (
+        <div className="w-full flex justify-center items-center">
+          <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
+            {String(value)}
+          </Button>
+          <Button
+            size="rounded"
+            onClick={() => {
+              try {
+                copyToClipboard(value);
+                showNotification("success", "Se ha copiado con exito");
+              } catch (error: any) {
+                console.error(error);
+                showNotification(
+                  "error",
+                  error.message || "sucedio un error al copiar el valor"
+                );
+              }
+            }}
+            variant="secondary"
+          >
+            <Copy className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    };
+    return map;
+  }
 
   useEffect(() => {
     setDisplayData(data);
