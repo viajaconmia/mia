@@ -18,14 +18,13 @@ import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
 import { Invoice, ModalType, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
-import NavContainerModal from "../components/organism/detalles";
+// import NavContainerModal from "../components/organism/detalles";
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
 import { ColumnsTable, Table } from "../components/atom/table";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
-import { DonutChart } from "@tremor/react";
-import { formatNumberWithCommas } from "../utils/format";
+import Button from "../components/atom/Button";
 
 interface DashboardStats {
   totalUsers: number;
@@ -64,38 +63,31 @@ type ModalTypeMap = {
   invoice: Invoice;
 };
 
-// Componente global para contenido expandible
-// Reemplaza el componente ExpandedContentRenderer con esta versión corregida:
-
 const ExpandedContentRenderer = ({
   item,
   itemType,
-  openDetails,
 }: {
   item: any;
   itemType: ModalType;
-  openDetails: (id: string | null, type: ModalType) => void;
 }) => {
-  const renderTypes = typesModal.filter((type) => type !== itemType);
+  const [, setLocation] = useLocation();
+  const renderTypes = typesModal.filter((type) => type != itemType);
 
-  // Verifica la estructura real de tus datos
-  console.log("Item data:", item);
-  console.log("Item type:", itemType);
-
-  // Define las columnas para cada tipo
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
       component: "copiar_and_button",
       componentProps: {
-
-
-        newValue: ["id_hospedaje"],
-
         variant: "ghost",
-        onClick: (booking: Reserva) =>
-          openDetails(booking.id_hospedaje || booking.id_reservacion || "", "booking"),
+        onClick: ({ item }: { item: Reserva }) => {
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH(
+              "reservaciones",
+              item.codigo_reservacion_hotel || ""
+            )
+          );
+        },
       },
     },
     {
@@ -109,17 +101,25 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-
-  const payment_columns: ColumnsTable<Payment>[] = [
+  const payment_columns: ColumnsTable<
+    Payment & { id_pago: string | null; id_saldo: string | null }
+  >[] = [
     {
       key: "id_pago",
       header: "ID",
       component: "copiar_and_button",
       componentProps: {
-        newValue: ["id_pago"],
         variant: "ghost",
-        onClick: (payment: Payment) =>
-          openDetails(payment.id_saldo || payment.id_pago || "", "payment"),
+        onClick: ({
+          item,
+        }: {
+          item: Payment & { id_pago: string | null; id_saldo: string | null };
+        }) => {
+          console.log(item);
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH("pagos", String(item.id_pago) || "")
+          );
+        },
       },
     },
     {
@@ -128,7 +128,6 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
@@ -136,8 +135,10 @@ const ExpandedContentRenderer = ({
       component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
-        onClick: (invoice: Invoice) =>
-          openDetails(invoice.id_factura || "", "invoice"),
+        onClick: ({ item }: { item: Invoice }) =>
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
+          ),
       },
     },
     {
@@ -147,89 +148,65 @@ const ExpandedContentRenderer = ({
     },
   ];
 
-  // Determina qué datos mostrar basado en el tipo del item principal
-  const getRelatedData = () => {
-    switch (itemType) {
-      case "booking":
-        return {
-          left: {
-            columns: invoice_columns,
-            title: "Facturas asociadas",
-            data: item.facturas || item.facturas_asociadas || [],
-          },
-          right: {
-            columns: payment_columns,
-            title: "Pagos asociados",
-            data: item.pagos || item.pagos_asociados || [],
-          }
-        };
-      case "payment":
-        return {
-          left: {
-            columns: invoice_columns,
-            title: "Facturas asociadas",
-            data: item.facturas || item.facturas_asociadas || [],
-          },
-          right: {
-            columns: booking_columns,
-            title: "Reservas asociadas",
-            data: item.reservas || item.reservas_asociadas || [],
-          }
-        };
-      case "invoice":
-        return {
-          left: {
-            columns: payment_columns,
-            title: "Pagos asociados",
-            data: item.pagos || item.pagos_asociados || [],
-          },
-          right: {
-            columns: booking_columns,
-            title: "Reservas asociadas",
-            data: item.reservas || item.reservas_asociadas || [],
-          }
-        };
-      default:
-        return {
-          left: { columns: [], title: "", data: [] },
-          right: { columns: [], title: "", data: [] }
-        };
-    }
+  const renderData: {
+    [K in ModalType]: {
+      columns: ColumnsTable<ModalTypeMap[K]>[];
+      title: string;
+      data: ModalTypeMap[K][];
+    };
+  } = {
+    booking: {
+      columns: booking_columns,
+      title: "Reservas asociadas",
+      data:
+        itemType == "invoice" || itemType == "payment"
+          ? item.reservas_asociadas || []
+          : [],
+    },
+    payment: {
+      columns: payment_columns,
+      title: "Pagos asociados",
+      data:
+        itemType == "invoice" || itemType == "booking"
+          ? item.pagos_asociados || []
+          : [],
+    },
+    invoice: {
+      columns: invoice_columns,
+      title: "Facturas asociadas",
+      data:
+        itemType == "payment" || itemType == "booking"
+          ? item.facturas_asociadas || []
+          : [],
+    },
   };
-
-  const { left, right } = getRelatedData();
+  const left = renderData[renderTypes[0]];
+  const right = renderData[renderTypes[1]];
 
   return (
     <TwoColumnDropdown
       leftContent={
         <div className="space-y-2">
-          <h1 className="font-semibold">{left.title}</h1>
-          {left.data.length > 0 ? (
-            <Table
-              data={left.data}
-              columns={left.columns}
-            />
-          ) : (
-            <p className="text-gray-500">No hay {left.title.toLowerCase()}</p>
-          )}
+          <h1>{left.title}</h1>
+          <Table<(typeof left.data)[0]>
+            data={left.data}
+            columns={left.columns as ColumnsTable<(typeof left.data)[0]>[]}
+          />
         </div>
       }
       rightContent={
         <div className="space-y-2">
-          <h1 className="font-semibold">{right.title}</h1>
-          {right.data.length > 0 ? (
-            <Table
-              data={right.data}
-              columns={right.columns}
-            />
-          ) : (
-            <p className="text-gray-500">No hay {right.title.toLowerCase()}</p>
-          )}
+          <h1>{right.title}</h1>
+          <Table<(typeof right.data)[0]>
+            data={right.data}
+            columns={right.columns as ColumnsTable<(typeof right.data)[0]>[]}
+          />
         </div>
       }
     />
   );
 };
+
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -251,26 +228,22 @@ export const AdminDashboard = () => {
   const { user } = useAuth();
 
   // Nuevo estado para controlar el modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [selectedItemType, setSelectedItemType] = useState<ModalType | null>(
-    null
-  );
+  // const [isModalOpen, setIsModalOpen] = useState(false);
   const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Nueva función para abrir el modal
-  const openDetails = (itemId: string | null, itemType: ModalType) => {
-    try {
-      if (!itemId) throw new Error("No hay id");
+  // const openDetails = (itemId: string | null, itemType: ModalType) => {
+  //   try {
+  //     if (!itemId) throw new Error("No hay id");
 
-      setSelectedItemId(itemId);
-      setSelectedItemType(itemType);
-      setIsModalOpen(true);
-    } catch (error: any) {
-      console.error(error.message);
-    }
-  };
+  //     setSelectedItemId(itemId);
+  //     setSelectedItemType(itemType);
+  //     setIsModalOpen(true);
+  //   } catch (error: any) {
+  //     console.error(error.message);
+  //   }
+  // };
 
   useEffect(() => {
     fetchDataPage();
@@ -295,36 +268,6 @@ export const AdminDashboard = () => {
       showNotification("error", error.message || "");
     }
   };
-
-  // Definir la interfaz ListItem localmente si no está importada
-  interface ListItem {
-    id: string;
-    title: string;
-  }
-
-  // Función para obtener y transformar los items según el tipo
-  const getItemsByType = (type: ModalType): ListItem[] => {
-    switch (type) {
-      case 'booking':
-        return bookings.map(booking => ({
-          id: booking.id_reservacion || '',
-          title: `Reserva ${booking.codigo_reservacion_hotel || booking.id_reservacion || ''}`
-        }));
-      case 'payment':
-        return payments.map(payment => ({
-          id: payment.id_pago || payment.id_saldo || '',
-          title: `Pago ${payment.id_pago || payment.id_saldo || ''}`
-        }));
-      case 'invoice':
-        return invoices.map(invoice => ({
-          id: invoice.id_factura || '',
-          title: `Factura ${invoice.id_factura || ''}`
-        }));
-      default:
-        return [];
-    }
-  };
-
 
   const fetchPayments = async () => {
     try {
@@ -382,11 +325,24 @@ export const AdminDashboard = () => {
 
   const views: Record<ViewsConsultas, React.ReactNode> = {
     general: <OverviewView stats={stats} />,
-    facturas: <InvoicesView invoices={invoices} openDetails={openDetails} />,
+    facturas: (
+      <InvoicesView
+        invoices={invoices}
+        // openDetails={openDetails}
+      />
+    ),
     // usuarios: <UsersView users={users} />,
-    pagos: <PaymentsView payments={payments} openDetails={openDetails} />,
+    pagos: (
+      <PaymentsView
+        payments={payments}
+        // openDetails={openDetails}
+      />
+    ),
     reservaciones: (
-      <BookingsView bookings={bookings} openDetails={openDetails} />
+      <BookingsView
+        bookings={bookings}
+        // openDetails={openDetails}
+      />
     ),
   };
 
@@ -436,7 +392,7 @@ export const AdminDashboard = () => {
           </Switch>
         </div>
       </div>
-      {isModalOpen && selectedItemId && selectedItemType && (
+      {/* {isModalOpen && selectedItemId && selectedItemType && (
         <NavContainerModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -446,18 +402,19 @@ export const AdminDashboard = () => {
           items={[]}
           itemType={selectedItemType}
         />
-      )}
+      )} */}
     </>
   );
 };
 
 const BookingsView = ({
   bookings,
-  openDetails,
-}: {
+}: // openDetails,
+{
   bookings: Reserva[];
-  openDetails: (id: string | null, type: ModalType) => void;
+  // openDetails: (id: string | null, type: ModalType) => void;
 }) => {
+  const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
@@ -465,7 +422,8 @@ const BookingsView = ({
   const filterBookings = bookings.filter(
     (booking) =>
       booking.id_booking?.includes(search) ||
-      booking.nombre_viajero_reservacion?.includes(search)
+      booking.nombre_viajero_reservacion?.includes(search) ||
+      booking.codigo_reservacion_hotel?.includes(search)
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
@@ -499,6 +457,18 @@ const BookingsView = ({
       header: "Precio",
       component: "text",
     },
+    {
+      key: "id_solicitud",
+      header: "Detalles",
+      component: "button",
+      componentProps: {
+        label: "Detalles",
+        onClick: ({ item }: { item: Reserva }) => {
+          console.log(item);
+          setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+        },
+      },
+    },
   ];
 
   return (
@@ -508,11 +478,7 @@ const BookingsView = ({
         data={filterBookings}
         columns={bookingColumns}
         expandableContent={(booking) => (
-          <ExpandedContentRenderer
-            openDetails={openDetails}
-            item={booking}
-            itemType="booking"
-          />
+          <ExpandedContentRenderer item={booking} itemType="booking" />
         )}
       />
     </div>
@@ -521,12 +487,20 @@ const BookingsView = ({
 
 const PaymentsView = ({
   payments,
-  openDetails,
-}: {
+}: // openDetails,
+{
   payments: Payment[];
-  openDetails: (id: string | null, type: ModalType) => void;
+  // openDetails: (id: string | null, type: ModalType) => void;
 }) => {
+  const [searchParams] = useSearchParams();
+  const params = searchParams.get("search");
+
+  let search = params ? params : "";
+  const filterPayments = payments.filter((payment) =>
+    String(payment.raw_id)?.includes(search)
+  );
   const paymentColumns: ColumnsTable<Payment>[] = [
+    { key: "raw_id", header: "ID", component: "text" },
     { key: "fecha_pago", header: "Fecha de Pago", component: "date" },
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
@@ -537,14 +511,10 @@ const PaymentsView = ({
     <div className="">
       <Table<Payment>
         id="paymentsTable"
-        data={payments}
+        data={filterPayments}
         columns={paymentColumns}
         expandableContent={(payment) => (
-          <ExpandedContentRenderer
-            openDetails={openDetails}
-            item={payment}
-            itemType="payment"
-          />
+          <ExpandedContentRenderer item={payment} itemType="payment" />
         )}
       />
     </div>
@@ -553,36 +523,58 @@ const PaymentsView = ({
 
 const InvoicesView = ({
   invoices,
-  openDetails,
-}: {
+}: // openDetails,
+{
   invoices: Invoice[];
-  openDetails: (id: string | null, type: ModalType) => void;
+  // openDetails: (id: string | null, type: ModalType) => void;
 }) => {
+  const [searchParams] = useSearchParams();
+  const params = searchParams.get("search");
+
+  let search = params ? params : "";
+  const filterInvoices = invoices.filter((invoice) =>
+    invoice.id_factura?.includes(search)
+  );
   const invoiceColumns: ColumnsTable<Invoice>[] = [
+    { key: "id_factura", header: "ID", component: "text" },
+    { key: "fecha_emision", header: "Fecha Facturación", component: "date" },
+    { key: "subtotal", header: "Subtotal", component: "precio" },
+    { key: "impuestos", header: "IVA", component: "precio" },
+    { key: "total", header: "Total", component: "precio" },
     {
-      key: "id_factura",
-      header: "Fecha Facturación",
-      component: "text",
-    },
-    {
-      key: "fecha_emision",
-      header: "Fecha Facturación",
-      component: "date",
-    },
-    {
-      key: "subtotal",
-      header: "Subtotal",
-      component: "precio",
-    },
-    {
-      key: "impuestos",
-      header: "IVA",
-      component: "precio",
-    },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
+      key: null,
+      header: "Detalles",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Invoice }) => {
+          return (
+            <div className="flex justify-between w-full gap-2">
+              {(item.id_facturama || item.url_pdf) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    console.log(`Descargando PDF`);
+                  }}
+                >
+                  PDF
+                </Button>
+              )}
+              {(item.id_facturama || item.url_xml) && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    console.log(`Descargando XML`);
+                  }}
+                >
+                  XML
+                </Button>
+              )}
+            </div>
+          );
+        },
+      },
     },
   ];
 
@@ -590,14 +582,10 @@ const InvoicesView = ({
     <div className="">
       <Table<Invoice>
         id="invoicesTable"
-        data={invoices}
+        data={filterInvoices}
         columns={invoiceColumns}
         expandableContent={(invoice) => (
-          <ExpandedContentRenderer
-            openDetails={openDetails}
-            item={invoice}
-            itemType="invoice"
-          />
+          <ExpandedContentRenderer item={invoice} itemType="invoice" />
         )}
       />
     </div>
@@ -648,8 +636,9 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
             )}
           </div>
           <div
-            className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]
-              } rounded-full flex items-center justify-center`}
+            className={`w-12 h-12 ${
+              colorClasses[color as keyof typeof colorClasses]
+            } rounded-full flex items-center justify-center`}
           >
             <Icon className="w-6 h-6" />
           </div>
