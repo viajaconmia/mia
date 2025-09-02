@@ -21,3 +21,15 @@ export const exportToCSV = (data: any[], filename = "archivo.csv") => {
   link.click();
   document.body.removeChild(link);
 };
+
+export async function copyToClipboard(text: string) {
+  try {
+    // Usa el método writeText para copiar el texto
+    await navigator.clipboard.writeText(text);
+    console.log("Texto copiado al portapapeles!");
+  } catch (err) {
+    throw new Error(
+      "Error al copiar el texto. Asegúrate de que tu navegador lo soporte y estés en un entorno seguro (HTTPS)."
+    );
+  }
+}

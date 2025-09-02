@@ -21,6 +21,10 @@ const ROUTES = {
     HOME: "/consultas/general",
     SUBPATH: (path: string) => `/consultas/${path}`,
   },
+  FACTURACION: {
+    HOME: "/factura/:id",
+    ID: (path: string) => `/factura/${path}`,
+  },
   BOOKINGS: {
     HOME: "/bookings",
     ID: "/bookings/:id",

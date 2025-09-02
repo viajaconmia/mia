@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import TwoColumnDropdown from "../components/molecule/TwoColumnDropdown";
 import Donut from "../components/Donut";
 import {
-  Users,
+  // Users,
   BarChart3,
   Calendar,
   DollarSign,
   Building2,
   CreditCardIcon,
   File,
+  Search,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { TabsList } from "../components/molecule/TabsList";
@@ -18,11 +19,13 @@ import { FacturaService } from "../services/FacturaService";
 import { Invoice, ModalType, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
 import NavContainerModal from "../components/organism/detalles";
-import { useSearch } from "../hooks/useSearch";
-import { Redirect, Route, Switch, useLocation } from "wouter";
+import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
 import { ColumnsTable, Table } from "../components/atom/table";
-import { HEADERS_API } from "../constants/apiConstant";
+import { HEADERS_API, URL } from "../constants/apiConstant";
+import { InputText } from "../components/atom/Input";
+import { DonutChart } from "@tremor/react";
+import { formatNumberWithCommas } from "../utils/format";
 
 interface DashboardStats {
   totalUsers: number;
@@ -37,18 +40,18 @@ interface DashboardStats {
   monthlyRevenue: any[];
 }
 
-interface User {
-  id: string;
-  company_name: string;
-  rfc: string;
-  industry: string;
-  city: string;
-  created_at: string;
-}
+// interface User {
+//   id: string;
+//   company_name: string;
+//   rfc: string;
+//   industry: string;
+//   city: string;
+//   created_at: string;
+// }
 
 type ViewsConsultas =
   | "general"
-  | "usuarios"
+  // | "usuarios"
   | "reservaciones"
   | "pagos"
   | "facturas";
@@ -84,9 +87,12 @@ const ExpandedContentRenderer = ({
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
-      component: "button",
+      component: "copiar_and_button",
       componentProps: {
+
+
         newValue: ["id_hospedaje"],
+
         variant: "ghost",
         onClick: (booking: Reserva) =>
           openDetails(booking.id_hospedaje || booking.id_reservacion || "", "booking"),
@@ -108,7 +114,7 @@ const ExpandedContentRenderer = ({
     {
       key: "id_pago",
       header: "ID",
-      component: "button",
+      component: "copiar_and_button",
       componentProps: {
         newValue: ["id_pago"],
         variant: "ghost",
@@ -127,7 +133,7 @@ const ExpandedContentRenderer = ({
     {
       key: "id_factura",
       header: "ID",
-      component: "button",
+      component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
         onClick: (invoice: Invoice) =>
@@ -240,7 +246,7 @@ export const AdminDashboard = () => {
   });
   const [location, setLocation] = useLocation();
   const [bookings, setBookings] = useState<Reserva[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  // const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { user } = useAuth();
@@ -252,6 +258,7 @@ export const AdminDashboard = () => {
     null
   );
   const { showNotification } = useNotification();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Nueva función para abrir el modal
   const openDetails = (itemId: string | null, itemType: ModalType) => {
@@ -324,7 +331,6 @@ export const AdminDashboard = () => {
     try {
       const { data } = await PagosService.getInstance().getPagosConsultas();
       setPayments(data?.pagos || []);
-      console.log(data);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
       setPayments([]);
@@ -336,7 +342,6 @@ export const AdminDashboard = () => {
     try {
       const { data } = await BookingService.getInstance().getReservas();
       setBookings(data || []);
-      console.log(data);
     } catch (error: any) {
       console.error("Error fetching bookings:", error);
       setBookings([]);
@@ -349,7 +354,7 @@ export const AdminDashboard = () => {
       if (!user) {
         throw new Error("No hay usuario autenticado");
       }
-      setUsers([]);
+      // setUsers([]);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -377,7 +382,7 @@ export const AdminDashboard = () => {
   const views: Record<ViewsConsultas, React.ReactNode> = {
     general: <OverviewView stats={stats} />,
     facturas: <InvoicesView invoices={invoices} openDetails={openDetails} />,
-    usuarios: <UsersView users={users} />,
+    // usuarios: <UsersView users={users} />,
     pagos: <PaymentsView payments={payments} openDetails={openDetails} />,
     reservaciones: (
       <BookingsView bookings={bookings} openDetails={openDetails} />
@@ -390,7 +395,7 @@ export const AdminDashboard = () => {
         <TabsList
           tabs={[
             { icon: BarChart3, tab: "general" },
-            { icon: Users, tab: "usuarios" },
+            // { icon: Users, tab: "usuarios" },
             { icon: Building2, tab: "reservaciones" },
             { icon: CreditCardIcon, tab: "pagos" },
             { icon: File, tab: "facturas" },
@@ -402,7 +407,22 @@ export const AdminDashboard = () => {
             (location.split("/").at(-1) as ViewsConsultas) || "general"
           }
         />
-        <div>
+        <div className="px-4">
+          {location != ROUTES.CONSULTAS.SUBPATH("general") && (
+            <InputText
+              icon={Search}
+              onChange={(value) => {
+                setSearchParams((prev) => {
+                  const params = new URLSearchParams(prev);
+                  params.set("search", value);
+                  return params;
+                });
+              }}
+              value={searchParams.get("search") || ""}
+            />
+          )}
+        </div>
+        <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
           <Switch>
             {Object.entries(views).map(([key, Component]) => (
               <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
@@ -437,8 +457,15 @@ const BookingsView = ({
   bookings: Reserva[];
   openDetails: (id: string | null, type: ModalType) => void;
 }) => {
-  const response = useSearch();
-  console.log(response);
+  const [searchParams] = useSearchParams();
+  const params = searchParams.get("search");
+
+  let search = params ? params : "";
+  const filterBookings = bookings.filter(
+    (booking) =>
+      booking.id_booking?.includes(search) ||
+      booking.nombre_viajero_reservacion?.includes(search)
+  );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
     {
@@ -477,7 +504,7 @@ const BookingsView = ({
     <div className="">
       <Table<Reserva>
         id="bookingsTable"
-        data={bookings}
+        data={filterBookings}
         columns={bookingColumns}
         expandableContent={(booking) => (
           <ExpandedContentRenderer
@@ -576,15 +603,15 @@ const InvoicesView = ({
   );
 };
 
-const UsersView = ({ users }: { users: User[] }) => {
-  const userColumns: ColumnsTable<User>[] = [];
+// const UsersView = ({ users }: { users: User[] }) => {
+//   const userColumns: ColumnsTable<User>[] = [];
 
-  return (
-    <div className="">
-      <Table id="usersTable" data={users} columns={userColumns} />
-    </div>
-  );
-};
+//   return (
+//     <div className="">
+//       <Table id="usersTable" data={users} columns={userColumns} />
+//     </div>
+//   );
+// };
 
 const OverviewView = ({ stats }: { stats: DashboardStats }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -610,7 +637,7 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
     };
 
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">{title}</p>
@@ -764,11 +791,10 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
         name: "Gastos",
         data: data
           .filter((obj) => obj.mes.includes(`${selectedMonth}`))
-          .map((obj, index) => ({
+          .map((obj) => ({
             name: obj.hotel,
             amount: Number(obj.total_gastado),
             href: "#",
-            borderColor: `bg-cyan-${index + 1}00`,
           })),
       },
     ];
@@ -778,33 +804,32 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
         name: "Noches",
         data: data
           .filter((obj) => obj.mes.includes(`${selectedMonth}`))
-          .map((obj, index) => ({
+          .map((obj) => ({
             name: obj.hotel,
             amount: obj.visitas,
             href: "#",
-            borderColor: `bg-cyan-${index + 1}00`,
           })),
       },
     ];
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <Donut
-            summary={summary}
-            titulo="Gráfica por gasto"
-            subtitulo="Aquí verás cuanto es tu gasto por mes"
-            simbol="$"
-          />
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <Donut
-            summary={summary1}
-            titulo="Gráfica por noches"
-            subtitulo="Aquí verás cuántas noches por mes reservaron"
-            simbol={""}
-          />
-        </div>
+        {/* <div className="bg-white rounded-xl shadow-sm p-6"> */}
+        <Donut
+          summary={summary}
+          titulo="Gráfica por gasto"
+          subtitulo="Aquí verás cuanto es tu gasto por mes"
+          simbol="$"
+        />
+        {/* </div> */}
+        {/* <div className="bg-white rounded-xl shadow-sm p-6"> */}
+        <Donut
+          summary={summary1}
+          titulo="Gráfica por noches"
+          subtitulo="Aquí verás cuántas noches por mes reservaron"
+          simbol={""}
+        />
+        {/* </div> */}
       </div>
     );
   };
@@ -860,9 +885,9 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
   ];
 
   return (
-    <div className="space-y-8 p-4">
+    <div className="px-4 py-4 bg-gray-100">
       {/* Grid de estadísticas con colores originales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
         {cards.map((card) => (
           <StatCard
             key={card.title}
@@ -875,12 +900,9 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
         ))}
       </div>
       {/* Selectores de mes y año */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Panel de Control
-          </h2>
-          <div className="flex gap-3">
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
             <MonthSelector
               selectedMonth={selectedMonth}
               onChange={(month) => setSelectedMonth(Number(month))}
@@ -892,10 +914,7 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
           </div>
         </div>
         {/* Gráficas */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Resumen Anual
-          </h3>
+        <div className="">
           <GraphContainer />
         </div>
       </div>
