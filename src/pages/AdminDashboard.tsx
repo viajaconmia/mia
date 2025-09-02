@@ -267,7 +267,7 @@ export const AdminDashboard = () => {
   const fetchInvoices = async () => {
     try {
       const { data } = await FacturaService.getInstance().getFacturasByAgente();
-      console.log(data);
+      console.log("invoices", data);
       setInvoices(data || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -279,6 +279,7 @@ export const AdminDashboard = () => {
   const fetchPayments = async () => {
     try {
       const { data } = await PagosService.getInstance().getPagosConsultas();
+      console.log("payments", data?.pagos);
       setPayments(data?.pagos || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -290,6 +291,7 @@ export const AdminDashboard = () => {
   const fetchBookings = async () => {
     try {
       const { data } = await BookingService.getInstance().getReservas();
+      console.log("bookings", data);
       setBookings(data || []);
     } catch (error: any) {
       console.error("Error fetching bookings:", error);

@@ -93,7 +93,7 @@ export const Table = <T extends Record<string, any>>({
       date: ({ value }) => <span>{formatDate(value)}</span>,
       precio: ({ value }) => <span>{formatNumberWithCommas(value)}</span>,
       copiar_and_button: ({ item, onClick, value, variant }) => (
-        <div className="w-full flex justify-center items-center">
+        <div className="w-full flex justify-start items-center">
           <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
             {String(value)}
           </Button>
