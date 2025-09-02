@@ -20,6 +20,7 @@ const ROUTES = {
     REDIRECT: "/consultas/:subpath",
     HOME: "/consultas/general",
     SUBPATH: (path: string) => `/consultas/${path}`,
+    SEARCH: (path: string, search:string) => `/consultas/${path}?search=${search}`,
   },
   FACTURACION: {
     HOME: "/factura/:id",

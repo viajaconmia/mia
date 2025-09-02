@@ -60,7 +60,7 @@ const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
 type ModalTypeMap = {
   booking: Reserva;
-  payment: Payment & { id_pago: string | null; id_saldo: string | null };
+  payment: Payment;
   invoice: Invoice;
 };
 
@@ -76,7 +76,6 @@ const ExpandedContentRenderer = ({
   itemType: ModalType;
   openDetails: (id: string | null, type: ModalType) => void;
 }) => {
-  const renderTypes = typesModal.filter((type) => type !== itemType);
 
   // Verifica la estructura real de tus datos
   console.log("Item data:", item);
@@ -108,6 +107,8 @@ const ExpandedContentRenderer = ({
       header: "Total",
       component: "precio",
     },
+
+
   ];
 
   const payment_columns: ColumnsTable<Payment>[] = [
@@ -199,6 +200,7 @@ const ExpandedContentRenderer = ({
 
   const { left, right } = getRelatedData();
 
+
   return (
     <TwoColumnDropdown
       leftContent={
@@ -230,6 +232,7 @@ const ExpandedContentRenderer = ({
     />
   );
 };
+
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -256,19 +259,95 @@ export const AdminDashboard = () => {
   const [selectedItemType, setSelectedItemType] = useState<ModalType | null>(
     null
   );
+  const [selectedItemData, setSelectedItemData] = useState<
+    ModalTypeMap[ModalType] | null
+  >(null);
   const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Nueva función para abrir el modal
+  // Reemplaza la función openDetails existente con esta versión
+
+  // Agrega estas funciones dentro del componente AdminDashboard
+
+  const getBookingById = (id: string): Reserva | undefined => {
+    return bookings.find(booking =>
+      booking.id_hospedaje === id
+    );
+  };
+
+  const getPaymentById = (id: string): Payment | undefined => {
+    return payments.find(payment =>
+      payment.raw_id
+    );
+  };
+
+  const getInvoiceById = (id: string): Invoice | undefined => {
+    return invoices.find(invoice => invoice.id_factura === id);
+  };
+
   const openDetails = (itemId: string | null, itemType: ModalType) => {
     try {
       if (!itemId) throw new Error("No hay id");
 
+      let itemData: ModalTypeMap[ModalType] | null = null;
+
+      // Buscar los datos correspondientes según el tipo
+      switch (itemType) {
+        case "booking":
+          itemData = getBookingById(itemId) || null;
+          break;
+        case "payment":
+          itemData = getPaymentById(itemId) || null;
+          break;
+        case "invoice":
+          itemData = getInvoiceById(itemId) || null;
+          break;
+      }
+
       setSelectedItemId(itemId);
       setSelectedItemType(itemType);
+      setSelectedItemData(itemData);
       setIsModalOpen(true);
+
+      console.log("Item data encontrado:", itemData); // Para debugging
     } catch (error: any) {
       console.error(error.message);
+      showNotification("error", "Error al abrir los detalles");
+    }
+  };
+
+  // Agrega esta función para transformar los items al formato esperado
+  const getItemsByType = (type: ModalType): any[] => {
+    switch (type) {
+      case "booking":
+        return bookings.map(booking => ({
+          id: booking.id_hospedaje || "",
+          title: booking.hotel || "Reserva sin nombre",
+          subtitle: booking.nombre_viajero_reservacion || "",
+          amount: booking.total || 0,
+          date: booking.check_in || "",
+          status: booking.status_reserva || ""
+        }));
+      case "payment":
+        return payments.map(payment => ({
+          id: payment.raw_id || "",
+          title: `Pago ${payment.metodo || ""}`,
+          subtitle: payment.tipo || "",
+          amount: payment.monto || 0,
+          date: payment.fecha_pago || "",
+        }));
+      case "invoice":
+        return invoices.map(invoice => ({
+          id: invoice.id_factura || "",
+          title: `Factura ${invoice.id_factura || ""}`,
+          subtitle: "",
+          amount: invoice.total || 0,
+          date: invoice.fecha_emision || "",
+          status: invoice.estado || ""
+        }));
+      default:
+        return [];
     }
   };
 
@@ -297,33 +376,6 @@ export const AdminDashboard = () => {
   };
 
   // Definir la interfaz ListItem localmente si no está importada
-  interface ListItem {
-    id: string;
-    title: string;
-  }
-
-  // Función para obtener y transformar los items según el tipo
-  const getItemsByType = (type: ModalType): ListItem[] => {
-    switch (type) {
-      case 'booking':
-        return bookings.map(booking => ({
-          id: booking.id_reservacion || '',
-          title: `Reserva ${booking.codigo_reservacion_hotel || booking.id_reservacion || ''}`
-        }));
-      case 'payment':
-        return payments.map(payment => ({
-          id: payment.id_pago || payment.id_saldo || '',
-          title: `Pago ${payment.id_pago || payment.id_saldo || ''}`
-        }));
-      case 'invoice':
-        return invoices.map(invoice => ({
-          id: invoice.id_factura || '',
-          title: `Factura ${invoice.id_factura || ''}`
-        }));
-      default:
-        return [];
-    }
-  };
 
 
   const fetchPayments = async () => {
@@ -388,6 +440,8 @@ export const AdminDashboard = () => {
     ),
   };
 
+  // const item: bookings||payments||invoices.find((item));
+
   return (
     <>
       <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
@@ -440,9 +494,9 @@ export const AdminDashboard = () => {
           onClose={() => setIsModalOpen(false)}
           agentId={user?.info?.id_agente || ""}
           initialItemId={selectedItemId}
-          //items={getItemsByType(selectedItemType)} Aquí pasamos los items transformados
-          items={[]}
+          // items={getItemsByType(selectedItemType)}
           itemType={selectedItemType}
+          itemData={selectedItemData}
         />
       )}
     </>
@@ -461,9 +515,12 @@ const BookingsView = ({
 
   let search = params ? params : "";
   const filterBookings = bookings.filter(
-    (booking) =>
-      booking.id_booking?.includes(search) ||
-      booking.nombre_viajero_reservacion?.includes(search)
+    (booking) => {
+      console.log("chcando booking", booking)
+      return booking.id_booking?.includes(search) ||
+        booking.id_hospedaje?.includes(search) ||
+        booking.nombre_viajero_reservacion?.includes(search)
+    }
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
