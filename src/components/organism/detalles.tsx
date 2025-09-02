@@ -8,13 +8,16 @@ import {
   ArrowUpRight as ArrowIcon,
   CreditCard as PaymentIcon,
   FileText as InvoicesIcon,
+  Calendar as BookingIcon,
 } from "lucide-react";
 import { ModalType } from "../../types/services";
+import { HEADERS_API, URL } from "../../constants/apiConstant";
 
-// Interfaces para los items de la lista (Pagos o Facturas)
+// Interfaces para los items de la lista (Pagos, Facturas o Reservas)
 interface ListItem {
   id: string;
   title: string;
+  type: 'payment' | 'invoice' | 'booking';
 }
 
 interface NavContainerModalProps {
@@ -27,7 +30,7 @@ interface NavContainerModalProps {
   title?: string;
 }
 
-// Interfaces para los datos de detalle (adapta estos a la respuesta de tu API)
+// Interfaces para los datos de detalle
 interface PaymentDetails {
   id_movimiento: string;
   monto: string;
@@ -49,64 +52,15 @@ interface InvoiceDetails {
   // Agrega más campos específicos de facturas
 }
 
-// Datos de ejemplo para pagos
-const paymentExamples: PaymentDetails[] = [
-  {
-    id_movimiento: "PAY-001",
-    monto: "$1,250.00",
-    fecha_emision: "15/03/2023",
-    estado: "Completado",
-    metodo_pago: "Transferencia bancaria",
-    referencia: "REF7890123",
-  },
-  {
-    id_movimiento: "PAY-002",
-    monto: "$850.50",
-    fecha_emision: "22/03/2023",
-    estado: "Completado",
-    metodo_pago: "Tarjeta de crédito",
-    referencia: "REF3456789",
-  },
-  {
-    id_movimiento: "PAY-003",
-    monto: "$2,100.75",
-    fecha_emision: "05/04/2023",
-    estado: "Pendiente",
-    metodo_pago: "PayPal",
-    referencia: "REF9012345",
-  },
-];
-
-// Datos de ejemplo para facturas
-const invoiceExamples: InvoiceDetails[] = [
-  {
-    id_factura: "INV-2023-001",
-    invoice_number: "F-001",
-    total: "$1,250.00",
-    fecha_emision: "10/03/2023",
-    fecha_vencimiento: "10/04/2023",
-    estado: "Pagada",
-    concepto: "Servicios de consultoría marzo",
-  },
-  {
-    id_factura: "INV-2023-002",
-    invoice_number: "F-002",
-    total: "$850.50",
-    fecha_emision: "15/03/2023",
-    fecha_vencimiento: "15/04/2023",
-    estado: "Pagada",
-    concepto: "Licencias de software",
-  },
-  {
-    id_factura: "INV-2023-003",
-    invoice_number: "F-003",
-    total: "$2,100.75",
-    fecha_emision: "22/03/2023",
-    fecha_vencimiento: "22/04/2023",
-    estado: "Pendiente",
-    concepto: "Desarrollo de aplicación móvil",
-  },
-];
+interface BookingDetails {
+  id_hospedaje: string;
+  confirmation_code: string;
+  nombre_hotel: string;
+  fecha_entrada: string;
+  fecha_salida: string;
+  estado?: string;
+  // Agrega más campos específicos de reservas
+}
 
 const MiaIcon = () => (
   <svg
@@ -134,10 +88,15 @@ export default function NavContainerModal({
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [currentItemId, setCurrentItemId] = useState(initialItemId);
   const [details, setDetails] = useState<
-    PaymentDetails | InvoiceDetails | null
+    PaymentDetails | InvoiceDetails | BookingDetails | null
   >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados separados para cada tipo de item
+  const [payments, setPayments] = useState<ListItem[]>([]);
+  const [invoices, setInvoices] = useState<ListItem[]>([]);
+  const [bookings, setBookings] = useState<ListItem[]>([]);
 
   const isSidebarExpanded = isSidebarOpen || isSidebarHovered;
 
@@ -148,52 +107,115 @@ export default function NavContainerModal({
       try {
         let url = "";
         if (itemType === "payment") {
-          url = `/v1/mia/pagos/get_pago_details?id_agente=${agentId}&id_pago=${itemId}`;
+          url = `${URL}/v1/mia/pagos/getDetallesConexion?id_agente=${agentId}&id_raw=${itemId}`;
         } else if (itemType === "invoice") {
-          url = `/v1/mia/factura/get_factura_details?id_agente=${agentId}&id_factura=${itemId}`;
+          url = `${URL}/v1/mia/factura/getDetallesConexionesFactura?id_agente=${agentId}&id_factura=${itemId}`;
+        } else if (itemType === "booking") {
+          url = `${URL}/v1/mia/reservas/detallesConexion?id_agente=${agentId}&id_hospedaje=${itemId}`;
         }
 
-        const response = await fetch(url);
+        console.log("url", url);
+        const response = await fetch(url, {
+          method: "GET",
+          headers: HEADERS_API,
+        });
+
         if (!response.ok) {
           throw new Error(`Error al obtener los detalles de ${itemType}`);
         }
         const data = await response.json();
+        console.log("type", itemType)
+        console.log("data traida", data);
 
-        // Si no hay datos, usar datos de ejemplo
-        if (!data.data) {
-          if (itemType === "payment") {
-            const examplePayment =
-              paymentExamples.find((p) => p.id_movimiento === itemId) ||
-              paymentExamples[0];
-            setDetails(examplePayment);
-          } else {
-            const exampleInvoice =
-              invoiceExamples.find((i) => i.id_factura === itemId) ||
-              invoiceExamples[0];
-            setDetails(exampleInvoice);
-          }
-        } else {
+        // Procesar los datos según el tipo
+        if (data.data) {
+          // Establecer los detalles principales
           setDetails(data.data);
+
+          // Procesar items relacionados según el tipo
+          if (itemType === "payment" && data.data.reservas && Array.isArray(data.data.reservas)) {
+            const relatedBookings = data.data.reservas.map((reserva: any) => ({
+              id: reserva.id_hospedaje || reserva.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
+              title: reserva.nombre_hotel || `Reserva ${reserva.confirmation_code || reserva.id_solicitud}`,
+              type: 'booking' as const,
+              check_in: reserva.check_in,
+              check_out: reserva.check_out,
+              night: reserva.night,
+              viajeros: reserva.viajero + " " + reserva.viajeros_adicionales_reserva,
+              total: reserva.total_venta
+            }));
+            setBookings(relatedBookings);
+          }
+
+          if (itemType === "payment" && data.data.facturas && Array.isArray(data.data.facturas)) {
+            const relatedInvoices = data.data.facturas.map((factura: any) => ({
+              id: factura.id_factura || `INV-${Math.random().toString(36).substr(2, 9)}`,
+              title: factura.concepto || `Factura ${factura.numero_factura || factura.id_factura}`,
+              type: 'invoice' as const,
+              fecha_emision: factura.fecha_emision,
+              total: factura.total,
+            }));
+            setInvoices(relatedInvoices);
+          }
+
+          if (itemType === "booking" && data.data.pagos && Array.isArray(data.data.pagos)) {
+            const relatedPayments = data.data.pagos.map((pago: any) => ({
+              id: pago.raw_id || pago.id_movimiento || `PAY-${Math.random().toString(36).substr(2, 9)}`,
+              title: pago.concepto || `Pago ${pago.referencia || pago.id_movimiento}`,
+              type: 'payment' as const,
+              monto: pago.monto,
+              saldo: pago.saldo,
+              metodo: pago.metodo,
+              fehca_de_pago: pago.fecha_pago
+            }));
+            setPayments(relatedPayments);
+          }
+          if (itemType === "booking" && data.data.facturas && Array.isArray(data.data.facturas)) {
+            const relatedpayments = data.data.facturas.map((facturas: any) => ({
+              id: facturas.raw_id || facturas.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
+              title: facturas.concepto || `pago ${facturas.confirmation_code || facturas.id_solicitud}`,
+              type: 'invoice' as const,
+              fecha_emision: facturas.fecha_emision,
+              total: facturas.total,
+            }));
+            setInvoices(relatedpayments);
+
+          }
+        }
+
+        if (itemType === "invoice" && data.reservas && Array.isArray(data.reservas)) {
+          const relatedBookings = data.reservas.map((reserva: any) => ({
+            id: reserva.id_hospedaje || reserva.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
+            title: reserva.nombre_hotel || `Reserva ${reserva.confirmation_code || reserva.id_solicitud}`,
+            type: 'booking' as const,
+            check_in: reserva.check_in,
+            check_out: reserva.check_out,
+            night: reserva.night,
+            viajeros: reserva.viajero + " " + reserva.viajeros_adicionales_reserva,
+            total: reserva.total_venta
+          }));
+          setBookings(relatedBookings);
+        }
+
+        if (itemType === "invoice" && data.pagos && Array.isArray(data.pagos)) {
+          const relatedPayments = data.pagos.map((pago: any) => ({
+            id: pago.raw_id || pago.id_movimiento || `PAY-${Math.random().toString(36).substr(2, 9)}`,
+            title: pago.concepto || `Pago ${pago.referencia || pago.id_movimiento}`,
+            type: 'payment' as const,
+            monto: pago.monto,
+            saldo: pago.saldo,
+            metodo: pago.metodo,
+            fehca_de_pago: pago.fecha_pago
+          }));
+          setPayments(relatedPayments);
         }
       } catch (err) {
         // En caso de error, usar datos de ejemplo pero mantener el mensaje de error
-        setError(
-          `Error al cargar los detalles de ${itemType}. Mostrando datos de ejemplo.`
-        );
+        setError(`Error al cargar los detalles de ${itemType}. Mostrando datos de ejemplo.`);
         console.error(err);
 
         // Usar datos de ejemplo como respaldo
-        if (itemType === "payment") {
-          const examplePayment =
-            paymentExamples.find((p) => p.id_movimiento === itemId) ||
-            paymentExamples[0];
-          setDetails(examplePayment);
-        } else {
-          const exampleInvoice =
-            invoiceExamples.find((i) => i.id_factura === itemId) ||
-            invoiceExamples[0];
-          setDetails(exampleInvoice);
-        }
+
       } finally {
         setIsLoading(false);
       }
@@ -201,15 +223,59 @@ export default function NavContainerModal({
     [agentId, itemType]
   );
 
+  console.log(bookings, "reservas", invoices, "facturas", payments, "pagos")
+
   useEffect(() => {
     if (isOpen && currentItemId) {
       fetchDetails(currentItemId);
     }
   }, [isOpen, currentItemId, fetchDetails]);
 
+  // Inicializar los items principales según el tipo
+  useEffect(() => {
+    if (items && items.length > 0) {
+      if (itemType === "payment") {
+        setPayments(items.map(item => ({ ...item, type: 'payment' as const })));
+      } else if (itemType === "invoice") {
+        setInvoices(items.map(item => ({ ...item, type: 'invoice' as const })));
+      } else if (itemType === "booking") {
+        setBookings(items.map(item => ({ ...item, type: 'booking' as const })));
+      }
+    }
+  }, [items, itemType]);
+
   if (!isOpen) {
     return null;
   }
+
+  // Función para renderizar el ícono según el tipo
+  const renderIcon = (type: 'payment' | 'invoice' | 'booking') => {
+    switch (type) {
+      case 'payment':
+        return <PaymentIcon className="h-4 w-4" />;
+      case 'invoice':
+        return <InvoicesIcon className="h-4 w-4" />;
+      case 'booking':
+        return <BookingIcon className="h-4 w-4" />;
+      default:
+        return <InvoicesIcon className="h-4 w-4" />;
+    }
+  };
+
+  // Función para obtener el título de sección según el tipo
+  const getSectionTitle = (type: 'payment' | 'invoice' | 'booking') => {
+    switch (type) {
+      case 'payment':
+        return "Pagos";
+      case 'invoice':
+        return "Facturas";
+      case 'booking':
+        return "Reservas";
+      default:
+        return "Items";
+    }
+  };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -225,9 +291,8 @@ export default function NavContainerModal({
 
         <div className="flex h-full w-full min-w-[85vw]">
           <div
-            className={`relative h-full bg-white/70 transition-all duration-300 ${
-              isSidebarExpanded ? "w-52" : "w-16"
-            }`}
+            className={`relative h-full bg-white/70 transition-all duration-300 ${isSidebarExpanded ? "w-52" : "w-16"
+              }`}
           >
             <Button
               variant="ghost"
@@ -236,9 +301,8 @@ export default function NavContainerModal({
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
               <ArrowIcon
-                className={`transition-transform ${
-                  isSidebarOpen ? "rotate-180" : ""
-                }`}
+                className={`transition-transform ${isSidebarOpen ? "rotate-180" : ""
+                  }`}
               />
             </Button>
 
@@ -259,29 +323,101 @@ export default function NavContainerModal({
                       )}
                     </div>
 
-                    <nav className="space-y-2">
-                      {items.map((item) => (
-                        <button
-                          onClick={() => setCurrentItemId(item.id)}
-                          key={item.id}
-                          className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900 ${
-                            currentItemId === item.id
-                              ? "bg-blue-100 text-blue-900"
-                              : "text-gray-500"
-                          }`}
-                        >
-                          {itemType === "payment" ? (
-                            <PaymentIcon className="h-4 w-4" />
-                          ) : (
-                            <InvoicesIcon className="h-4 w-4" />
-                          )}
-                          {isSidebarExpanded && (
-                            <span className="whitespace-nowrap">
-                              {item.title}
-                            </span>
-                          )}
-                        </button>
-                      ))}
+                    <nav className="space-y-4">
+                      {/* Sección principal según el tipo */}
+                      <div>
+                        <h3 className={`px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider ${isSidebarExpanded ? "" : "sr-only"}`}>
+                          {getSectionTitle(itemType)}
+                        </h3>
+                        <div className="mt-2 space-y-1">
+                          {(itemType === "payment" ? payments :
+                            itemType === "invoice" ? invoices : bookings).map((item) => (
+                              <button
+                                onClick={() => setCurrentItemId(item.id)}
+                                key={item.id}
+                                className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900 ${currentItemId === item.id
+                                  ? "bg-blue-100 text-blue-900"
+                                  : "text-gray-500"
+                                  }`}
+                              >
+                                {renderIcon(item.type)}
+                                {isSidebarExpanded && (
+                                  <span className="whitespace-nowrap truncate">
+                                    {item.title}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Sección de items relacionados */}
+                      {(invoices.length > 0 || bookings.length > 0) && (
+                        <div>
+                          <h3 className={`px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider ${isSidebarExpanded ? "" : "sr-only"}`}>
+                            {itemType === "payment" ? "Facturas y Reservas relacionadas" :
+                              itemType === "invoice" ? "Pagos relacionados" : "Facturas relacionadas"}
+                          </h3>
+                          <div className="mt-2 space-y-1">
+                            {/* Mostrar facturas relacionadas para pagos y reservas */}
+                            {(itemType === "payment" || itemType === "booking") && invoices.map((item) => (
+                              <button
+                                onClick={() => setCurrentItemId(item.id)}
+                                key={item.id}
+                                className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 hover:text-gray-900 ${currentItemId === item.id
+                                  ? "bg-gray-100 text-gray-900"
+                                  : "text-gray-400"
+                                  }`}
+                              >
+                                {renderIcon('invoice')}
+                                {isSidebarExpanded && (
+                                  <span className="whitespace-nowrap truncate">
+                                    {item.title}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+
+                            {/* Mostrar reservas relacionadas para pagos y facturas */}
+                            {(itemType === "payment" || itemType === "invoice") && bookings.map((item) => (
+                              <button
+                                onClick={() => setCurrentItemId(item.id)}
+                                key={item.id}
+                                className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 hover:text-gray-900 ${currentItemId === item.id
+                                  ? "bg-gray-100 text-gray-900"
+                                  : "text-gray-400"
+                                  }`}
+                              >
+                                {renderIcon('booking')}
+                                {isSidebarExpanded && (
+                                  <span className="whitespace-nowrap truncate">
+                                    {item.title}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+
+                            {/* Mostrar pagos relacionados para facturas y reservas */}
+                            {(itemType === "invoice" || itemType === "booking") && payments.map((item) => (
+                              <button
+                                onClick={() => setCurrentItemId(item.id)}
+                                key={item.id}
+                                className={`flex items-center justify-start w-full gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 hover:text-gray-900 ${currentItemId === item.id
+                                  ? "bg-gray-100 text-gray-900"
+                                  : "text-gray-400"
+                                  }`}
+                              >
+                                {renderIcon('payment')}
+                                {isSidebarExpanded && (
+                                  <span className="whitespace-nowrap truncate">
+                                    {item.title}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </nav>
                   </div>
                 </div>
@@ -434,6 +570,62 @@ export default function NavContainerModal({
                               </p>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {itemType === "booking" && details && (
+                    <div>
+                      <h2 className="text-2xl font-bold mb-4">
+                        Detalles de la Reserva
+                      </h2>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              ID de Reserva
+                            </p>
+                            <p className="font-medium">
+                              {(details as BookingDetails).id_hospedaje}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              Código de Confirmación
+                            </p>
+                            <p className="font-medium">
+                              {(details as BookingDetails).confirmation_code}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Hotel</p>
+                            <p className="font-medium">
+                              {(details as BookingDetails).nombre_hotel}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Estado</p>
+                            <p className="font-medium">
+                              {(details as BookingDetails).estado || "Confirmada"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              Fecha de Entrada
+                            </p>
+                            <p className="font-medium">
+                              {(details as BookingDetails).fecha_entrada}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              Fecha de Salida
+                            </p>
+                            <p className="font-medium">
+                              {(details as BookingDetails).fecha_salida}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
