@@ -230,7 +230,6 @@ const ExpandedContentRenderer = ({
     />
   );
 };
-
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,

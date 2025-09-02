@@ -137,7 +137,12 @@ export default function NavContainerModal({
             const relatedBookings = data.data.reservas.map((reserva: any) => ({
               id: reserva.id_hospedaje || reserva.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
               title: reserva.nombre_hotel || `Reserva ${reserva.confirmation_code || reserva.id_solicitud}`,
-              type: 'booking' as const
+              type: 'booking' as const,
+              check_in: reserva.check_in,
+              check_out: reserva.check_out,
+              night: reserva.night,
+              viajeros: reserva.viajero + " " + reserva.viajeros_adicionales_reserva,
+              total: reserva.total_venta
             }));
             setBookings(relatedBookings);
           }
@@ -146,46 +151,61 @@ export default function NavContainerModal({
             const relatedInvoices = data.data.facturas.map((factura: any) => ({
               id: factura.id_factura || `INV-${Math.random().toString(36).substr(2, 9)}`,
               title: factura.concepto || `Factura ${factura.numero_factura || factura.id_factura}`,
-              type: 'invoice' as const
+              type: 'invoice' as const,
+              fecha_emision: factura.fecha_emision,
+              total: factura.total,
             }));
             setInvoices(relatedInvoices);
           }
-          console.log("probando")
 
           if (itemType === "booking" && data.data.pagos && Array.isArray(data.data.pagos)) {
             const relatedPayments = data.data.pagos.map((pago: any) => ({
               id: pago.raw_id || pago.id_movimiento || `PAY-${Math.random().toString(36).substr(2, 9)}`,
               title: pago.concepto || `Pago ${pago.referencia || pago.id_movimiento}`,
-              type: 'payment' as const
+              type: 'payment' as const,
+              monto: pago.monto,
+              saldo: pago.saldo,
+              metodo: pago.metodo,
+              fehca_de_pago: pago.fecha_pago
             }));
             setPayments(relatedPayments);
           }
-          if (itemType === "booking" && data.data.pagos && Array.isArray(data.data.pagos)) {
-            const relatedpayments = data.data.pagos.map((pagos: any) => ({
-              id: pagos.raw_id || pagos.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
-              title: pagos.concepto || `pago ${pagos.confirmation_code || pagos.id_solicitud}`,
-              total: pagos.monto,
-              type: 'payment' as const
+          if (itemType === "booking" && data.data.facturas && Array.isArray(data.data.facturas)) {
+            const relatedpayments = data.data.facturas.map((facturas: any) => ({
+              id: facturas.raw_id || facturas.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
+              title: facturas.concepto || `pago ${facturas.confirmation_code || facturas.id_solicitud}`,
+              type: 'invoice' as const,
+              fecha_emision: facturas.fecha_emision,
+              total: facturas.total,
             }));
-            setPayments(relatedpayments);
+            setInvoices(relatedpayments);
 
           }
         }
 
-        if (itemType === "invoice" && data.data.reservas && Array.isArray(data.data.reservas)) {
-          const relatedBookings = data.data.reservas.map((reserva: any) => ({
+        if (itemType === "invoice" && data.reservas && Array.isArray(data.reservas)) {
+          const relatedBookings = data.reservas.map((reserva: any) => ({
             id: reserva.id_hospedaje || reserva.id_solicitud || `RES-${Math.random().toString(36).substr(2, 9)}`,
             title: reserva.nombre_hotel || `Reserva ${reserva.confirmation_code || reserva.id_solicitud}`,
-            type: 'booking' as const
+            type: 'booking' as const,
+            check_in: reserva.check_in,
+            check_out: reserva.check_out,
+            night: reserva.night,
+            viajeros: reserva.viajero + " " + reserva.viajeros_adicionales_reserva,
+            total: reserva.total_venta
           }));
           setBookings(relatedBookings);
         }
 
-        if (itemType === "invoice" && data.data.pagos && Array.isArray(data.data.pagos)) {
-          const relatedPayments = data.data.pagos.map((pago: any) => ({
+        if (itemType === "invoice" && data.pagos && Array.isArray(data.pagos)) {
+          const relatedPayments = data.pagos.map((pago: any) => ({
             id: pago.raw_id || pago.id_movimiento || `PAY-${Math.random().toString(36).substr(2, 9)}`,
             title: pago.concepto || `Pago ${pago.referencia || pago.id_movimiento}`,
-            type: 'payment' as const
+            type: 'payment' as const,
+            monto: pago.monto,
+            saldo: pago.saldo,
+            metodo: pago.metodo,
+            fehca_de_pago: pago.fecha_pago
           }));
           setPayments(relatedPayments);
         }
@@ -255,6 +275,7 @@ export default function NavContainerModal({
         return "Items";
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
