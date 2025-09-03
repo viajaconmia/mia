@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import TwoColumnDropdown from "../components/molecule/TwoColumnDropdown";
 import Donut from "../components/Donut";
 import {
-  // Users,
   BarChart3,
   Calendar,
   DollarSign,
@@ -18,13 +17,17 @@ import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
 import { Invoice, ModalType, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
-// import NavContainerModal from "../components/organism/detalles";
+
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
 import { ColumnsTable, Table } from "../components/atom/table";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
+
 import Button from "../components/atom/Button";
+
+import { formatNumberWithCommas } from "../utils/format";
+
 
 interface DashboardStats {
   totalUsers: number;
@@ -39,18 +42,8 @@ interface DashboardStats {
   monthlyRevenue: any[];
 }
 
-// interface User {
-//   id: string;
-//   company_name: string;
-//   rfc: string;
-//   industry: string;
-//   city: string;
-//   created_at: string;
-// }
-
 type ViewsConsultas =
   | "general"
-  // | "usuarios"
   | "reservaciones"
   | "pagos"
   | "facturas";
@@ -59,7 +52,7 @@ const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
 type ModalTypeMap = {
   booking: Reserva;
-  payment: Payment & { id_pago: string | null; id_saldo: string | null };
+  payment: Payment;
   invoice: Invoice;
 };
 
@@ -70,13 +63,18 @@ const ExpandedContentRenderer = ({
   item: any;
   itemType: ModalType;
 }) => {
+
   const [, setLocation] = useLocation();
   const renderTypes = typesModal.filter((type) => type != itemType);
+
+
+  // Define las columnas para cada tipo
 
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
+
       component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
@@ -89,6 +87,9 @@ const ExpandedContentRenderer = ({
           );
         },
       },
+
+      component: "text",
+
     },
     {
       key: "hotel",
@@ -140,6 +141,7 @@ const ExpandedContentRenderer = ({
             ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
           ),
       },
+
     },
     {
       key: "total",
@@ -222,7 +224,6 @@ export const AdminDashboard = () => {
   });
   const [location, setLocation] = useLocation();
   const [bookings, setBookings] = useState<Reserva[]>([]);
-  // const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { user } = useAuth();
@@ -260,7 +261,9 @@ export const AdminDashboard = () => {
   const fetchInvoices = async () => {
     try {
       const { data } = await FacturaService.getInstance().getFacturasByAgente();
+
       console.log("invoices", data);
+
       setInvoices(data || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -298,7 +301,6 @@ export const AdminDashboard = () => {
       if (!user) {
         throw new Error("No hay usuario autenticado");
       }
-      // setUsers([]);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -344,6 +346,7 @@ export const AdminDashboard = () => {
         // openDetails={openDetails}
       />
     ),
+
   };
 
   return (
@@ -352,7 +355,6 @@ export const AdminDashboard = () => {
         <TabsList
           tabs={[
             { icon: BarChart3, tab: "general" },
-            // { icon: Users, tab: "usuarios" },
             { icon: Building2, tab: "reservaciones" },
             { icon: CreditCardIcon, tab: "pagos" },
             { icon: File, tab: "facturas" },
@@ -392,6 +394,7 @@ export const AdminDashboard = () => {
           </Switch>
         </div>
       </div>
+
       {/* {isModalOpen && selectedItemId && selectedItemType && (
         <NavContainerModal
           isOpen={isModalOpen}
@@ -403,16 +406,16 @@ export const AdminDashboard = () => {
           itemType={selectedItemType}
         />
       )} */}
+
     </>
   );
 };
 
 const BookingsView = ({
   bookings,
-}: // openDetails,
-{
+}: {
   bookings: Reserva[];
-  // openDetails: (id: string | null, type: ModalType) => void;
+
 }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
@@ -420,10 +423,14 @@ const BookingsView = ({
 
   let search = params ? params : "";
   const filterBookings = bookings.filter(
+
     (booking) =>
       booking.id_booking?.includes(search) ||
       booking.nombre_viajero_reservacion?.includes(search) ||
-      booking.codigo_reservacion_hotel?.includes(search)
+      booking.codigo_reservacion_hotel?.includes(search)||
+        booking.id_hospedaje?.includes(search) ||
+        booking.nombre_viajero_reservacion?.includes(search)
+    
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
@@ -478,7 +485,9 @@ const BookingsView = ({
         data={filterBookings}
         columns={bookingColumns}
         expandableContent={(booking) => (
+
           <ExpandedContentRenderer item={booking} itemType="booking" />
+
         )}
       />
     </div>
@@ -487,10 +496,10 @@ const BookingsView = ({
 
 const PaymentsView = ({
   payments,
-}: // openDetails,
-{
+
+}: {
   payments: Payment[];
-  // openDetails: (id: string | null, type: ModalType) => void;
+
 }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
@@ -514,7 +523,12 @@ const PaymentsView = ({
         data={filterPayments}
         columns={paymentColumns}
         expandableContent={(payment) => (
-          <ExpandedContentRenderer item={payment} itemType="payment" />
+
+          <ExpandedContentRenderer
+            item={payment}
+            itemType="payment"
+          />
+
         )}
       />
     </div>
@@ -523,10 +537,10 @@ const PaymentsView = ({
 
 const InvoicesView = ({
   invoices,
-}: // openDetails,
-{
+
+}: {
   invoices: Invoice[];
-  // openDetails: (id: string | null, type: ModalType) => void;
+
 }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
@@ -575,6 +589,7 @@ const InvoicesView = ({
           );
         },
       },
+
     },
   ];
 
@@ -585,22 +600,14 @@ const InvoicesView = ({
         data={filterInvoices}
         columns={invoiceColumns}
         expandableContent={(invoice) => (
+
           <ExpandedContentRenderer item={invoice} itemType="invoice" />
+
         )}
       />
     </div>
   );
 };
-
-// const UsersView = ({ users }: { users: User[] }) => {
-//   const userColumns: ColumnsTable<User>[] = [];
-
-//   return (
-//     <div className="">
-//       <Table id="usersTable" data={users} columns={userColumns} />
-//     </div>
-//   );
-// };
 
 const OverviewView = ({ stats }: { stats: DashboardStats }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -804,22 +811,18 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* <div className="bg-white rounded-xl shadow-sm p-6"> */}
         <Donut
           summary={summary}
           titulo="Gráfica por gasto"
           subtitulo="Aquí verás cuanto es tu gasto por mes"
           simbol="$"
         />
-        {/* </div> */}
-        {/* <div className="bg-white rounded-xl shadow-sm p-6"> */}
         <Donut
           summary={summary1}
           titulo="Gráfica por noches"
           subtitulo="Aquí verás cuántas noches por mes reservaron"
           simbol={""}
         />
-        {/* </div> */}
       </div>
     );
   };
