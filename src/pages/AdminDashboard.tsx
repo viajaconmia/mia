@@ -25,6 +25,13 @@ import { ColumnsTable, Table } from "../components/atom/table";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
 import Button from "../components/atom/Button";
+import { FacturamaService } from "../services/FacturamaService";
+import {
+  downloadXMLBase64,
+  downloadXMLUrl,
+  viewPDFBase64,
+  viewPDFUrl,
+} from "../utils/files";
 
 interface DashboardStats {
   totalUsers: number;
@@ -222,28 +229,11 @@ export const AdminDashboard = () => {
   });
   const [location, setLocation] = useLocation();
   const [bookings, setBookings] = useState<Reserva[]>([]);
-  // const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const { user } = useAuth();
-
-  // Nuevo estado para controlar el modal
-  // const [isModalOpen, setIsModalOpen] = useState(false);
-  const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Nueva función para abrir el modal
-  // const openDetails = (itemId: string | null, itemType: ModalType) => {
-  //   try {
-  //     if (!itemId) throw new Error("No hay id");
-
-  //     setSelectedItemId(itemId);
-  //     setSelectedItemType(itemType);
-  //     setIsModalOpen(true);
-  //   } catch (error: any) {
-  //     console.error(error.message);
-  //   }
-  // };
+  const { user } = useAuth();
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     fetchDataPage();
@@ -260,7 +250,7 @@ export const AdminDashboard = () => {
   const fetchInvoices = async () => {
     try {
       const { data } = await FacturaService.getInstance().getFacturasByAgente();
-      console.log("invoices", data);
+      // console.log("invoices", data);
       setInvoices(data || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -272,7 +262,7 @@ export const AdminDashboard = () => {
   const fetchPayments = async () => {
     try {
       const { data } = await PagosService.getInstance().getPagosConsultas();
-      console.log("payments", data?.pagos);
+      // console.log("payments", data?.pagos);
       setPayments(data?.pagos || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -284,7 +274,7 @@ export const AdminDashboard = () => {
   const fetchBookings = async () => {
     try {
       const { data } = await BookingService.getInstance().getReservas();
-      console.log("bookings", data);
+      // console.log("bookings", data);
       setBookings(data || []);
     } catch (error: any) {
       console.error("Error fetching bookings:", error);
@@ -325,85 +315,54 @@ export const AdminDashboard = () => {
 
   const views: Record<ViewsConsultas, React.ReactNode> = {
     general: <OverviewView stats={stats} />,
-    facturas: (
-      <InvoicesView
-        invoices={invoices}
-        // openDetails={openDetails}
-      />
-    ),
-    // usuarios: <UsersView users={users} />,
-    pagos: (
-      <PaymentsView
-        payments={payments}
-        // openDetails={openDetails}
-      />
-    ),
-    reservaciones: (
-      <BookingsView
-        bookings={bookings}
-        // openDetails={openDetails}
-      />
-    ),
+    facturas: <InvoicesView invoices={invoices} />,
+    pagos: <PaymentsView payments={payments} />,
+    reservaciones: <BookingsView bookings={bookings} />,
   };
 
   return (
-    <>
-      <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
-        <TabsList
-          tabs={[
-            { icon: BarChart3, tab: "general" },
-            // { icon: Users, tab: "usuarios" },
-            { icon: Building2, tab: "reservaciones" },
-            { icon: CreditCardIcon, tab: "pagos" },
-            { icon: File, tab: "facturas" },
-          ]}
-          onChange={(tab) => {
-            setLocation(ROUTES.CONSULTAS.SUBPATH(tab));
-          }}
-          activeTab={
-            (location.split("/").at(-1) as ViewsConsultas) || "general"
-          }
-        />
-        <div className="px-4">
-          {location != ROUTES.CONSULTAS.SUBPATH("general") && (
-            <InputText
-              icon={Search}
-              onChange={(value) => {
-                setSearchParams((prev) => {
-                  const params = new URLSearchParams(prev);
-                  params.set("search", value);
-                  return params;
-                });
-              }}
-              value={searchParams.get("search") || ""}
-            />
-          )}
-        </div>
-        <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
-          <Switch>
-            {Object.entries(views).map(([key, Component]) => (
-              <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
-                {Component}
-              </Route>
-            ))}
-            <Route path="*">
-              <Redirect to={ROUTES.CONSULTAS.SUBPATH(Object.keys(views)[0])} />
-            </Route>
-          </Switch>
-        </div>
+    <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
+      <TabsList
+        tabs={[
+          { icon: BarChart3, tab: "general" },
+          // { icon: Users, tab: "usuarios" },
+          { icon: Building2, tab: "reservaciones" },
+          { icon: CreditCardIcon, tab: "pagos" },
+          { icon: File, tab: "facturas" },
+        ]}
+        onChange={(tab) => {
+          setLocation(ROUTES.CONSULTAS.SUBPATH(tab));
+        }}
+        activeTab={(location.split("/").at(-1) as ViewsConsultas) || "general"}
+      />
+      <div className="px-4">
+        {location != ROUTES.CONSULTAS.SUBPATH("general") && (
+          <InputText
+            icon={Search}
+            onChange={(value) => {
+              setSearchParams((prev) => {
+                const params = new URLSearchParams(prev);
+                params.set("search", value);
+                return params;
+              });
+            }}
+            value={searchParams.get("search") || ""}
+          />
+        )}
       </div>
-      {/* {isModalOpen && selectedItemId && selectedItemType && (
-        <NavContainerModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          agentId={user?.info?.id_agente || ""}
-          initialItemId={selectedItemId}
-          //items={getItemsByType(selectedItemType)} Aquí pasamos los items transformados
-          items={[]}
-          itemType={selectedItemType}
-        />
-      )} */}
-    </>
+      <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
+        <Switch>
+          {Object.entries(views).map(([key, Component]) => (
+            <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
+              {Component}
+            </Route>
+          ))}
+          <Route path="*">
+            <Redirect to={ROUTES.CONSULTAS.SUBPATH(Object.keys(views)[0])} />
+          </Route>
+        </Switch>
+      </div>
+    </div>
   );
 };
 
@@ -427,36 +386,14 @@ const BookingsView = ({
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
-    {
-      key: "hotel",
-      header: "Hotel",
-      component: "text",
-    },
-    {
-      key: "nombre_viajero_reservacion",
-      header: "Viajero",
-      component: "text",
-    },
-    {
-      key: "check_in",
-      header: "Check-in",
-      component: "date",
-    },
-    {
-      key: "check_out",
-      header: "Check-out",
-      component: "date",
-    },
-    {
-      key: "room",
-      header: "Cuarto",
-      component: "text",
-    },
-    {
-      key: "total",
-      header: "Precio",
-      component: "text",
-    },
+    { key: "created_at", header: "Creado", component: "date" },
+    { key: "codigo_reservacion_hotel", header: "Codigo", component: "text" },
+    { key: "hotel", header: "Hotel", component: "text" },
+    { key: "nombre_viajero_reservacion", header: "Viajero", component: "text" },
+    { key: "check_in", header: "Check-in", component: "date" },
+    { key: "check_out", header: "Check-out", component: "date" },
+    { key: "room", header: "Cuarto", component: "text" },
+    { key: "total", header: "Precio", component: "text" },
     {
       key: "id_solicitud",
       header: "Detalles",
@@ -472,26 +409,18 @@ const BookingsView = ({
   ];
 
   return (
-    <div className="">
-      <Table<Reserva>
-        id="bookingsTable"
-        data={filterBookings}
-        columns={bookingColumns}
-        expandableContent={(booking) => (
-          <ExpandedContentRenderer item={booking} itemType="booking" />
-        )}
-      />
-    </div>
+    <Table<Reserva>
+      id="bookingsTable"
+      data={filterBookings}
+      columns={bookingColumns}
+      expandableContent={(booking) => (
+        <ExpandedContentRenderer item={booking} itemType="booking" />
+      )}
+    />
   );
 };
 
-const PaymentsView = ({
-  payments,
-}: // openDetails,
-{
-  payments: Payment[];
-  // openDetails: (id: string | null, type: ModalType) => void;
-}) => {
+const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
@@ -500,24 +429,38 @@ const PaymentsView = ({
     String(payment.raw_id)?.includes(search)
   );
   const paymentColumns: ColumnsTable<Payment>[] = [
-    { key: "raw_id", header: "ID", component: "text" },
+    {
+      key: "raw_id",
+      header: "ID",
+      component: "id",
+      componentProps: { index: 12 },
+    },
     { key: "fecha_pago", header: "Fecha de Pago", component: "date" },
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
     { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
+    {
+      key: null,
+      header: "Acción",
+      component: "button",
+      componentProps: {
+        label: "Facturar",
+        onClick: ({ item }: { item: Payment }) => {
+          console.log(item);
+        },
+      },
+    },
   ];
 
   return (
-    <div className="">
-      <Table<Payment>
-        id="paymentsTable"
-        data={filterPayments}
-        columns={paymentColumns}
-        expandableContent={(payment) => (
-          <ExpandedContentRenderer item={payment} itemType="payment" />
-        )}
-      />
-    </div>
+    <Table<Payment>
+      id="paymentsTable"
+      data={filterPayments}
+      columns={paymentColumns}
+      expandableContent={(payment) => (
+        <ExpandedContentRenderer item={payment} itemType="payment" />
+      )}
+    />
   );
 };
 
@@ -536,10 +479,14 @@ const InvoicesView = ({
     invoice.id_factura?.includes(search)
   );
   const invoiceColumns: ColumnsTable<Invoice>[] = [
-    { key: "id_factura", header: "ID", component: "text" },
+    {
+      key: "id_factura",
+      header: "ID",
+      component: "id",
+      componentProps: { index: 12 },
+    },
+    { key: "uuid_factura", header: "Folio fiscal", component: "text" },
     { key: "fecha_emision", header: "Fecha Facturación", component: "date" },
-    { key: "subtotal", header: "Subtotal", component: "precio" },
-    { key: "impuestos", header: "IVA", component: "precio" },
     { key: "total", header: "Total", component: "precio" },
     {
       key: null,
@@ -548,13 +495,29 @@ const InvoicesView = ({
       componentProps: {
         component: ({ item }: { item: Invoice }) => {
           return (
-            <div className="flex justify-between w-full gap-2">
+            <div className="flex w-full gap-2">
               {(item.id_facturama || item.url_pdf) && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    console.log(`Descargando PDF`);
+                    if (item.id_facturama) {
+                      FacturamaService.getInstance()
+                        .downloadCFDI({
+                          id: item.id_facturama,
+                          type: "pdf",
+                        })
+                        .then(({ data }) => viewPDFBase64(data?.Content || ""))
+                        .catch((error) =>
+                          console.log(
+                            error.response ||
+                              error.message ||
+                              "Error al obtener la factura"
+                          )
+                        );
+                    } else if (item.url_pdf) {
+                      viewPDFUrl(item.url_pdf);
+                    }
                   }}
                 >
                   PDF
@@ -565,7 +528,35 @@ const InvoicesView = ({
                   size="sm"
                   variant="primary"
                   onClick={() => {
-                    console.log(`Descargando XML`);
+                    if (item.id_facturama) {
+                      FacturamaService.getInstance()
+                        .downloadCFDI({
+                          id: item.id_facturama,
+                          type: "xml",
+                        })
+                        .then(({ data }) =>
+                          downloadXMLBase64(
+                            data?.Content || "",
+                            `${item.id_factura.slice(0, 8)}-${
+                              item.created_at.split("T")[0]
+                            }.xml`
+                          )
+                        )
+                        .catch((error) =>
+                          console.log(
+                            error.response ||
+                              error.message ||
+                              "Error al obtener la factura"
+                          )
+                        );
+                    } else if (item.url_xml) {
+                      downloadXMLUrl(
+                        item.url_xml,
+                        `${item.id_factura.slice(0, 8)}-${
+                          item.created_at.split("T")[0]
+                        }.xml`
+                      );
+                    }
                   }}
                 >
                   XML
@@ -579,16 +570,14 @@ const InvoicesView = ({
   ];
 
   return (
-    <div className="">
-      <Table<Invoice>
-        id="invoicesTable"
-        data={filterInvoices}
-        columns={invoiceColumns}
-        expandableContent={(invoice) => (
-          <ExpandedContentRenderer item={invoice} itemType="invoice" />
-        )}
-      />
-    </div>
+    <Table<Invoice>
+      id="invoicesTable"
+      data={filterInvoices}
+      columns={invoiceColumns}
+      expandableContent={(invoice) => (
+        <ExpandedContentRenderer item={invoice} itemType="invoice" />
+      )}
+    />
   );
 };
 

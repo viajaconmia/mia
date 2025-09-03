@@ -10,7 +10,7 @@ export const Notification = () => {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-[1000] transform shadow-xl transition-transform duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-[1000] transform transition-transform duration-300 ${
         notification.show ? "translate-y-0" : "-translate-y-full"
       }`}
     >

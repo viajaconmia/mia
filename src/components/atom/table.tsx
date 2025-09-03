@@ -10,6 +10,7 @@ import { useNotification } from "../../hooks/useNotification";
 type ComponentPropsMap<T> = {
   text: { value: string };
   number: { value: number };
+  id: { value: string; index: number };
   button: {
     item: T;
     onClick?: ({ item }: { item: T }) => void;
@@ -85,10 +86,13 @@ export const Table = <T extends Record<string, any>>({
         ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
       >;
     } = {
-      text: ({ value }) => <span className="text-sm">{value}</span>,
-      number: ({ value }) => <strong>{value}</strong>,
+      text: ({ value }) => <span className="text-xs">{value}</span>,
+      id: ({ value, index }) => (
+        <span className="text-xs">{value.slice(0, index)}</span>
+      ),
+      number: ({ value }) => <strong className="text-xs">{value}</strong>,
       button: ({ item, onClick, label, variant }) => (
-        <div className="w-full flex justify-center items-center">
+        <div className="w-full flex items-center">
           <Button
             size="sm"
             onClick={() => onClick?.({ item })}
@@ -98,8 +102,10 @@ export const Table = <T extends Record<string, any>>({
           </Button>
         </div>
       ),
-      date: ({ value }) => <span>{formatDate(value)}</span>,
-      precio: ({ value }) => <span>{formatNumberWithCommas(value)}</span>,
+      date: ({ value }) => <span className="text-xs">{formatDate(value)}</span>,
+      precio: ({ value }) => (
+        <span className="text-xs">{formatNumberWithCommas(value)}</span>
+      ),
       copiar_and_button: ({ item, onClick, value, variant }) => (
         <div className="w-full flex justify-between items-center">
           <Button
