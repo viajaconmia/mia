@@ -1,42 +1,40 @@
-import { ArrowDown, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Loader from "../atom/Loader";
 import React from "react";
 import Button from "./Button";
 import { formatDate, formatNumberWithCommas } from "../../utils/format";
+import { copyToClipboard } from "../../utils";
+import { useNotification } from "../../hooks/useNotification";
 
 type ComponentPropsMap<T> = {
   text: { value: string };
   number: { value: number };
+  id: { value: string; index: number };
   button: {
     item: T;
-    onClick?: (item: T) => void;
-    value: string;
+    onClick?: ({ item }: { item: T }) => void;
+    label: string;
     variant?: "primary" | "secondary" | "ghost" | "warning";
   };
   date: { value: string };
   precio: { value: number | string | null | undefined };
-};
-function createComponents<T>() {
-  const map: {
-    [K in keyof ComponentPropsMap<T>]: React.FC<
-      ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
-    >;
-  } = {
-    text: ({ value }) => <span className="text-sm">{value}</span>,
-    number: ({ value }) => <strong>{value}</strong>,
-    button: ({ item, onClick, value, variant }) => (
-      <div className="w-full flex justify-center items-center">
-        <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
-          {String(value)}
-        </Button>
-      </div>
-    ),
-    date: ({ value }) => <span>{formatDate(value)}</span>,
-    precio: ({ value }) => <span>{formatNumberWithCommas(value)}</span>,
+  copiar_and_button: {
+    item: T;
+    onClick?: ({ item }: { item: T }) => void;
+    value: string;
+    variant?: "primary" | "secondary" | "ghost" | "warning";
   };
-  return map;
-}
+
+  custom: {
+    component: React.ElementType;
+    item: T;
+  };
+
+  acciones: { onClick: () => void, value: string }
+
+};
+
 export interface ColumnsTable<
   T,
   K extends keyof ComponentPropsMap<T> = keyof ComponentPropsMap<T>
@@ -84,6 +82,71 @@ export const Table = <T extends Record<string, any>>({
     }
   );
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const { showNotification } = useNotification();
+
+  function createComponents<T>() {
+    const map: {
+      [K in keyof ComponentPropsMap<T>]: React.FC<
+        ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
+      >;
+    } = {
+      text: ({ value }) => <span className="text-xs">{value}</span>,
+      id: ({ value, index }) => (
+        <span className="text-xs">{value.slice(0, index)}</span>
+      ),
+      number: ({ value }) => <strong className="text-xs">{value}</strong>,
+      button: ({ item, onClick, label, variant }) => (
+        <div className="w-full flex items-center">
+          <Button
+            size="sm"
+            onClick={() => onClick?.({ item })}
+            variant={variant}
+          >
+            {String(label)}
+          </Button>
+        </div>
+      ),
+      date: ({ value }) => <span className="text-xs">{formatDate(value)}</span>,
+      precio: ({ value }) => (
+        <span className="text-xs">{formatNumberWithCommas(value)}</span>
+      ),
+      copiar_and_button: ({ item, onClick, value, variant }) => (
+        <div className="w-full flex justify-between items-center">
+          <Button
+            size="sm"
+            onClick={() => onClick?.({ item })}
+            variant={variant}
+          >
+            {String(value)}
+          </Button>
+          <Button
+            size="rounded"
+            onClick={() => {
+              try {
+                copyToClipboard(value);
+                showNotification("success", "Se ha copiado con exito");
+              } catch (error: any) {
+                console.error(error);
+                showNotification(
+                  "error",
+                  error.message || "sucedio un error al copiar el valor"
+                );
+              }
+            }}
+            variant="secondary"
+          >
+            <Copy className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+
+      custom: ({ item, component: Comp }) => <Comp item={item} />,
+
+      acciones: ({ value, onClick }) => (<><button onClick={onClick}>{value}</button></>)
+
+    };
+    return map;
+  }
 
   useEffect(() => {
     setDisplayData(data);
@@ -170,20 +233,18 @@ export const Table = <T extends Record<string, any>>({
                 <th
                   key={String(column.key)}
                   onClick={() => handleSort(String(column.key))}
-                  className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${
-                    column.key !== "__expand__"
+                  className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${column.key !== "__expand__"
                       ? "cursor-pointer"
                       : "cursor-default"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-start space-x-2">
                     <span>{column.header}</span>
                     {currentSort.key === column.key &&
                       column.key !== "__expand__" && (
                         <ArrowDown
-                          className={`w-4 h-4 transition-transform ${
-                            currentSort.direction === "asc" ? "rotate-180" : ""
-                          }`}
+                          className={`w-4 h-4 transition-transform ${currentSort.direction === "asc" ? "rotate-180" : ""
+                            }`}
                         />
                       )}
                   </div>
@@ -245,6 +306,9 @@ export const Table = <T extends Record<string, any>>({
                     }
 
                     // Columnas normales
+                    if (column.component == "copiar_and_button") {
+                      console.log(baseProps, column);
+                    }
                     return (
                       <td
                         key={`${index}-${columnKey}`}

@@ -10,7 +10,7 @@ interface CommonInteractiveElementProps {
    * 'ghost': Elemento transparente con texto blue-700 y borde transparente.
    */
   variant?: "primary" | "secondary" | "ghost" | "warning";
-  size?: "sm" | "md" | "lg" | "full";
+  size?: "sm" | "md" | "lg" | "full" | "rounded";
   /**
    * Contenido del elemento (texto, otros elementos, etc.).
    */
@@ -37,7 +37,7 @@ type ButtonPropsWithoutChildren = Omit<
 
 interface InteractiveElementAsButtonProps
   extends CommonInteractiveElementProps,
-  ButtonPropsWithoutChildren {
+    ButtonPropsWithoutChildren {
   as?: "button"; // Indica explícitamente que será un botón HTML
   href?: never; // No debe tener href si es un botón
 }
@@ -45,7 +45,7 @@ interface InteractiveElementAsButtonProps
 // Interfaz para cuando el componente es un <Link> de Wouter
 interface InteractiveElementAsLinkProps
   extends CommonInteractiveElementProps,
-  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "children"> {
+    Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "children"> {
   as: "link"; // Indica explícitamente que será un enlace de Wouter
   href: string; // Requiere href si es un enlace
 }
@@ -72,13 +72,13 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
 }) => {
   // Clases base para todos los elementos interactivos
   const baseClasses = `
-    flex items-center justify-center rounded-md
+    flex items-center gap-x-2 justify-center rounded-md
     font-normal
     transition-all duration-200 ease-in-out
-    focus:outline-none focus:ring-2 focus:ring-offset-2
-    whitespace-nowrap
-    ${disabled &&
-    "opacity-70 cursor-not-allowed bg-gray-100 hover:text-gray-500 text-gray-500"
+    focus:outline-none whitespace-nowrap
+    ${
+      disabled &&
+      "opacity-70 cursor-not-allowed bg-gray-100 hover:text-gray-500 text-gray-500"
     }
   `;
 
@@ -87,6 +87,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
     md: "text-sm px-4 py-2", // ya es tu base
     lg: "text-base px-6 py-3",
     full: "w-full text-base px-6 py-3",
+    rounded: "rounded p-2",
   };
 
   // Clases específicas para cada variante
@@ -122,14 +123,15 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
     `,
   };
 
-  const combinedClasses = `${baseClasses} ${disabled ? "" : variantClasses[variant]
-    } ${sizeClasses[size]} ${className} `;
+  const combinedClasses = `${baseClasses} ${
+    disabled ? "" : variantClasses[variant]
+  } ${sizeClasses[size]} ${className} `;
 
   // Contenido interno (ícono y texto)
   const content = (
     <>
       {rest.icon && (
-        <span className="mr-2">{<rest.icon className="w-4 h-4" />}</span>
+        <span className="">{<rest.icon className="w-4 h-4" />}</span>
       )}
       {children}
     </>

@@ -10,7 +10,11 @@ interface Notification {
 
 type NotificationContextProps = {
   notification: Notification;
-  showNotification: (type: NotificationType, message: string) => void;
+  showNotification: (
+    type: NotificationType,
+    message: string,
+    seconds?: number
+  ) => void;
   hideNotification: () => void;
 };
 
@@ -29,12 +33,16 @@ export const NotificationProvider = ({
     show: false,
   });
 
-  const showNotification = (type: NotificationType, message: string) => {
+  const showNotification = (
+    type: NotificationType,
+    message: string,
+    seconds: number = 7
+  ) => {
     setNotification({ type, message, show: true });
     console.log("MOSTRANDO PERR NOTIFICACION");
     setTimeout(() => {
       setNotification((prev) => ({ ...prev, show: false }));
-    }, 7000);
+    }, seconds * 1000);
   };
   const hideNotification = () => {
     setNotification((prev) => ({ ...prev, show: false }));

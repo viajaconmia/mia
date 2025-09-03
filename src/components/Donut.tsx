@@ -12,23 +12,19 @@ import {
   TabPanels,
 } from "@tremor/react";
 
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(" ");
-}
-
 const currencyFormatter = (number: number, simbol: string = "") => {
-  return `${simbol}` + Intl.NumberFormat("us").format(number).toString();
+  return `${simbol}` + number;
 };
 
 export default function Donut({
   summary,
   titulo,
-  subtitulo,
+  // subtitulo,
   simbol = "",
 }: {
   summary: {
     name: string;
-    data: { name: string; amount: number; href: string; borderColor: string }[];
+    data: { name: string; amount: number; href: string }[];
   }[];
   titulo: string;
   subtitulo: string;
@@ -37,13 +33,13 @@ export default function Donut({
   return (
     <>
       <Card className="overflow-hidden p-0 sm:mx-auto sm:max-w-lg">
-        <div className="px-6 pt-6">
+        <div className="p-3">
           <h3 className="text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
             {titulo}
           </h3>
-          <p className="mt-1 text-tremor-default leading-6 text-tremor-content dark:text-dark-tremor-content">
+          {/* <p className="mt-1 text-tremor-default leading-6 text-tremor-content dark:text-dark-tremor-content">
             {subtitulo}
-          </p>
+          </p> */}
         </div>
         <TabGroup>
           <TabList className="px-6 pt-4">
@@ -51,10 +47,10 @@ export default function Donut({
               <Tab key={category.name}>By {category.name}</Tab>
             ))}
           </TabList>
-          <TabPanels className="mt-8">
+          <TabPanels className="mt-4">
             {summary.map((category) => (
               <TabPanel key={category.name}>
-                <div className="px-6 pb-6">
+                <div className="p-6">
                   <DonutChart
                     data={category.data}
                     category="amount"
@@ -73,10 +69,7 @@ export default function Donut({
                       className="group relative space-x-4 truncate !py-0 !pr-4 hover:bg-tremor-background-muted hover:dark:bg-dark-tremor-background-muted"
                     >
                       <div
-                        className={classNames(
-                          item.borderColor,
-                          "flex h-12 w-full items-center truncate border-l-2 pl-4"
-                        )}
+                        className={` flex h-12 w-full items-center truncate border-l-2 pl-4`}
                       >
                         <span className="truncate group-hover:text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis group-hover:dark:text-dark-tremor-content-strong">
                           <a href={item.href} className="focus:outline-none">
