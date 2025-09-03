@@ -14,6 +14,7 @@ import { SupportModal } from "../components/SupportModal";
 import { ReservationDetails2 } from "../types/index";
 import { fetchReservation } from "../services/reservas";
 import ROUTES from "../constants/routes";
+import { Logo } from "../components/atom/Logo";
 
 export function Reserva() {
   const [, params] = useRoute(`${ROUTES.BOOKINGS.ID}`);
@@ -44,7 +45,7 @@ export function Reserva() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50">
+    <div className="min-h-full bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50">
       <div className="max-w-5xl mx-auto px-4 py-12 relative">
         <img
           src="https://luiscastaneda-tos.github.io/log/files/nokt.png"
@@ -52,36 +53,7 @@ export function Reserva() {
           className="w-20 h-auto absolute top-15 left-4"
         />
         <p className="w-20 h-auto absolute top-15 right-4">
-          <span>
-            <svg
-              version="1.1"
-              id="Capa_1"
-              xmlns="http://www.w3.org/2000/svg"
-              x="0px"
-              y="0px"
-              viewBox="0 0 493 539"
-              className="w-16 h-16 -rotate-12 transform text-sky-950"
-            >
-              <path
-                fill="currentColor"
-                d="M205.1,500.5C205.1,500.5,205,500.6,205.1,500.5C140.5,436.1,71.7,369.1,71.7,291.1 c0-86.6,84.2-157.1,187.6-157.1S447,204.4,447,291.1c0,74.8-63.4,139.6-150.8,154.1c0,0,0,0,0,0l-8.8-53.1 c61.3-10.2,105.8-52.6,105.8-100.9c0-56.9-60-103.2-133.7-103.2s-133.7,46.3-133.7,103.2c0,49.8,48,93.6,111.7,101.8c0,0,0,0,0,0 L205.1,500.5L205.1,500.5z"
-              ></path>
-              <path
-                fill="currentColor"
-                d="M341,125.5c-2.9,0-5.8-0.7-8.6-2.1c-70.3-37.3-135.9-1.7-138.7-0.2c-8.8,4.9-20,1.8-24.9-7.1 c-4.9-8.8-1.8-20,7-24.9c3.4-1.9,85.4-47.1,173.8-0.2c9,4.8,12.4,15.9,7.6,24.8C353.9,122,347.6,125.5,341,125.5z"
-              ></path>
-              <g>
-                <path
-                  fill="currentColor"
-                  d="M248.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C257.8,277.6,255.4,268.3,248.8,263.8z"
-                ></path>
-                <path
-                  fill="currentColor"
-                  d="M348.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C357.8,277.6,355.4,268.3,348.8,263.8z"
-                ></path>
-              </g>
-            </svg>
-          </span>
+          <Logo className="w-16 h-16"></Logo>
         </p>
         <>
           <SupportModal
@@ -109,52 +81,48 @@ export function Reserva() {
                     <InfoCard
                       icon={User}
                       label="Huésped"
-                      value={reservationDetails.huesped || ""}
+                      value={(reservationDetails.huesped || "").toUpperCase()}
                     />
+                    <InfoCard
+                      icon={Bed}
+                      label="Tipo de Habitación"
+                      value={cambiarLenguaje(reservationDetails.room || "")}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InfoCard
                       icon={Hotel}
                       label="Hotel"
                       value={reservationDetails.hotel || ""}
                       subValue={reservationDetails.direccion || ""}
                     />
+                    <DateCard
+                      check_in={reservationDetails.check_in}
+                      check_out={reservationDetails.check_out}
+                    />
                   </div>
-                  <div className="space-y-4">
-                    {reservationDetails.acompañantes &&
-                      reservationDetails.acompañantes.length > 0 && (
-                        <div className="">
-                          <InfoCard
-                            icon={Users}
-                            label="Acompañantes"
-                            value={getAcompanantesValue(
-                              reservationDetails.acompañantes
-                            )}
-                          />
-                        </div>
-                      )}
-                    <div className="">
-                      <InfoCard
-                        icon={CupSoda}
-                        label="Desayuno incluido"
-                        value={
-                          reservationDetails.incluye_desayuno === 1
-                            ? "Desayuno incluido"
-                            : "No incluye desayuno"
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {/* Dates */}
-                  <DateCard
-                    check_in={reservationDetails.check_in}
-                    check_out={reservationDetails.check_out}
-                  />
+                  {reservationDetails.acompañantes.trim() &&
+                    reservationDetails.acompañantes.length > 0 && (
+                      <div className="">
+                        <InfoCard
+                          icon={Users}
+                          label="Acompañantes"
+                          value={getAcompanantesValue(
+                            reservationDetails.acompañantes
+                          )}
+                        />
+                      </div>
+                    )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Room Type */}
                     <InfoCard
-                      icon={Bed}
-                      label="Tipo de Habitación"
-                      value={cambiarLenguaje(reservationDetails.room || "")}
+                      icon={CupSoda}
+                      label="Desayuno incluido"
+                      value={
+                        reservationDetails.incluye_desayuno === 1
+                          ? "Desayuno incluido"
+                          : "No incluye desayuno"
+                      }
                     />
                     <InfoCard
                       icon={MessageCircle}
@@ -268,8 +236,8 @@ const DateCard = ({
     <div className="flex items-center space-x-2">
       <Calendar className="w-4 h-4 text-blue-600" />
       <div className="flex-1">
-        <p className="text-xs font-medium text-blue-900/60">
-          Fechas de Estancia
+        <p className="text-blue-900/60 text-xs font-semibold">
+          Fechas de estancia
         </p>
         <div className="flex items-center justify-between mt-2">
           <div>

@@ -13,7 +13,7 @@ import {
 } from "@tremor/react";
 
 const currencyFormatter = (number: number, simbol: string = "") => {
-  return `${simbol}` + Intl.NumberFormat("us").format(number).toString();
+  return `${simbol}` + number;
 };
 
 export default function Donut({

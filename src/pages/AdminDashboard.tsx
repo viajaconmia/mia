@@ -17,17 +17,25 @@ import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
 import { Invoice, ModalType, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
-
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
 import { ColumnsTable, Table } from "../components/atom/table";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
-import { calculateTotalByHotelForMonthYear, calculateNightsByHotelForMonthYear, calculateGrandTotalForMonthYear } from "../utils/calculos";
 import Button from "../components/atom/Button";
-
+import { FacturamaService } from "../services/FacturamaService";
+import {
+  downloadXMLBase64,
+  downloadXMLUrl,
+  viewPDFBase64,
+  viewPDFUrl,
+} from "../utils/files";
+import {
+  calculateGrandTotalForMonthYear,
+  calculateNightsByHotelForMonthYear,
+  calculateTotalByHotelForMonthYear,
+} from "../utils/calculos";
 import { formatNumberWithCommas } from "../utils/format";
-
 
 interface DashboardStats {
   totalUsers: number;
@@ -42,17 +50,13 @@ interface DashboardStats {
   monthlyRevenue: any[];
 }
 
-type ViewsConsultas =
-  | "general"
-  | "reservaciones"
-  | "pagos"
-  | "facturas";
+type ViewsConsultas = "general" | "reservaciones" | "pagos" | "facturas";
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
 type ModalTypeMap = {
   booking: Reserva;
-  payment: Payment;
+  payment: Payment & { id_pago: string };
   invoice: Invoice;
 };
 
@@ -63,10 +67,8 @@ const ExpandedContentRenderer = ({
   item: any;
   itemType: ModalType;
 }) => {
-
   const [, setLocation] = useLocation();
   const renderTypes = typesModal.filter((type) => type != itemType);
-
 
   // Define las columnas para cada tipo
 
@@ -99,33 +101,27 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-  const payment_columns: ColumnsTable<
-    Payment & { id_pago: string | null; id_saldo: string | null }
-  >[] = [
-      {
-        key: "id_pago",
-        header: "ID",
-        component: "copiar_and_button",
-        componentProps: {
-          variant: "ghost",
-          onClick: ({
-            item,
-          }: {
-            item: Payment & { id_pago: string | null; id_saldo: string | null };
-          }) => {
-            console.log(item);
-            setLocation(
-              ROUTES.CONSULTAS.SEARCH("pagos", String(item.id_pago) || "")
-            );
-          },
+  const payment_columns: ColumnsTable<Payment & { id_pago: string }>[] = [
+    {
+      key: "id_pago",
+      header: "ID",
+      component: "copiar_and_button",
+      componentProps: {
+        variant: "ghost",
+        onClick: ({ item }: { item: Payment }) => {
+          console.log(item);
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH("pagos", String(item.raw_id) || "")
+          );
         },
       },
-      {
-        key: "monto",
-        header: "Total",
-        component: "precio",
-      },
-    ];
+    },
+    {
+      key: "monto",
+      header: "Total",
+      component: "precio",
+    },
+  ];
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
@@ -138,7 +134,6 @@ const ExpandedContentRenderer = ({
             ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
           ),
       },
-
     },
     {
       key: "total",
@@ -223,224 +218,164 @@ export const AdminDashboard = () => {
   const [bookings, setBookings] = useState<Reserva[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const { user } = useAuth();
-  // Se añadió estado de carga
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Nuevo estado para controlar el modal
-  // const [isModalOpen, setIsModalOpen] = useState(false);
-  const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const { showNotification } = useNotification();
 
-  // Nueva función para abrir el modal
-  // const openDetails = (itemId: string | null, itemType: ModalType) => {
-  //   try {
-  //     if (!itemId) throw new Error("No hay id");
-
-  //     setSelectedItemId(itemId);
-  //     setSelectedItemType(itemType);
-  //     setIsModalOpen(true);
-  //   } catch (error: any) {
-  //     console.error(error.message);
-  //   }
-  // };
-
-  // Este es el único useEffect necesario para la carga inicial
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const [bookingsData, paymentsData, invoicesData] = await Promise.all([
-          BookingService.getInstance().getReservas(),
-          PagosService.getInstance().getPagosConsultas(),
-          FacturaService.getInstance().getFacturasByAgente(),
-        ]);
+    fetchDataPage();
+  }, []);
 
-        const fetchedBookings = bookingsData.data || [];
-        const fetchedPayments = paymentsData.data?.pagos || [];
-        const fetchedInvoices = invoicesData.data || [];
+  const fetchDataPage = () => {
+    fetchDashboardData();
+    fetchBookings();
+    fetchUsers();
+    fetchPayments();
+    fetchInvoices();
+  };
 
-        setBookings(fetchedBookings);
-        setPayments(fetchedPayments);
-        setInvoices(fetchedInvoices);
-
-        // Ahora que los datos están cargados, calculamos las estadísticas
-        const totalBookings = fetchedBookings.length;
-        const totalRevenue = bookings.reduce(
-          (acc, payment) => acc + Number(payment.total || 0),
-          0
-        );
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const upcomingBookings = fetchedBookings.filter(booking => {
-          if (!booking.check_in) return false;
-          const checkInDate = new Date(booking.check_in);
-          return checkInDate > today;
-        });
-
-        // Actualizamos el estado de stats una sola vez con todos los valores
-        setStats((prevStats) => ({
-          ...prevStats,
-          totalBookings: totalBookings,
-          totalRevenue: totalRevenue,
-          upcomingBookings: upcomingBookings.length,
-        }));
-
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        showNotification("error", "Error al cargar los datos.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (user?.info?.id_agente) {
-      loadData();
+  const fetchInvoices = async () => {
+    try {
+      const { data } = await FacturaService.getInstance().getFacturasByAgente();
+      // console.log("invoices", data);
+      setInvoices(data || []);
+    } catch (error: any) {
+      console.error("Error fetching payments:", error);
+      setInvoices([]);
+      showNotification("error", error.message || "");
     }
-  }, [user?.info?.id_agente, showNotification]);
-  // Se eliminaron las funciones duplicadas fetchDataPage, fetchBookings, etc.
-  // Y la lógica de fetchDashboardData se integró en el useEffect principal
+  };
+
+  const fetchPayments = async () => {
+    try {
+      const { data } = await PagosService.getInstance().getPagosConsultas();
+      // console.log("payments", data?.pagos);
+      setPayments(data?.pagos || []);
+    } catch (error: any) {
+      console.error("Error fetching payments:", error);
+      setPayments([]);
+      showNotification("error", error.message || "");
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      const { data } = await BookingService.getInstance().getReservas();
+      // console.log("bookings", data);
+      setBookings(data || []);
+    } catch (error: any) {
+      console.error("Error fetching bookings:", error);
+      setBookings([]);
+      showNotification("error", error.message || "");
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      if (!user) {
+        throw new Error("No hay usuario autenticado");
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      setStats({
+        totalUsers: 0,
+        totalBookings: bookings?.length || 0,
+        totalRevenue: 0,
+        activeBookings: 0,
+        completedBookings: 0,
+        cancelledBookings: 0,
+        recentUsers: [],
+        recentBookings: [],
+        recentPayments: [],
+        monthlyRevenue: [],
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    }
+  };
 
   const views: Record<ViewsConsultas, React.ReactNode> = {
-    general: <OverviewView stats={stats} bookings={bookings} isLoading={isLoading} />,
-    facturas: (
-      <InvoicesView
-        invoices={invoices}
-      // openDetails={openDetails}
-      />
-    ),
-    // usuarios: <UsersView users={users} />,
-    pagos: (
-      <PaymentsView
-        payments={payments}
-      // openDetails={openDetails}
-      />
-    ),
-    reservaciones: (
-      <BookingsView
-        bookings={bookings}
-      // openDetails={openDetails}
-      />
-    ),
-
+    general: <OverviewView stats={stats} bookings={bookings} />,
+    facturas: <InvoicesView invoices={invoices} />,
+    pagos: <PaymentsView payments={payments} />,
+    reservaciones: <BookingsView bookings={bookings} />,
   };
 
   return (
-    <>
-      <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
-        <TabsList
-          tabs={[
-            { icon: BarChart3, tab: "general" },
-            { icon: Building2, tab: "reservaciones" },
-            { icon: CreditCardIcon, tab: "pagos" },
-            { icon: File, tab: "facturas" },
-          ]}
-          onChange={(tab) => {
-            setLocation(ROUTES.CONSULTAS.SUBPATH(tab));
-          }}
-          activeTab={
-            (location.split("/").at(-1) as ViewsConsultas) || "general"
-          }
-        />
-        <div className="px-4">
-          {location != ROUTES.CONSULTAS.SUBPATH("general") && (
-            <InputText
-              icon={Search}
-              onChange={(value) => {
-                setSearchParams((prev) => {
-                  const params = new URLSearchParams(prev);
-                  params.set("search", value);
-                  return params;
-                });
-              }}
-              value={searchParams.get("search") || ""}
-            />
-          )}
-        </div>
-        <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
-          <Switch>
-            {Object.entries(views).map(([key, Component]) => (
-              <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
-                {Component}
-              </Route>
-            ))}
-            <Route path="*">
-              <Redirect to={ROUTES.CONSULTAS.SUBPATH(Object.keys(views)[0])} />
-            </Route>
-          </Switch>
-        </div>
+    <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
+      <TabsList
+        tabs={[
+          { icon: BarChart3, tab: "general" },
+          // { icon: Users, tab: "usuarios" },
+          { icon: Building2, tab: "reservaciones" },
+          { icon: CreditCardIcon, tab: "pagos" },
+          { icon: File, tab: "facturas" },
+        ]}
+        onChange={(tab) => {
+          setLocation(ROUTES.CONSULTAS.SUBPATH(tab));
+        }}
+        activeTab={(location.split("/").at(-1) as ViewsConsultas) || "general"}
+      />
+      <div className="px-4">
+        {location != ROUTES.CONSULTAS.SUBPATH("general") && (
+          <InputText
+            icon={Search}
+            onChange={(value) => {
+              setSearchParams((prev) => {
+                const params = new URLSearchParams(prev);
+                params.set("search", value);
+                return params;
+              });
+            }}
+            value={searchParams.get("search") || ""}
+          />
+        )}
       </div>
-
-      {/* {isModalOpen && selectedItemId && selectedItemType && (
-        <NavContainerModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          agentId={user?.info?.id_agente || ""}
-          initialItemId={selectedItemId}
-          //items={getItemsByType(selectedItemType)} Aquí pasamos los items transformados
-          items={[]}
-          itemType={selectedItemType}
-        />
-      )} */}
-
-    </>
+      <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
+        <Switch>
+          {Object.entries(views).map(([key, Component]) => (
+            <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
+              {Component}
+            </Route>
+          ))}
+          <Route path="*">
+            <Redirect to={ROUTES.CONSULTAS.SUBPATH(Object.keys(views)[0])} />
+          </Route>
+        </Switch>
+      </div>
+    </div>
   );
 };
 
-const BookingsView = ({
-  bookings,
-}: {
-  bookings: Reserva[];
-
-}) => {
+const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
   let search = params ? params : "";
   const filterBookings = bookings.filter(
-
     (booking) =>
       booking.id_booking?.includes(search) ||
       booking.nombre_viajero_reservacion?.includes(search) ||
       booking.codigo_reservacion_hotel?.includes(search) ||
       booking.id_hospedaje?.includes(search) ||
       booking.nombre_viajero_reservacion?.includes(search)
-
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
-    {
-      key: "hotel",
-      header: "Hotel",
-      component: "text",
-    },
-    {
-      key: "nombre_viajero_reservacion",
-      header: "Viajero",
-      component: "text",
-    },
-    {
-      key: "check_in",
-      header: "Check-in",
-      component: "date",
-    },
-    {
-      key: "check_out",
-      header: "Check-out",
-      component: "date",
-    },
-    {
-      key: "room",
-      header: "Cuarto",
-      component: "text",
-    },
-    {
-      key: "total",
-      header: "Precio",
-      component: "text",
-    },
+    { key: "created_at", header: "Creado", component: "date" },
+    { key: "codigo_reservacion_hotel", header: "Codigo", component: "text" },
+    { key: "hotel", header: "Hotel", component: "text" },
+    { key: "nombre_viajero_reservacion", header: "Viajero", component: "text" },
+    { key: "check_in", header: "Check-in", component: "date" },
+    { key: "check_out", header: "Check-out", component: "date" },
+    { key: "room", header: "Cuarto", component: "text" },
+    { key: "total", header: "Precio", component: "text" },
     {
       key: "id_solicitud",
       header: "Detalles",
@@ -456,28 +391,18 @@ const BookingsView = ({
   ];
 
   return (
-    <div className="">
-      <Table<Reserva>
-        id="bookingsTable"
-        data={filterBookings}
-        columns={bookingColumns}
-        expandableContent={(booking) => (
-
-          <ExpandedContentRenderer item={booking} itemType="booking" />
-
-        )}
-      />
-    </div>
+    <Table<Reserva>
+      id="bookingsTable"
+      data={filterBookings}
+      columns={bookingColumns}
+      expandableContent={(booking) => (
+        <ExpandedContentRenderer item={booking} itemType="booking" />
+      )}
+    />
   );
 };
 
-const PaymentsView = ({
-  payments,
-
-}: {
-  payments: Payment[];
-
-}) => {
+const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
@@ -486,39 +411,42 @@ const PaymentsView = ({
     String(payment.raw_id)?.includes(search)
   );
   const paymentColumns: ColumnsTable<Payment>[] = [
-    { key: "raw_id", header: "ID", component: "text" },
+    {
+      key: "raw_id",
+      header: "ID",
+      component: "id",
+      componentProps: { index: 12 },
+    },
     { key: "fecha_pago", header: "Fecha de Pago", component: "date" },
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
     { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
+    {
+      key: null,
+      header: "Acción",
+      component: "button",
+      componentProps: {
+        label: "Facturar",
+        onClick: ({ item }: { item: Payment }) => {
+          console.log(item);
+        },
+      },
+    },
   ];
 
   return (
-    <div className="">
-      <Table<Payment>
-        id="paymentsTable"
-        data={filterPayments}
-        columns={paymentColumns}
-        expandableContent={(payment) => (
-
-          <ExpandedContentRenderer
-            item={payment}
-            itemType="payment"
-          />
-
-        )}
-      />
-    </div>
+    <Table<Payment>
+      id="paymentsTable"
+      data={filterPayments}
+      columns={paymentColumns}
+      expandableContent={(payment) => (
+        <ExpandedContentRenderer item={payment} itemType="payment" />
+      )}
+    />
   );
 };
 
-const InvoicesView = ({
-  invoices,
-
-}: {
-  invoices: Invoice[];
-
-}) => {
+const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
@@ -527,10 +455,14 @@ const InvoicesView = ({
     invoice.id_factura?.includes(search)
   );
   const invoiceColumns: ColumnsTable<Invoice>[] = [
-    { key: "id_factura", header: "ID", component: "text" },
+    {
+      key: "id_factura",
+      header: "ID",
+      component: "id",
+      componentProps: { index: 12 },
+    },
+    { key: "uuid_factura", header: "Folio fiscal", component: "text" },
     { key: "fecha_emision", header: "Fecha Facturación", component: "date" },
-    { key: "subtotal", header: "Subtotal", component: "precio" },
-    { key: "impuestos", header: "IVA", component: "precio" },
     { key: "total", header: "Total", component: "precio" },
     {
       key: null,
@@ -539,13 +471,29 @@ const InvoicesView = ({
       componentProps: {
         component: ({ item }: { item: Invoice }) => {
           return (
-            <div className="flex justify-between w-full gap-2">
+            <div className="flex w-full gap-2">
               {(item.id_facturama || item.url_pdf) && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    console.log(`Descargando PDF`);
+                    if (item.id_facturama) {
+                      FacturamaService.getInstance()
+                        .downloadCFDI({
+                          id: item.id_facturama,
+                          type: "pdf",
+                        })
+                        .then(({ data }) => viewPDFBase64(data?.Content || ""))
+                        .catch((error) =>
+                          console.log(
+                            error.response ||
+                              error.message ||
+                              "Error al obtener la factura"
+                          )
+                        );
+                    } else if (item.url_pdf) {
+                      viewPDFUrl(item.url_pdf);
+                    }
                   }}
                 >
                   PDF
@@ -556,7 +504,35 @@ const InvoicesView = ({
                   size="sm"
                   variant="primary"
                   onClick={() => {
-                    console.log(`Descargando XML`);
+                    if (item.id_facturama) {
+                      FacturamaService.getInstance()
+                        .downloadCFDI({
+                          id: item.id_facturama,
+                          type: "xml",
+                        })
+                        .then(({ data }) =>
+                          downloadXMLBase64(
+                            data?.Content || "",
+                            `${item.id_factura.slice(0, 8)}-${
+                              item.created_at.split("T")[0]
+                            }.xml`
+                          )
+                        )
+                        .catch((error) =>
+                          console.log(
+                            error.response ||
+                              error.message ||
+                              "Error al obtener la factura"
+                          )
+                        );
+                    } else if (item.url_xml) {
+                      downloadXMLUrl(
+                        item.url_xml,
+                        `${item.id_factura.slice(0, 8)}-${
+                          item.created_at.split("T")[0]
+                        }.xml`
+                      );
+                    }
                   }}
                 >
                   XML
@@ -566,36 +542,31 @@ const InvoicesView = ({
           );
         },
       },
-
     },
   ];
 
   return (
-    <div className="">
-      <Table<Invoice>
-        id="invoicesTable"
-        data={filterInvoices}
-        columns={invoiceColumns}
-        expandableContent={(invoice) => (
-
-          <ExpandedContentRenderer item={invoice} itemType="invoice" />
-
-        )}
-      />
-    </div>
+    <Table<Invoice>
+      id="invoicesTable"
+      data={filterInvoices}
+      columns={invoiceColumns}
+      expandableContent={(invoice) => (
+        <ExpandedContentRenderer item={invoice} itemType="invoice" />
+      )}
+    />
   );
 };
 
-const OverviewView = ({ stats, bookings, isLoading }: {
+const OverviewView = ({
+  stats,
+  bookings,
+}: {
   stats: DashboardStats;
   bookings: Reserva[];
-  isLoading: boolean;
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const { user } = useAuth();
-  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
-  const [monthlySpending, setMonthlySpending] = useState(0); // Añade este estado
 
   // Componente StatCard con colores originales
   const StatCard: React.FC<{
@@ -625,8 +596,9 @@ const OverviewView = ({ stats, bookings, isLoading }: {
             )}
           </div>
           <div
-            className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]
-              } rounded-full flex items-center justify-center`}
+            className={`w-12 h-12 ${
+              colorClasses[color as keyof typeof colorClasses]
+            } rounded-full flex items-center justify-center`}
           >
             <Icon className="w-6 h-6" />
           </div>
@@ -723,7 +695,7 @@ const OverviewView = ({ stats, bookings, isLoading }: {
             }
           );
           const json = await response.json();
-          console.log(json, "rrrrrrrrrrrrrrrrrrrrrrrrrppppppppppp")
+          console.log(json, "rrrrrrrrrrrrrrrrrrrrrrrrrppppppppppp");
           setData(json);
         } catch (error) {
           console.error("Error al obtener estadísticas mensuales:", error);
@@ -743,13 +715,13 @@ const OverviewView = ({ stats, bookings, isLoading }: {
         name: "Gastos",
         data: gastosHotel.totalByHotel.map(({ hotel, total }) => ({
           name: hotel,
-          amount: Number(total),
+          amount: Number(total.toFixed(2)),
           href: "#",
         })),
       },
     ];
-
-    console.log("CFCCCCCCCCCCCCCCCC", data)
+    console.log(summary);
+    console.log("CFCCCCCCCCCCCCCCCC", data);
     const summary1 = [
       {
         name: "Noches",
@@ -787,13 +759,13 @@ const OverviewView = ({ stats, bookings, isLoading }: {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const upcomingBookings = bookings.filter(booking => {
+  const upcomingBookings = bookings.filter((booking) => {
     if (!booking.check_in) return false;
     const checkInDate = new Date(booking.check_in);
     return checkInDate > today;
   });
 
-  console.log("activos proximos", bookings)
+  console.log("activos proximos", bookings);
 
   // Calcular reservas activas (check-in hoy o antes, check-out después de hoy)
   const activeBookings = bookings.filter((obj) => {
@@ -803,19 +775,30 @@ const OverviewView = ({ stats, bookings, isLoading }: {
 
   if (!bookings?.length || !selectedMonth || !selectedYear) return;
 
-  const nightsByHotel = calculateNightsByHotelForMonthYear(bookings, selectedMonth, selectedYear);
+  const nightsByHotel = calculateNightsByHotelForMonthYear(
+    bookings.filter((b) => b.check_in != null) as any,
+    selectedMonth,
+    selectedYear
+  );
   console.log("Noches por hotel (solo dentro del mes):", nightsByHotel);
 
-  const total = calculateGrandTotalForMonthYear(bookings, selectedMonth, selectedYear);
+  const total = calculateGrandTotalForMonthYear(
+    bookings.filter((b) => b.check_in != null) as any,
+    selectedMonth,
+    selectedYear
+  );
   console.log("Total del mes:", total);
 
-  const totalByHotel = calculateTotalByHotelForMonthYear(bookings, selectedMonth, selectedYear);
+  const totalByHotel = calculateTotalByHotelForMonthYear(
+    bookings.filter((b) => b.check_in != null) as any,
+    selectedMonth,
+    selectedYear
+  );
   console.log("Total por hotel (mes):", totalByHotel);
   const gastosHotel = { total, totalByHotel };
 
-
-  console.log(activeBookings)
-  console.log(stats, "srrrrrrrrrrrrr")
+  console.log(activeBookings);
+  console.log(stats, "srrrrrrrrrrrrr");
   const cards = [
     {
       title: "Reservas Activas",
@@ -834,14 +817,14 @@ const OverviewView = ({ stats, bookings, isLoading }: {
 
     {
       title: "Total de Reservas",
-      value: stats.totalBookings,
+      value: bookings.length,
       icon: Calendar,
       subtitle: "Historial completo",
       color: "indigo",
     },
     {
       title: "Gasto Mensual",
-      value: `$${stats.totalRevenue}`,
+      value: `${formatNumberWithCommas(total.toFixed(2))}`,
       icon: DollarSign,
       subtitle: "Este mes",
       color: "green",
