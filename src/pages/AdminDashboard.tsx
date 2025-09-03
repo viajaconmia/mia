@@ -23,7 +23,7 @@ import ROUTES from "../constants/routes";
 import { ColumnsTable, Table } from "../components/atom/table";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
-
+import { calculateTotalByHotelForMonthYear, calculateNightsByHotelForMonthYear, calculateGrandTotalForMonthYear } from "../utils/calculos";
 import Button from "../components/atom/Button";
 
 import { formatNumberWithCommas } from "../utils/format";
@@ -87,9 +87,6 @@ const ExpandedContentRenderer = ({
           );
         },
       },
-
-      component: "text",
-
     },
     {
       key: "hotel",
@@ -105,30 +102,30 @@ const ExpandedContentRenderer = ({
   const payment_columns: ColumnsTable<
     Payment & { id_pago: string | null; id_saldo: string | null }
   >[] = [
-    {
-      key: "id_pago",
-      header: "ID",
-      component: "copiar_and_button",
-      componentProps: {
-        variant: "ghost",
-        onClick: ({
-          item,
-        }: {
-          item: Payment & { id_pago: string | null; id_saldo: string | null };
-        }) => {
-          console.log(item);
-          setLocation(
-            ROUTES.CONSULTAS.SEARCH("pagos", String(item.id_pago) || "")
-          );
+      {
+        key: "id_pago",
+        header: "ID",
+        component: "copiar_and_button",
+        componentProps: {
+          variant: "ghost",
+          onClick: ({
+            item,
+          }: {
+            item: Payment & { id_pago: string | null; id_saldo: string | null };
+          }) => {
+            console.log(item);
+            setLocation(
+              ROUTES.CONSULTAS.SEARCH("pagos", String(item.id_pago) || "")
+            );
+          },
         },
       },
-    },
-    {
-      key: "monto",
-      header: "Total",
-      component: "precio",
-    },
-  ];
+      {
+        key: "monto",
+        header: "Total",
+        component: "precio",
+      },
+    ];
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
@@ -227,6 +224,8 @@ export const AdminDashboard = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { user } = useAuth();
+  // Se añadió estado de carga
+  const [isLoading, setIsLoading] = useState(true);
 
   // Nuevo estado para controlar el modal
   // const [isModalOpen, setIsModalOpen] = useState(false);
@@ -235,115 +234,93 @@ export const AdminDashboard = () => {
 
   // Nueva función para abrir el modal
   // const openDetails = (itemId: string | null, itemType: ModalType) => {
-  //   try {
-  //     if (!itemId) throw new Error("No hay id");
+  //   try {
+  //     if (!itemId) throw new Error("No hay id");
 
-  //     setSelectedItemId(itemId);
-  //     setSelectedItemType(itemType);
-  //     setIsModalOpen(true);
-  //   } catch (error: any) {
-  //     console.error(error.message);
-  //   }
+  //     setSelectedItemId(itemId);
+  //     setSelectedItemType(itemType);
+  //     setIsModalOpen(true);
+  //   } catch (error: any) {
+  //     console.error(error.message);
+  //   }
   // };
 
+  // Este es el único useEffect necesario para la carga inicial
   useEffect(() => {
-    fetchDataPage();
-  }, []);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [bookingsData, paymentsData, invoicesData] = await Promise.all([
+          BookingService.getInstance().getReservas(),
+          PagosService.getInstance().getPagosConsultas(),
+          FacturaService.getInstance().getFacturasByAgente(),
+        ]);
 
-  const fetchDataPage = () => {
-    fetchDashboardData();
-    fetchBookings();
-    fetchUsers();
-    fetchPayments();
-    fetchInvoices();
-  };
+        const fetchedBookings = bookingsData.data || [];
+        const fetchedPayments = paymentsData.data?.pagos || [];
+        const fetchedInvoices = invoicesData.data || [];
 
-  const fetchInvoices = async () => {
-    try {
-      const { data } = await FacturaService.getInstance().getFacturasByAgente();
+        setBookings(fetchedBookings);
+        setPayments(fetchedPayments);
+        setInvoices(fetchedInvoices);
 
-      console.log("invoices", data);
+        // Ahora que los datos están cargados, calculamos las estadísticas
+        const totalBookings = fetchedBookings.length;
+        const totalRevenue = bookings.reduce(
+          (acc, payment) => acc + Number(payment.total || 0),
+          0
+        );
 
-      setInvoices(data || []);
-    } catch (error: any) {
-      console.error("Error fetching payments:", error);
-      setInvoices([]);
-      showNotification("error", error.message || "");
-    }
-  };
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcomingBookings = fetchedBookings.filter(booking => {
+          if (!booking.check_in) return false;
+          const checkInDate = new Date(booking.check_in);
+          return checkInDate > today;
+        });
 
-  const fetchPayments = async () => {
-    try {
-      const { data } = await PagosService.getInstance().getPagosConsultas();
-      console.log("payments", data?.pagos);
-      setPayments(data?.pagos || []);
-    } catch (error: any) {
-      console.error("Error fetching payments:", error);
-      setPayments([]);
-      showNotification("error", error.message || "");
-    }
-  };
+        // Actualizamos el estado de stats una sola vez con todos los valores
+        setStats((prevStats) => ({
+          ...prevStats,
+          totalBookings: totalBookings,
+          totalRevenue: totalRevenue,
+          upcomingBookings: upcomingBookings.length,
+        }));
 
-  const fetchBookings = async () => {
-    try {
-      const { data } = await BookingService.getInstance().getReservas();
-      console.log("bookings", data);
-      setBookings(data || []);
-    } catch (error: any) {
-      console.error("Error fetching bookings:", error);
-      setBookings([]);
-      showNotification("error", error.message || "");
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      if (!user) {
-        throw new Error("No hay usuario autenticado");
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        showNotification("error", "Error al cargar los datos.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
+    };
 
-  const fetchDashboardData = async () => {
-    try {
-      setStats({
-        totalUsers: 0,
-        totalBookings: bookings?.length || 0,
-        totalRevenue: 0,
-        activeBookings: 0,
-        completedBookings: 0,
-        cancelledBookings: 0,
-        recentUsers: [],
-        recentBookings: [],
-        recentPayments: [],
-        monthlyRevenue: [],
-      });
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+    if (user?.info?.id_agente) {
+      loadData();
     }
-  };
+  }, [user?.info?.id_agente, showNotification]);
+  // Se eliminaron las funciones duplicadas fetchDataPage, fetchBookings, etc.
+  // Y la lógica de fetchDashboardData se integró en el useEffect principal
 
   const views: Record<ViewsConsultas, React.ReactNode> = {
-    general: <OverviewView stats={stats} />,
+    general: <OverviewView stats={stats} bookings={bookings} isLoading={isLoading} />,
     facturas: (
       <InvoicesView
         invoices={invoices}
-        // openDetails={openDetails}
+      // openDetails={openDetails}
       />
     ),
     // usuarios: <UsersView users={users} />,
     pagos: (
       <PaymentsView
         payments={payments}
-        // openDetails={openDetails}
+      // openDetails={openDetails}
       />
     ),
     reservaciones: (
       <BookingsView
         bookings={bookings}
-        // openDetails={openDetails}
+      // openDetails={openDetails}
       />
     ),
 
@@ -427,10 +404,10 @@ const BookingsView = ({
     (booking) =>
       booking.id_booking?.includes(search) ||
       booking.nombre_viajero_reservacion?.includes(search) ||
-      booking.codigo_reservacion_hotel?.includes(search)||
-        booking.id_hospedaje?.includes(search) ||
-        booking.nombre_viajero_reservacion?.includes(search)
-    
+      booking.codigo_reservacion_hotel?.includes(search) ||
+      booking.id_hospedaje?.includes(search) ||
+      booking.nombre_viajero_reservacion?.includes(search)
+
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
@@ -609,11 +586,16 @@ const InvoicesView = ({
   );
 };
 
-const OverviewView = ({ stats }: { stats: DashboardStats }) => {
+const OverviewView = ({ stats, bookings, isLoading }: {
+  stats: DashboardStats;
+  bookings: Reserva[];
+  isLoading: boolean;
+}) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const { user } = useAuth();
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
+  const [monthlySpending, setMonthlySpending] = useState(0); // Añade este estado
 
   // Componente StatCard con colores originales
   const StatCard: React.FC<{
@@ -643,9 +625,8 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
             )}
           </div>
           <div
-            className={`w-12 h-12 ${
-              colorClasses[color as keyof typeof colorClasses]
-            } rounded-full flex items-center justify-center`}
+            className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]
+              } rounded-full flex items-center justify-center`}
           >
             <Icon className="w-6 h-6" />
           </div>
@@ -716,33 +697,6 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
     );
   };
 
-  // Obtener estadísticas mensuales
-  useEffect(() => {
-    const fetchMonthlyStats = async () => {
-      try {
-        const response = await fetch(
-          `${URL}/v1/mia/stats/monthly?month=${selectedMonth}&year=${selectedYear}&id_user=${user?.info?.id_agente}`,
-          {
-            method: "GET",
-            headers: HEADERS_API,
-          }
-        );
-        const json = await response.json();
-        setMonthlyStats(
-          json.data.filter(
-            (obj: any) => obj.id_pago != null || obj.id_credito != null
-          )
-        );
-      } catch (error) {
-        console.error("Error al obtener estadísticas mensuales:", error);
-      }
-    };
-
-    if (user?.info?.id_agente) {
-      fetchMonthlyStats();
-    }
-  }, [selectedMonth, selectedYear, user?.info?.id_agente]);
-
   // Componente para mostrar las gráficas
   const GraphContainer = () => {
     interface MonthlyStat {
@@ -769,6 +723,7 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
             }
           );
           const json = await response.json();
+          console.log(json, "rrrrrrrrrrrrrrrrrrrrrrrrrppppppppppp")
           setData(json);
         } catch (error) {
           console.error("Error al obtener estadísticas mensuales:", error);
@@ -786,26 +741,23 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
     const summary = [
       {
         name: "Gastos",
-        data: data
-          .filter((obj) => obj.mes.includes(`${selectedMonth}`))
-          .map((obj) => ({
-            name: obj.hotel,
-            amount: Number(obj.total_gastado),
-            href: "#",
-          })),
+        data: gastosHotel.totalByHotel.map(({ hotel, total }) => ({
+          name: hotel,
+          amount: Number(total),
+          href: "#",
+        })),
       },
     ];
 
+    console.log("CFCCCCCCCCCCCCCCCC", data)
     const summary1 = [
       {
         name: "Noches",
-        data: data
-          .filter((obj) => obj.mes.includes(`${selectedMonth}`))
-          .map((obj) => ({
-            name: obj.hotel,
-            amount: obj.visitas,
-            href: "#",
-          })),
+        data: nightsByHotel.map((item) => ({
+          name: item.hotel,
+          amount: item.nights,
+          href: "#",
+        })),
       },
     ];
 
@@ -831,21 +783,39 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
   const fechaHoy = new Date();
   fechaHoy.setHours(0, 0, 0, 0);
 
-  const activeBookings =
-    monthlyStats.filter(
-      (obj: any) =>
-        new Date(obj.check_in) <= fechaHoy && new Date(obj.check_out) > fechaHoy
-    ).length || "0";
-  const upcomingBookings =
-    monthlyStats.filter((obj: any) => new Date(obj.check_in) > fechaHoy)
-      .length || "0";
-  const monthlySpending =
-    monthlyStats.reduce(
-      (accumulator: number, currentValue: any) =>
-        accumulator + Number(currentValue.total),
-      0
-    ) || 0;
+  // Calcular próximas reservas (con fecha después de hoy)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
+  const upcomingBookings = bookings.filter(booking => {
+    if (!booking.check_in) return false;
+    const checkInDate = new Date(booking.check_in);
+    return checkInDate > today;
+  });
+
+  console.log("activos proximos", bookings)
+
+  // Calcular reservas activas (check-in hoy o antes, check-out después de hoy)
+  const activeBookings = bookings.filter((obj) => {
+    // Se corrigió el error de asignación a un operador de comparación
+    return obj.status_reserva === "Confirmada";
+  }).length;
+
+  if (!bookings?.length || !selectedMonth || !selectedYear) return;
+
+  const nightsByHotel = calculateNightsByHotelForMonthYear(bookings, selectedMonth, selectedYear);
+  console.log("Noches por hotel (solo dentro del mes):", nightsByHotel);
+
+  const total = calculateGrandTotalForMonthYear(bookings, selectedMonth, selectedYear);
+  console.log("Total del mes:", total);
+
+  const totalByHotel = calculateTotalByHotelForMonthYear(bookings, selectedMonth, selectedYear);
+  console.log("Total por hotel (mes):", totalByHotel);
+  const gastosHotel = { total, totalByHotel };
+
+
+  console.log(activeBookings)
+  console.log(stats, "srrrrrrrrrrrrr")
   const cards = [
     {
       title: "Reservas Activas",
@@ -856,21 +826,22 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
     },
     {
       title: "Próximas Reservas",
-      value: upcomingBookings,
+      value: upcomingBookings.length,
       icon: Building2,
-      subtitle: "Este mes",
+      subtitle: "Reservas futuras",
       color: "yellow",
     },
+
     {
       title: "Total de Reservas",
-      value: stats.totalBookings || "0",
+      value: stats.totalBookings,
       icon: Calendar,
       subtitle: "Historial completo",
       color: "indigo",
     },
     {
       title: "Gasto Mensual",
-      value: `$${monthlySpending.toLocaleString("es-MX")}`,
+      value: `$${stats.totalRevenue}`,
       icon: DollarSign,
       subtitle: "Este mes",
       color: "green",
