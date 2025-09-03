@@ -20,10 +20,18 @@ const ROUTES = {
     REDIRECT: "/consultas/:subpath",
     HOME: "/consultas/general",
     SUBPATH: (path: string) => `/consultas/${path}`,
+
+    SEARCH: (path: string, search:string) => `/consultas/${path}?search=${search}`,
+
+  },
+  FACTURACION: {
+    HOME: "/factura/:id",
+    ID: (path: string) => `/factura/${path}`,
   },
   BOOKINGS: {
     HOME: "/bookings",
     ID: "/bookings/:id",
+    ID_SOLICITUD: (id: string) => `/bookings/${id}`,
   },
 };
 

@@ -583,9 +583,7 @@ export const ManualReservationPage = () => {
             onClick={handleAddCart}
             disabled={
               Object.values(reservationData)
-                .map((item) =>
-                  Array.isArray(item) ? item.length <= 0 : !!item
-                )
+                .map((item) => !!item)
                 .some((value) => value === false) || loading
             }
           >

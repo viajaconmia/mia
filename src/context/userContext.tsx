@@ -4,6 +4,7 @@ import { supabase, SupabaseClient } from "../services/supabaseClient";
 import { UserAuth } from "../types/auth"; // Asegúrate de que UserAuth es robusto
 import { Session } from "@supabase/supabase-js";
 import { UserSingleton } from "../services/UserSingleton";
+import { useNotification } from "../hooks/useNotification";
 
 export type Auth = {
   user: UserAuth | null;
@@ -25,12 +26,22 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     isAuthenticated: false,
     isLoading: true,
   });
+  const { showNotification } = useNotification();
+  const [showAnuncio, setShowAnuncio] = useState(false);
 
   // useEffect(() => {
   //   console.log(authState);
   // }, [authState]);
 
   useEffect(() => {
+    if (!showAnuncio) {
+      showNotification(
+        "info",
+        "¡Ya puedes ver tu nueva pagina de consultas!",
+        3
+      );
+      setShowAnuncio(true);
+    }
     const fetchInfo = async (session: Session) => {
       const info = await SupabaseClient.getInstance().getInfo(session.user.id); // aquí pasas solo el user.id
       const userAuth: UserAuth = {

@@ -5,26 +5,36 @@ interface TabsListProps {
   onChange: (tab: string) => void;
   activeTab: string;
 }
+const medidas = [
+  "@xs:flex-row @xs:text-sm",
+  "@sm:flex-row @sm:text-sm",
+  "@md:flex-row @md:text-sm",
+  "@lg:flex-row @lg:text-sm",
+  "@xl:flex-row @xl:text-sm",
+  "@2xl:flex-row @2xl:text-sm",
+  "@3xl:flex-row @3xl:text-sm",
+];
 
 export const TabsList = ({ onChange, tabs, activeTab }: TabsListProps) => {
   return (
-    <div className="border-b border-gray-200 rounded-t-md">
-      <nav className="-mb-px flex">
+    <div className="border-b border-gray-200 rounded-t-md @container">
+      <nav className={`-mb-px flex`}>
         {tabs.map(({ tab, icon }) => (
-          <Button
-            key={tab}
-            variant="ghost"
-            size="full"
-            onClick={() => onChange(tab)}
-            icon={icon}
-            className={`${
-              activeTab === tab
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            } flex items-center w-1/5 py-4 px-1 border-b-2 text-sm`}
-          >
-            {tab.slice(0, 1).toUpperCase() + tab.slice(1)}
-          </Button>
+          <div key={tab} className=" w-full">
+            <Button
+              variant="ghost"
+              size="full"
+              onClick={() => onChange(tab)}
+              icon={icon}
+              className={`${activeTab !== tab && "text-gray-500"} py-4   ${
+                tabs.length < 3
+                  ? "text-xs flex-col gap-[2px] px-0"
+                  : medidas[tabs.length - 1]
+              }`}
+            >
+              {tab.slice(0, 1).toUpperCase() + tab.slice(1)}
+            </Button>
+          </div>
         ))}
       </nav>
     </div>
