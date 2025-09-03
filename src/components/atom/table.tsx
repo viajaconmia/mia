@@ -12,19 +12,26 @@ type ComponentPropsMap<T> = {
   number: { value: number };
   button: {
     item: T;
-    onClick?: (item: T) => void;
-    value: string;
+    onClick?: ({ item }: { item: T }) => void;
+    label: string;
     variant?: "primary" | "secondary" | "ghost" | "warning";
   };
   date: { value: string };
   precio: { value: number | string | null | undefined };
   copiar_and_button: {
     item: T;
-    onClick?: (item: T) => void;
+    onClick?: ({ item }: { item: T }) => void;
     value: string;
     variant?: "primary" | "secondary" | "ghost" | "warning";
   };
+
+  custom: {
+    component: React.ElementType;
+    item: T;
+  };
+
   acciones: { onClick: () => void, value: string }
+
 };
 
 export interface ColumnsTable<
@@ -84,18 +91,26 @@ export const Table = <T extends Record<string, any>>({
     } = {
       text: ({ value }) => <span className="text-sm">{value}</span>,
       number: ({ value }) => <strong>{value}</strong>,
-      button: ({ item, onClick, value, variant }) => (
+      button: ({ item, onClick, label, variant }) => (
         <div className="w-full flex justify-center items-center">
-          <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
-            {String(value)}
+          <Button
+            size="sm"
+            onClick={() => onClick?.({ item })}
+            variant={variant}
+          >
+            {String(label)}
           </Button>
         </div>
       ),
       date: ({ value }) => <span>{formatDate(value)}</span>,
       precio: ({ value }) => <span>{formatNumberWithCommas(value)}</span>,
       copiar_and_button: ({ item, onClick, value, variant }) => (
-        <div className="w-full flex justify-center items-center">
-          <Button size="sm" onClick={() => onClick?.(item)} variant={variant}>
+        <div className="w-full flex justify-between items-center">
+          <Button
+            size="sm"
+            onClick={() => onClick?.({ item })}
+            variant={variant}
+          >
             {String(value)}
           </Button>
           <Button
@@ -118,7 +133,11 @@ export const Table = <T extends Record<string, any>>({
           </Button>
         </div>
       ),
+
+      custom: ({ item, component: Comp }) => <Comp item={item} />,
+
       acciones: ({ value, onClick }) => (<><button onClick={onClick}>{value}</button></>)
+
     };
     return map;
   }
@@ -281,6 +300,9 @@ export const Table = <T extends Record<string, any>>({
                     }
 
                     // Columnas normales
+                    if (column.component == "copiar_and_button") {
+                      console.log(baseProps, column);
+                    }
                     return (
                       <td
                         key={`${index}-${columnKey}`}

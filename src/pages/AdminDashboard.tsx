@@ -17,12 +17,17 @@ import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
 import { Invoice, ModalType, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
+
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
 import { ColumnsTable, Table } from "../components/atom/table";
 import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
+
+import Button from "../components/atom/Button";
+
 import { formatNumberWithCommas } from "../utils/format";
+
 
 interface DashboardStats {
   totalUsers: number;
@@ -58,12 +63,33 @@ const ExpandedContentRenderer = ({
   item: any;
   itemType: ModalType;
 }) => {
+
+  const [, setLocation] = useLocation();
+  const renderTypes = typesModal.filter((type) => type != itemType);
+
+
   // Define las columnas para cada tipo
+
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
+
+      component: "copiar_and_button",
+      componentProps: {
+        variant: "ghost",
+        onClick: ({ item }: { item: Reserva }) => {
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH(
+              "reservaciones",
+              item.codigo_reservacion_hotel || ""
+            )
+          );
+        },
+      },
+
       component: "text",
+
     },
     {
       key: "hotel",
@@ -76,12 +102,26 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-
-  const payment_columns: ColumnsTable<Payment>[] = [
+  const payment_columns: ColumnsTable<
+    Payment & { id_pago: string | null; id_saldo: string | null }
+  >[] = [
     {
       key: "id_pago",
       header: "ID",
-      component: "text",
+      component: "copiar_and_button",
+      componentProps: {
+        variant: "ghost",
+        onClick: ({
+          item,
+        }: {
+          item: Payment & { id_pago: string | null; id_saldo: string | null };
+        }) => {
+          console.log(item);
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH("pagos", String(item.id_pago) || "")
+          );
+        },
+      },
     },
     {
       key: "monto",
@@ -89,12 +129,19 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
       header: "ID",
-      component: "text",
+      component: "copiar_and_button",
+      componentProps: {
+        variant: "ghost",
+        onClick: ({ item }: { item: Invoice }) =>
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
+          ),
+      },
+
     },
     {
       key: "total",
@@ -103,84 +150,59 @@ const ExpandedContentRenderer = ({
     },
   ];
 
-  // Determina qué datos mostrar basado en el tipo del item principal
-  const getRelatedData = () => {
-    switch (itemType) {
-      case "booking":
-        return {
-          left: {
-            columns: invoice_columns,
-            title: "Facturas asociadas",
-            data: item.facturas || item.facturas_asociadas || [],
-          },
-          right: {
-            columns: payment_columns,
-            title: "Pagos asociados",
-            data: item.pagos || item.pagos_asociados || [],
-          }
-        };
-      case "payment":
-        return {
-          left: {
-            columns: invoice_columns,
-            title: "Facturas asociadas",
-            data: item.facturas || item.facturas_asociadas || [],
-          },
-          right: {
-            columns: booking_columns,
-            title: "Reservas asociadas",
-            data: item.reservas || item.reservas_asociadas || [],
-          }
-        };
-      case "invoice":
-        return {
-          left: {
-            columns: payment_columns,
-            title: "Pagos asociados",
-            data: item.pagos || item.pagos_asociados || [],
-          },
-          right: {
-            columns: booking_columns,
-            title: "Reservas asociadas",
-            data: item.reservas || item.reservas_asociadas || [],
-          }
-        };
-      default:
-        return {
-          left: { columns: [], title: "", data: [] },
-          right: { columns: [], title: "", data: [] }
-        };
-    }
+  const renderData: {
+    [K in ModalType]: {
+      columns: ColumnsTable<ModalTypeMap[K]>[];
+      title: string;
+      data: ModalTypeMap[K][];
+    };
+  } = {
+    booking: {
+      columns: booking_columns,
+      title: "Reservas asociadas",
+      data:
+        itemType == "invoice" || itemType == "payment"
+          ? item.reservas_asociadas || []
+          : [],
+    },
+    payment: {
+      columns: payment_columns,
+      title: "Pagos asociados",
+      data:
+        itemType == "invoice" || itemType == "booking"
+          ? item.pagos_asociados || []
+          : [],
+    },
+    invoice: {
+      columns: invoice_columns,
+      title: "Facturas asociadas",
+      data:
+        itemType == "payment" || itemType == "booking"
+          ? item.facturas_asociadas || []
+          : [],
+    },
   };
-
-  const { left, right } = getRelatedData();
+  const left = renderData[renderTypes[0]];
+  const right = renderData[renderTypes[1]];
 
   return (
     <TwoColumnDropdown
       leftContent={
         <div className="space-y-2">
-          <h1 className="font-semibold">{left.title}</h1>
-          {left.data.length > 0 ? (
-            <Table
-              data={left.data}
-              columns={left.columns}
-            />
-          ) : (
-            <p className="text-gray-500">No hay {left.title.toLowerCase()}</p>
-          )}
+          <h1>{left.title}</h1>
+          <Table<(typeof left.data)[0]>
+            data={left.data}
+            columns={left.columns as ColumnsTable<(typeof left.data)[0]>[]}
+          />
         </div>
       }
       rightContent={
         <div className="space-y-2">
-          <h1 className="font-semibold">{right.title}</h1>
-          {right.data.length > 0 ? (
-            <Table
-              data={right.data}
-              columns={right.columns}
-            />
-          ) : (
-            <p className="text-gray-500">No hay {right.title.toLowerCase()}</p>
-          )}
+          <h1>{right.title}</h1>
+          <Table<(typeof right.data)[0]>
+            data={right.data}
+            columns={right.columns as ColumnsTable<(typeof right.data)[0]>[]}
+          />
         </div>
       }
     />
@@ -205,8 +227,24 @@ export const AdminDashboard = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { user } = useAuth();
+
+  // Nuevo estado para controlar el modal
+  // const [isModalOpen, setIsModalOpen] = useState(false);
   const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Nueva función para abrir el modal
+  // const openDetails = (itemId: string | null, itemType: ModalType) => {
+  //   try {
+  //     if (!itemId) throw new Error("No hay id");
+
+  //     setSelectedItemId(itemId);
+  //     setSelectedItemType(itemType);
+  //     setIsModalOpen(true);
+  //   } catch (error: any) {
+  //     console.error(error.message);
+  //   }
+  // };
 
   useEffect(() => {
     fetchDataPage();
@@ -223,6 +261,9 @@ export const AdminDashboard = () => {
   const fetchInvoices = async () => {
     try {
       const { data } = await FacturaService.getInstance().getFacturasByAgente();
+
+      console.log("invoices", data);
+
       setInvoices(data || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -234,6 +275,7 @@ export const AdminDashboard = () => {
   const fetchPayments = async () => {
     try {
       const { data } = await PagosService.getInstance().getPagosConsultas();
+      console.log("payments", data?.pagos);
       setPayments(data?.pagos || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -245,6 +287,7 @@ export const AdminDashboard = () => {
   const fetchBookings = async () => {
     try {
       const { data } = await BookingService.getInstance().getReservas();
+      console.log("bookings", data);
       setBookings(data || []);
     } catch (error: any) {
       console.error("Error fetching bookings:", error);
@@ -284,9 +327,26 @@ export const AdminDashboard = () => {
 
   const views: Record<ViewsConsultas, React.ReactNode> = {
     general: <OverviewView stats={stats} />,
-    facturas: <InvoicesView invoices={invoices} />,
-    pagos: <PaymentsView payments={payments} />,
-    reservaciones: <BookingsView bookings={bookings} />,
+    facturas: (
+      <InvoicesView
+        invoices={invoices}
+        // openDetails={openDetails}
+      />
+    ),
+    // usuarios: <UsersView users={users} />,
+    pagos: (
+      <PaymentsView
+        payments={payments}
+        // openDetails={openDetails}
+      />
+    ),
+    reservaciones: (
+      <BookingsView
+        bookings={bookings}
+        // openDetails={openDetails}
+      />
+    ),
+
   };
 
   return (
@@ -334,6 +394,19 @@ export const AdminDashboard = () => {
           </Switch>
         </div>
       </div>
+
+      {/* {isModalOpen && selectedItemId && selectedItemType && (
+        <NavContainerModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          agentId={user?.info?.id_agente || ""}
+          initialItemId={selectedItemId}
+          //items={getItemsByType(selectedItemType)} Aquí pasamos los items transformados
+          items={[]}
+          itemType={selectedItemType}
+        />
+      )} */}
+
     </>
   );
 };
@@ -342,17 +415,22 @@ const BookingsView = ({
   bookings,
 }: {
   bookings: Reserva[];
+
 }) => {
+  const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
   let search = params ? params : "";
   const filterBookings = bookings.filter(
-    (booking) => {
-      return booking.id_booking?.includes(search) ||
+
+    (booking) =>
+      booking.id_booking?.includes(search) ||
+      booking.nombre_viajero_reservacion?.includes(search) ||
+      booking.codigo_reservacion_hotel?.includes(search)||
         booking.id_hospedaje?.includes(search) ||
         booking.nombre_viajero_reservacion?.includes(search)
-    }
+    
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
@@ -386,6 +464,18 @@ const BookingsView = ({
       header: "Precio",
       component: "text",
     },
+    {
+      key: "id_solicitud",
+      header: "Detalles",
+      component: "button",
+      componentProps: {
+        label: "Detalles",
+        onClick: ({ item }: { item: Reserva }) => {
+          console.log(item);
+          setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+        },
+      },
+    },
   ];
 
   return (
@@ -395,10 +485,9 @@ const BookingsView = ({
         data={filterBookings}
         columns={bookingColumns}
         expandableContent={(booking) => (
-          <ExpandedContentRenderer
-            item={booking}
-            itemType="booking"
-          />
+
+          <ExpandedContentRenderer item={booking} itemType="booking" />
+
         )}
       />
     </div>
@@ -407,10 +496,20 @@ const BookingsView = ({
 
 const PaymentsView = ({
   payments,
+
 }: {
   payments: Payment[];
+
 }) => {
+  const [searchParams] = useSearchParams();
+  const params = searchParams.get("search");
+
+  let search = params ? params : "";
+  const filterPayments = payments.filter((payment) =>
+    String(payment.raw_id)?.includes(search)
+  );
   const paymentColumns: ColumnsTable<Payment>[] = [
+    { key: "raw_id", header: "ID", component: "text" },
     { key: "fecha_pago", header: "Fecha de Pago", component: "date" },
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
@@ -421,13 +520,15 @@ const PaymentsView = ({
     <div className="">
       <Table<Payment>
         id="paymentsTable"
-        data={payments}
+        data={filterPayments}
         columns={paymentColumns}
         expandableContent={(payment) => (
+
           <ExpandedContentRenderer
             item={payment}
             itemType="payment"
           />
+
         )}
       />
     </div>
@@ -436,34 +537,59 @@ const PaymentsView = ({
 
 const InvoicesView = ({
   invoices,
+
 }: {
   invoices: Invoice[];
+
 }) => {
+  const [searchParams] = useSearchParams();
+  const params = searchParams.get("search");
+
+  let search = params ? params : "";
+  const filterInvoices = invoices.filter((invoice) =>
+    invoice.id_factura?.includes(search)
+  );
   const invoiceColumns: ColumnsTable<Invoice>[] = [
+    { key: "id_factura", header: "ID", component: "text" },
+    { key: "fecha_emision", header: "Fecha Facturación", component: "date" },
+    { key: "subtotal", header: "Subtotal", component: "precio" },
+    { key: "impuestos", header: "IVA", component: "precio" },
+    { key: "total", header: "Total", component: "precio" },
     {
-      key: "id_factura",
-      header: "ID Factura",
-      component: "text",
-    },
-    {
-      key: "fecha_emision",
-      header: "Fecha Facturación",
-      component: "date",
-    },
-    {
-      key: "subtotal",
-      header: "Subtotal",
-      component: "precio",
-    },
-    {
-      key: "impuestos",
-      header: "IVA",
-      component: "precio",
-    },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
+      key: null,
+      header: "Detalles",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Invoice }) => {
+          return (
+            <div className="flex justify-between w-full gap-2">
+              {(item.id_facturama || item.url_pdf) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    console.log(`Descargando PDF`);
+                  }}
+                >
+                  PDF
+                </Button>
+              )}
+              {(item.id_facturama || item.url_xml) && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    console.log(`Descargando XML`);
+                  }}
+                >
+                  XML
+                </Button>
+              )}
+            </div>
+          );
+        },
+      },
+
     },
   ];
 
@@ -471,13 +597,12 @@ const InvoicesView = ({
     <div className="">
       <Table<Invoice>
         id="invoicesTable"
-        data={invoices}
+        data={filterInvoices}
         columns={invoiceColumns}
         expandableContent={(invoice) => (
-          <ExpandedContentRenderer
-            item={invoice}
-            itemType="invoice"
-          />
+
+          <ExpandedContentRenderer item={invoice} itemType="invoice" />
+
         )}
       />
     </div>
@@ -518,8 +643,9 @@ const OverviewView = ({ stats }: { stats: DashboardStats }) => {
             )}
           </div>
           <div
-            className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]
-              } rounded-full flex items-center justify-center`}
+            className={`w-12 h-12 ${
+              colorClasses[color as keyof typeof colorClasses]
+            } rounded-full flex items-center justify-center`}
           >
             <Icon className="w-6 h-6" />
           </div>

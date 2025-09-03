@@ -72,11 +72,10 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
 }) => {
   // Clases base para todos los elementos interactivos
   const baseClasses = `
-    flex items-center justify-center rounded-md
+    flex items-center gap-x-2 justify-center rounded-md
     font-normal
     transition-all duration-200 ease-in-out
-    focus:outline-none focus:ring-2 focus:ring-offset-2
-    whitespace-nowrap
+    focus:outline-none whitespace-nowrap
     ${
       disabled &&
       "opacity-70 cursor-not-allowed bg-gray-100 hover:text-gray-500 text-gray-500"
@@ -132,7 +131,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
   const content = (
     <>
       {rest.icon && (
-        <span className="mr-2">{<rest.icon className="w-4 h-4" />}</span>
+        <span className="">{<rest.icon className="w-4 h-4" />}</span>
       )}
       {children}
     </>

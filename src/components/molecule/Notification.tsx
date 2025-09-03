@@ -10,12 +10,12 @@ export const Notification = () => {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-[1000] transform transition-transform duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-[1000] transform shadow-xl transition-transform duration-300 ${
         notification.show ? "translate-y-0" : "-translate-y-full"
       }`}
     >
       <div
-        className={`px-4 py-3 text-white flex justify-between items-center text-center relative ${
+        className={`px-4 py-5 text-white flex justify-between items-center text-center relative ${
           notification.type === "success"
             ? "bg-emerald-500"
             : notification.type === "error"
@@ -36,9 +36,9 @@ export const Notification = () => {
         </div>
         <button
           onClick={hideNotification}
-          className="transform -translate-y-1/2 hover:bg-white/20 rounded-full p-1 w-6 h-4"
+          className="hover:bg-white/20 rounded-full p-1"
         >
-          <X className="w-4 h-4" />
+          <X className="w-6 h-6" />
         </button>
       </div>
     </div>
