@@ -4,20 +4,27 @@
 
 // 📄 Ver PDF desde base64
 export function viewPDFBase64(base64Data: string) {
-  const fileURL = `data:application/pdf;base64,${base64Data}`;
-  window.open(fileURL, "_blank"); // abre en nueva pestaña
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
 }
 
 // 📥 Descargar PDF desde base64
-export function downloadPDFBase64(
-  base64Data: string,
-  fileName = "archivo.pdf"
-) {
-  const link = document.createElement("a");
-  link.href = `data:application/pdf;base64,${base64Data}`;
-  link.download = fileName;
-  link.click();
-}
+// export function downloadPDFBase64(
+//   base64Data: string,
+//   fileName = "archivo.pdf"
+// ) {
+//   const link = document.createElement("a");
+//   link.href = `data:application/pdf;base64,${base64Data}`;
+//   link.download = fileName;
+//   link.click();
+// }
 
 // =====================
 //   PDF URL
@@ -29,15 +36,15 @@ export function viewPDFUrl(url: string) {
 }
 
 // 📥 Descargar PDF desde URL
-export async function downloadPDFUrl(url: string, fileName = "archivo.pdf") {
-  const res = await fetch(url);
-  const blob = await res.blob();
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
+// export async function downloadPDFUrl(url: string, fileName = "archivo.pdf") {
+//   const res = await fetch(url);
+//   const blob = await res.blob();
+//   const link = document.createElement("a");
+//   link.href = URL.createObjectURL(blob);
+//   link.download = fileName;
+//   link.click();
+//   URL.revokeObjectURL(link.href);
+// }
 
 // =====================
 //   XML BASE64
