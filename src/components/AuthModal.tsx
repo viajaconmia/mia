@@ -75,6 +75,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
       onClose();
     } catch (error: any) {
+      if (
+        error.message == "Email not confirmed" ||
+        error.code == "email_not_confirmed"
+      ) {
+        setError(
+          "Te enviamos otro correo de verificación para que puedas acceder"
+        );
+      }
       console.log(error.response || error.message);
       setError(error.message);
     } finally {

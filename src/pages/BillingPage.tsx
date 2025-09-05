@@ -222,8 +222,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           },
           CfdiType: "I",
           NameId: "1",
-          // ExpeditionPlace: "11570",
-          ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
+          ExpeditionPlace: "11570",
+          // ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
           Serie: null,
           Folio: Math.round(Math.random() * 999999999),
           PaymentForm: selectedPaymentForm,
@@ -633,7 +633,7 @@ interface BillingPageProps {
   invoiceData?: DataInvoice;
 }
 
-const Prueba = () =>{
-  return <></>
-}
+const Prueba = () => {
+  return <></>;
+};
 export default Prueba;

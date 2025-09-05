@@ -26,9 +26,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     isLoading: true,
   });
 
-  // useEffect(() => {
-  //   console.log(authState);
-  // }, [authState]);
+  useEffect(() => {
+    console.log(authState);
+  }, [authState]);
 
   useEffect(() => {
     const fetchInfo = async (session: Session) => {
