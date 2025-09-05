@@ -421,17 +421,17 @@ const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
     { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
-    {
-      key: null,
-      header: "Acción",
-      component: "button",
-      componentProps: {
-        label: "Facturar",
-        onClick: ({ item }: { item: Payment }) => {
-          console.log(item);
-        },
-      },
-    },
+    // {
+    //   key: null,
+    //   header: "Acción",
+    //   component: "button",
+    //   componentProps: {
+    //     label: "Facturar",
+    //     onClick: ({ item }: { item: Payment }) => {
+    //       console.log(item);
+    //     },
+    //   },
+    // },
   ];
 
   return (
