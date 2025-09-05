@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Switch, Route } from "wouter";
 import "./index.css";
-import { Dashboard } from "./pages/Dashboard.tsx";
 import { UserProvider } from "./context/userContext.tsx";
 import Inicio from "./components/page/Inicio.tsx";
 import { Configuration } from "./pages/Configuration.tsx";
@@ -81,11 +80,6 @@ createRoot(document.getElementById("root")!).render(
               restricted={true}
               component={Configuration}
               path={ROUTES.SETTINGS}
-            />
-            <RouteSecure
-              restricted={true}
-              component={Dashboard}
-              path={ROUTES.DASHBOARD}
             />
             <RouteSecure
               restricted={true}
