@@ -411,12 +411,15 @@ const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
 };
 
 const PaymentsView = ({ payments }: { payments: Payment[] }) => {
+  console.log("VIENDO CAMBIOS PAYMENTS", payments)
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
   let search = params ? params : "";
-  const filterPayments = payments.filter((payment) =>
-    String(payment.raw_id) == (search)
+  const filterPayments = payments.filter((payment) => {
+    console.log(String(payment.raw_id) == (search))
+    return String(payment.raw_id).includes(search)
+  }
   );
   const paymentColumns: ColumnsTable<Payment>[] = [
     {
