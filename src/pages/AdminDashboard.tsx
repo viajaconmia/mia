@@ -67,6 +67,7 @@ const ExpandedContentRenderer = ({
   item: any;
   itemType: ModalType;
 }) => {
+
   const [, setLocation] = useLocation();
   const renderTypes = typesModal.filter((type) => type != itemType);
 
@@ -84,7 +85,7 @@ const ExpandedContentRenderer = ({
           setLocation(
             ROUTES.CONSULTAS.SEARCH(
               "reservaciones",
-              item.codigo_reservacion_hotel || ""
+              item.id_booking || ""
             )
           );
         },
@@ -101,15 +102,15 @@ const ExpandedContentRenderer = ({
       component: "precio",
     },
   ];
-  const payment_columns: ColumnsTable<Payment & { id_pago: string }>[] = [
+  const payment_columns: ColumnsTable<Payment & { raw_id: string }>[] = [
     {
-      key: "id_pago",
+      key: "raw_id",
       header: "ID",
       component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
-        onClick: ({ item }: { item: Payment }) => {
-          console.log(item);
+        onClick: ({ item }: { item: Payment & { raw_id: string } }) => {
+          console.log(item, "feffffffff");
           setLocation(
             ROUTES.CONSULTAS.SEARCH("pagos", String(item.raw_id) || "")
           );
@@ -176,7 +177,6 @@ const ExpandedContentRenderer = ({
   };
   const left = renderData[renderTypes[0]];
   const right = renderData[renderTypes[1]];
-
   return (
     <TwoColumnDropdown
       leftContent={
@@ -221,6 +221,12 @@ export const AdminDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { showNotification } = useNotification();
+
+  console.log("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", bookings)
+  console.log("ppppppppppppppppppppppp", payments)
+
+  console.log("lllllllllllllllllllllllll", location)
+
 
   useEffect(() => {
     fetchDataPage();
@@ -306,6 +312,7 @@ export const AdminDashboard = () => {
     reservaciones: <BookingsView bookings={bookings} />,
   };
 
+
   return (
     <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
       <TabsList
@@ -351,6 +358,7 @@ export const AdminDashboard = () => {
     </div>
   );
 };
+
 
 const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const [, setLocation] = useLocation();
@@ -408,7 +416,7 @@ const PaymentsView = ({ payments }: { payments: Payment[] }) => {
 
   let search = params ? params : "";
   const filterPayments = payments.filter((payment) =>
-    String(payment.raw_id)?.includes(search)
+    String(payment.raw_id) == (search)
   );
   const paymentColumns: ColumnsTable<Payment>[] = [
     {
@@ -421,19 +429,18 @@ const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
     { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
-    {
-      key: null,
-      header: "Acción",
-      component: "button",
-      componentProps: {
-        label: "Facturar",
-        onClick: ({ item }: { item: Payment }) => {
-          console.log(item);
-        },
-      },
-    },
+    // {
+    //   key: null,
+    //   header: "Acción",
+    //   component: "button",
+    //   componentProps: {
+    //     label: "Facturar",
+    //     onClick: ({ item }: { item: Payment }) => {
+    //       console.log(item);
+    //     },
+    //   },
+    // },
   ];
-
   return (
     <Table<Payment>
       id="paymentsTable"
@@ -487,8 +494,8 @@ const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .catch((error) =>
                           console.log(
                             error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
+                            error.message ||
+                            "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_pdf) {
@@ -513,23 +520,21 @@ const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .then(({ data }) =>
                           downloadXMLBase64(
                             data?.Content || "",
-                            `${item.id_factura.slice(0, 8)}-${
-                              item.created_at.split("T")[0]
+                            `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                             }.xml`
                           )
                         )
                         .catch((error) =>
                           console.log(
                             error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
+                            error.message ||
+                            "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_xml) {
                       downloadXMLUrl(
                         item.url_xml,
-                        `${item.id_factura.slice(0, 8)}-${
-                          item.created_at.split("T")[0]
+                        `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                         }.xml`
                       );
                     }
@@ -590,9 +595,8 @@ const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
             )}
           </div>
           <div
-            className={`w-12 h-12 ${
-              colorClasses[color as keyof typeof colorClasses]
-            } rounded-full flex items-center justify-center`}
+            className={`w-12 h-12 ${colorClasses[color as keyof typeof colorClasses]
+              } rounded-full flex items-center justify-center`}
           >
             <Icon className="w-6 h-6" />
           </div>
