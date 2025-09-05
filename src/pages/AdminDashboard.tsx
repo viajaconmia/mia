@@ -732,6 +732,9 @@ const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
       },
     ];
 
+    console.log(summary1, "gastos")
+    console.log(summary, "noches")
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Donut
