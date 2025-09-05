@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "engines": {
+    "npm": ">=9",
+    "node": ">=18"
+  },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@headlessui/tailwindcss": "^0.2.2",

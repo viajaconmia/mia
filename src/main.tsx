@@ -22,6 +22,8 @@ import { NotificationProvider } from "./hooks/useNotification.tsx";
 import { CartProvider } from "./context/cartContext.tsx";
 import { ManualReservationPage } from "./pages/ManualReservationPage.tsx";
 import BillingPage from "./pages/BillingPage.tsx";
+import { Logo } from "./components/atom/Logo.tsx";
+import Button from "./components/atom/Button.tsx";
 
 const RouteSecure: React.FC<{
   path: string;
@@ -35,6 +37,26 @@ const RouteSecure: React.FC<{
           <Component></Component>
         </ProtectedRoute>
       </Route>
+    </>
+  );
+};
+
+const Impersonado = () => {
+  return (
+    <>
+      <div className="w-full h-full flex flex-col justify-center items-center ">
+        <div className="bg-gray-50 flex flex-col justify-center items-center p-4 space-y-2 rounded-md">
+          <Logo className="w-20 h-20"></Logo>
+          <h1>{`Has entrado con exito!, te recomiendo ir a la siguiente ruta`}</h1>
+          <Button
+            onClick={() =>
+              window.location.replace(ROUTES.CONSULTAS.SUBPATH("general"))
+            }
+          >
+            Ir a ver sus registros
+          </Button>
+        </div>
+      </div>
     </>
   );
 };
@@ -54,6 +76,7 @@ createRoot(document.getElementById("root")!).render(
         <CartProvider>
           <NavigationBar />
           <Switch>
+            <RouteSecure component={Impersonado} path={ROUTES.IMPERSONADO} />
             <RouteSecure component={Reserva} path={ROUTES.BOOKINGS.ID} />
             <RouteSecure component={FAQPage} path={ROUTES.FAQ} />
             <RouteSecure
