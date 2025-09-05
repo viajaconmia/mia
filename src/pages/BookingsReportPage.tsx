@@ -563,6 +563,7 @@ export const BookingsReportPage = () => {
                                   <Receipt className="w-4 h-4" /> Facturar
                                 </Link>
                               </ProtectedComponent>
+
                             ) : (
                               <>
                                 {/* <Link
