@@ -80,7 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         error.code == "email_not_confirmed"
       ) {
         setError(
-          "Te enviaremos otro correo de verificación para que puedas acceder"
+          "Te enviaremos otro correo de verificación para que puedas acceder, una ves que entres al link podras acceder a tu cuenta desde cualquier dispositivo"
         );
       }
       console.log(error.response || error.message);

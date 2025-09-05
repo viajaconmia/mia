@@ -75,7 +75,7 @@ export const NewRegistrationPage = () => {
         error.code == "email_not_confirmed"
       ) {
         setRegistrationError(
-          "Te enviaremos otro correo de verificación para que puedas acceder"
+          "Te enviaremos otro correo de verificación para que puedas acceder, una ves que entres al link podras acceder a tu cuenta desde cualquier dispositivo"
         );
       } else {
         console.error("Error during registration:", error);
