@@ -1,13 +1,5 @@
-import React, { useState, useEffect } from "react";
-import {
-  Search,
-  Hotel,
-  ArrowLeft,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  Shield as Child,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Hotel, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchHoteles } from "../hooks/useFetch";
 import HotelCard from "../components/HotelComponent";
 
@@ -75,13 +67,8 @@ interface Hotel {
   score_operaciones: number | null;
 }
 
-interface HotelSearchPageProps {
-  onBack: () => void;
-}
-
-export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
+export const HotelSearchPage = () => {
   const [hotels, setHotels] = useState<Hotel[]>([]);
-  const [filteredHotels, setFilteredHotels] = useState<Hotel[]>([]);
   const [displayedHotels, setDisplayedHotels] = useState<Hotel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -116,7 +103,6 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
 
-      setFilteredHotels(data || []);
       setDisplayedHotels(randomHotels);
 
       // Extract unique values for filters
@@ -190,14 +176,6 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
     filterHotels();
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 2,
-    }).format(price);
-  };
-
   const handleReserveClick = (hotel: Hotel) => {
     // Store hotel data in session storage
     sessionStorage.setItem("selectedHotel", JSON.stringify(hotel));
@@ -210,19 +188,8 @@ export const HotelSearchPage: React.FC<HotelSearchPageProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center text-white hover:text-white/80 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span>Volver</span>
-          </button>
-        </div>
-
         {/* Search Section */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <div className="max-w-4xl mx-auto">

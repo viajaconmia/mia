@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Company, Employee } from "../types";
 import { X } from "lucide-react";
 import { fetchCompaniesAgent } from "../hooks/useFetch";
-import { formatDate } from "../helpers/helpers";
+import { formatDate } from "../utils/format";
 
 interface EmployeeFormProps {
   onSubmit: (data: Partial<Employee>) => void;
