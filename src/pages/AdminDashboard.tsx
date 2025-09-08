@@ -768,9 +768,17 @@ const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
   });
 
   // Calcular reservas activas (check-in hoy o antes, check-out después de hoy)
+  // Calcular reservas activas para el mes/año seleccionado
   const activeBookings = bookings.filter((obj) => {
-    // Se corrigió el error de asignación a un operador de comparación
-    return obj.status_reserva === "Confirmada";
+    if (!obj.check_in) return false;
+
+    const checkInDate = new Date(obj.check_in);
+    const today = new Date();
+
+    return obj.status_reserva === "Confirmada" &&
+      checkInDate <= today &&
+      checkInDate.getMonth() + 1 === selectedMonth &&
+      checkInDate.getFullYear() === selectedYear;
   }).length;
 
   if (!bookings?.length || !selectedMonth || !selectedYear) return;
