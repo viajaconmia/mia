@@ -497,8 +497,17 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
 
   // Calcular reservas activas (check-in hoy o antes, check-out después de hoy)
   const activeBookings = bookings.filter((obj) => {
-    // Se corrigió el error de asignación a un operador de comparación
-    return obj.status_reserva === "Confirmada";
+    if (!obj.check_in) return false;
+
+    const checkInDate = new Date(obj.check_in);
+    const today = new Date();
+
+    return (
+      obj.status_reserva === "Confirmada" &&
+      checkInDate <= today &&
+      checkInDate.getMonth() + 1 === Number(selectedMonth) &&
+      checkInDate.getFullYear() === Number(selectedYear)
+    );
   }).length;
 
   const nightsByHotel = calculateNightsByHotelForMonthYear(

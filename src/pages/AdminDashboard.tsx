@@ -34,11 +34,6 @@ export const AdminDashboard = () => {
   const { user } = useAuth();
   const { showNotification } = useNotification();
 
-  console.log("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", bookings);
-  console.log("ppppppppppppppppppppppp", payments);
-
-  console.log("lllllllllllllllllllllllll", location);
-
   useEffect(() => {
     fetchDataPage();
   }, []);
