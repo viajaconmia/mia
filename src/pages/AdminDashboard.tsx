@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
-import TwoColumnDropdown from "../components/molecule/TwoColumnDropdown";
-import Donut from "../components/Donut";
 import {
   BarChart3,
-  Calendar,
-  DollarSign,
   Building2,
   CreditCardIcon,
   File,
@@ -15,205 +11,21 @@ import { TabsList } from "../components/molecule/TabsList";
 import { PagosService, Payment } from "../services/PagosService";
 import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
-import { Invoice, ModalType, Reserva } from "../types/services";
+import { Invoice, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
-import { ColumnsTable, Table } from "../components/atom/table";
-import { HEADERS_API, URL } from "../constants/apiConstant";
 import { InputText } from "../components/atom/Input";
-import Button from "../components/atom/Button";
-import { FacturamaService } from "../services/FacturamaService";
 import {
-  downloadXMLBase64,
-  downloadXMLUrl,
-  viewPDFBase64,
-  viewPDFUrl,
-} from "../utils/files";
-import {
-  calculateGrandTotalForMonthYear,
-  calculateNightsByHotelForMonthYear,
-  calculateTotalByHotelForMonthYear,
-} from "../utils/calculos";
-import { formatNumberWithCommas } from "../utils/format";
-
-// interface DashboardStats {
-//   totalUsers: number;
-//   totalBookings: number;
-//   totalRevenue: number;
-//   activeBookings: number;
-//   completedBookings: number;
-//   cancelledBookings: number;
-//   recentUsers: any[];
-//   recentBookings: any[];
-//   recentPayments: any[];
-//   monthlyRevenue: any[];
-// }
+  BookingsView,
+  InvoicesView,
+  OverviewView,
+  PaymentsView,
+} from "../components/organism/ViewsAdmin";
 
 type ViewsConsultas = "general" | "reservaciones" | "pagos" | "facturas";
 
-const typesModal: ModalType[] = ["payment", "invoice", "booking"];
-
-type ModalTypeMap = {
-  booking: Reserva;
-  payment: Payment & { id_pago: string };
-  invoice: Invoice;
-};
-
-const ExpandedContentRenderer = ({
-  item,
-  itemType,
-}: {
-  item: any;
-  itemType: ModalType;
-}) => {
-
-  const [, setLocation] = useLocation();
-  const renderTypes = typesModal.filter((type) => type != itemType);
-
-  // Define las columnas para cada tipo
-
-  const booking_columns: ColumnsTable<Reserva>[] = [
-    {
-      key: "codigo_reservacion_hotel",
-      header: "ID",
-
-      component: "copiar_and_button",
-      componentProps: {
-        variant: "ghost",
-        onClick: ({ item }: { item: Reserva }) => {
-          setLocation(
-            ROUTES.CONSULTAS.SEARCH(
-              "reservaciones",
-              item.id_booking || ""
-            )
-          );
-        },
-      },
-    },
-    {
-      key: "hotel",
-      header: "Hotel",
-      component: "text",
-    },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
-    },
-  ];
-  const payment_columns: ColumnsTable<Payment & { raw_id: string }>[] = [
-    {
-      key: "raw_id",
-      header: "ID",
-      component: "copiar_and_button",
-      componentProps: {
-        variant: "ghost",
-        onClick: ({ item }: { item: Payment & { raw_id: string } }) => {
-          console.log(item, "feffffffff");
-          setLocation(
-            ROUTES.CONSULTAS.SEARCH("pagos", String(item.raw_id) || "")
-          );
-        },
-      },
-    },
-    {
-      key: "monto",
-      header: "Total",
-      component: "precio",
-    },
-  ];
-  const invoice_columns: ColumnsTable<Invoice>[] = [
-    {
-      key: "id_factura",
-      header: "ID",
-      component: "copiar_and_button",
-      componentProps: {
-        variant: "ghost",
-        onClick: ({ item }: { item: Invoice }) =>
-          setLocation(
-            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
-          ),
-      },
-    },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
-    },
-  ];
-
-  const renderData: {
-    [K in ModalType]: {
-      columns: ColumnsTable<ModalTypeMap[K]>[];
-      title: string;
-      data: ModalTypeMap[K][];
-    };
-  } = {
-    booking: {
-      columns: booking_columns,
-      title: "Reservas asociadas",
-      data:
-        itemType == "invoice" || itemType == "payment"
-          ? item.reservas_asociadas || []
-          : [],
-    },
-    payment: {
-      columns: payment_columns,
-      title: "Pagos asociados",
-      data:
-        itemType == "invoice" || itemType == "booking"
-          ? item.pagos_asociados || []
-          : [],
-    },
-    invoice: {
-      columns: invoice_columns,
-      title: "Facturas asociadas",
-      data:
-        itemType == "payment" || itemType == "booking"
-          ? item.facturas_asociadas || []
-          : [],
-    },
-  };
-  const left = renderData[renderTypes[0]];
-  const right = renderData[renderTypes[1]];
-  return (
-    <TwoColumnDropdown
-      leftContent={
-        <div className="space-y-2">
-          <h1>{left.title}</h1>
-          <Table<(typeof left.data)[0]>
-            data={left.data}
-            columns={left.columns as ColumnsTable<(typeof left.data)[0]>[]}
-          />
-        </div>
-      }
-      rightContent={
-        <div className="space-y-2">
-          <h1>{right.title}</h1>
-          <Table<(typeof right.data)[0]>
-            data={right.data}
-            columns={right.columns as ColumnsTable<(typeof right.data)[0]>[]}
-          />
-        </div>
-      }
-    />
-  );
-};
-
 export const AdminDashboard = () => {
-  // const [stats, setStats] = useState<DashboardStats>({
-  //   totalUsers: 0,
-  //   totalBookings: 0,
-  //   totalRevenue: 0,
-  //   activeBookings: 0,
-  //   completedBookings: 0,
-  //   cancelledBookings: 0,
-  //   recentUsers: [],
-  //   recentBookings: [],
-  //   recentPayments: [],
-  //   monthlyRevenue: [],
-  // });
   const [location, setLocation] = useLocation();
   const [bookings, setBookings] = useState<Reserva[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -222,11 +34,10 @@ export const AdminDashboard = () => {
   const { user } = useAuth();
   const { showNotification } = useNotification();
 
-  console.log("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", bookings)
-  console.log("ppppppppppppppppppppppp", payments)
+  console.log("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", bookings);
+  console.log("ppppppppppppppppppppppp", payments);
 
-  console.log("lllllllllllllllllllllllll", location)
-
+  console.log("lllllllllllllllllllllllll", location);
 
   useEffect(() => {
     fetchDataPage();
@@ -286,32 +97,12 @@ export const AdminDashboard = () => {
     }
   };
 
-  // const fetchDashboardData = async () => {
-  //   try {
-  //     setStats({
-  //       totalUsers: 0,
-  //       totalBookings: bookings?.length || 0,
-  //       totalRevenue: 0,
-  //       activeBookings: 0,
-  //       completedBookings: 0,
-  //       cancelledBookings: 0,
-  //       recentUsers: [],
-  //       recentBookings: [],
-  //       recentPayments: [],
-  //       monthlyRevenue: [],
-  //     });
-  //   } catch (error) {
-  //     console.error("Error fetching dashboard data:", error);
-  //   }
-  // };
-
   const views: Record<ViewsConsultas, React.ReactNode> = {
     general: <OverviewView bookings={bookings} />,
     facturas: <InvoicesView invoices={invoices} />,
     pagos: <PaymentsView payments={payments} />,
     reservaciones: <BookingsView bookings={bookings} />,
   };
-
 
   return (
     <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
@@ -326,7 +117,9 @@ export const AdminDashboard = () => {
         onChange={(tab) => {
           setLocation(ROUTES.CONSULTAS.SUBPATH(tab));
         }}
-        activeTab={(location.split("/").at(-1) as ViewsConsultas) || "general"}
+        activeTab={
+          (location.split("/").slice(-1)[0] as ViewsConsultas) || "general"
+        }
       />
       <div className="px-4">
         {location != ROUTES.CONSULTAS.SUBPATH("general") && (
@@ -358,6 +151,7 @@ export const AdminDashboard = () => {
     </div>
   );
 };
+
 
 
 const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
