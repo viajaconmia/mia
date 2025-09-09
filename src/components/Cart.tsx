@@ -21,7 +21,7 @@ import Button from "./atom/Button";
 import { useCart } from "../context/cartContext";
 import { CartItem } from "../types";
 import { CartService } from "../services/CartService";
-import { formatNumberWithCommas } from "../utils/format";
+import { formatDate, formatNumberWithCommas } from "../utils/format";
 import { InputRadio } from "./atom/Input";
 import { useNotification } from "../hooks/useNotification";
 import {
@@ -49,7 +49,6 @@ import { MetodosDePago } from "../types/newIndex";
 import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { SolicitudService } from "../services/SolicitudService";
-import { formatDate } from "../helpers/helpers";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
