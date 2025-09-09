@@ -49,6 +49,7 @@ import { MetodosDePago } from "../types/newIndex";
 import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { SolicitudService } from "../services/SolicitudService";
+import { formatDate } from "../helpers/helpers";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
@@ -102,9 +103,9 @@ const CartItemComponent: React.FC<{
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {new Date(item.details.pickup_date).toLocaleDateString()}
+                  {formatDate(item.details.pickup_date)}
                   {" - "}
-                  {new Date(item.details.dropoff_date).toLocaleDateString()}
+                  {formatDate(item.details.dropoff_date)}
                 </span>
               </div>
             </div>
