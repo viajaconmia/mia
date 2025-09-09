@@ -24,25 +24,40 @@ import { Root } from "../types/billing";
 import { useUser } from "../context/userContext";
 import { useNotification } from "../hooks/useNotification";
 
-
 // Catálogos completos del SAT
 const cfdiUseOptions = [
   { value: "G01", label: "G01 - Adquisición de mercancías" },
   { value: "G02", label: "G02 - Devoluciones, descuentos o bonificaciones" },
   { value: "G03", label: "G03 - Gastos en general" },
   { value: "I01", label: "I01 - Construcciones" },
-  { value: "I02", label: "I02 - Mobilario y equipo de oficina por inversiones" },
+  {
+    value: "I02",
+    label: "I02 - Mobilario y equipo de oficina por inversiones",
+  },
   { value: "I03", label: "I03 - Equipo de transporte" },
   { value: "I04", label: "I04 - Equipo de cómputo y accesorios" },
-  { value: "I05", label: "I05 - Dados, troqueles, moldes, matrices y herramental" },
+  {
+    value: "I05",
+    label: "I05 - Dados, troqueles, moldes, matrices y herramental",
+  },
   { value: "I06", label: "I06 - Comunicaciones telefónicas" },
   { value: "I07", label: "I07 - Comunicaciones satelitales" },
   { value: "I08", label: "I08 - Otra maquinaria y equipo" },
-  { value: "D01", label: "D01 - Honorarios médicos, dentales y gastos hospitalarios" },
-  { value: "D02", label: "D02 - Gastos médicos por incapacidad o discapacidad" },
+  {
+    value: "D01",
+    label: "D01 - Honorarios médicos, dentales y gastos hospitalarios",
+  },
+  {
+    value: "D02",
+    label: "D02 - Gastos médicos por incapacidad o discapacidad",
+  },
   { value: "D03", label: "D03 - Gastos funerales" },
   { value: "D04", label: "D04 - Donativos" },
-  { value: "D05", label: "D05 - Intereses reales efectivamente pagados por créditos hipotecarios" },
+  {
+    value: "D05",
+    label:
+      "D05 - Intereses reales efectivamente pagados por créditos hipotecarios",
+  },
   { value: "D06", label: "D06 - Aportaciones voluntarias al SAR" },
   { value: "D07", label: "D07 - Primas por seguros de gastos médicos" },
   { value: "D08", label: "D08 - Gastos de transportación escolar obligatoria" },
@@ -50,7 +65,7 @@ const cfdiUseOptions = [
   { value: "D10", label: "D10 - Pagos por servicios educativos" },
   { value: "S01", label: "S01 - Sin efectos fiscales" },
   { value: "CP01", label: "CP01 - Pagos" },
-  { value: "CN01", label: "CN01 - Nómina" }
+  { value: "CN01", label: "CN01 - Nómina" },
 ];
 
 const paymentFormOptions = [
@@ -75,14 +90,13 @@ const paymentFormOptions = [
   { value: "29", label: "29 - Tarjeta de servicios" },
   { value: "30", label: "30 - Aplicación de anticipos" },
   { value: "31", label: "31 - Intermediario pagos" },
-  { value: "99", label: "99 - Por definir" }
+  { value: "99", label: "99 - Por definir" },
 ];
 
 const paymentMethodOptions = [
   { value: "PUE", label: "PUE - Pago en una sola exhibición" },
-  { value: "PPD", label: "PPD - Pago en parcialidades o diferido" }
+  { value: "PPD", label: "PPD - Pago en parcialidades o diferido" },
 ];
-
 
 interface FiscalDataModalProps {
   isOpen: boolean;
@@ -115,10 +129,7 @@ const FiscalDataModal: React.FC<FiscalDataModalProps> = ({ isOpen }) => {
   );
 };
 
-export const BillingPage: React.FC<BillingPageProps> = ({
-  onBack,
-  invoiceData,
-}) => {
+const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
   const { authState } = useUser();
   const [match, params] = useRoute("/factura/:id");
   const [showFiscalModal, setShowFiscalModal] = useState(false);
@@ -134,7 +145,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   const [isInvoiceGenerated, setIsInvoiceGenerated] = useState<Root | null>(
     null
   );
-  const { showNotification } = useNotification()
+  const { showNotification } = useNotification();
   const { crearCfdi, descargarFactura, mandarCorreo } = useApi();
   const [cfdi, setCfdi] = useState({
     Receiver: {
@@ -419,13 +430,13 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           .catch((err) => console.error(err));
         setIsInvoiceGenerated(response.data);
       } catch (error: any) {
-        showNotification("error", error.message)
+        showNotification("error", error.message);
       }
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 py-4">
+    <div className="min-h-full bg-gradient-to-br from-blue-600 to-blue-800 py-4">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between mb-4">
           <a
@@ -516,8 +527,9 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                       amount={formatCurrency(
                         cfdi?.Items?.[0]?.Taxes?.[0]?.Total || 0
                       )}
-                      label={`IVA (${(cfdi?.Items?.[0]?.Taxes?.[0]?.Rate ?? 0) * 100
-                        }%)`}
+                      label={`IVA (${
+                        (cfdi?.Items?.[0]?.Taxes?.[0]?.Rate ?? 0) * 100
+                      }%)`}
                       icon={<Percent className="w-4 h-4 text-gray-400" />}
                     />
                     <div className="pt-2 border-t border-gray-200">
@@ -574,7 +586,6 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                   </select>
                 </div>
               </div>
-
 
               {/* Payment Method Select */}
               <div className="space-y-1 mb-4">
@@ -699,7 +710,4 @@ interface BillingPageProps {
   invoiceData?: DataInvoice;
 }
 
-const Prueba = () => {
-  return <></>;
-};
-export default Prueba;
+export default BillingPage;
