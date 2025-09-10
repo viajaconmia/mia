@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ShoppingCart,
   AlertCircle,
+  Divide,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/format";
 import { DataInvoice, DescargaFactura, ProductInvoice } from "../types/billing";
@@ -23,6 +24,7 @@ import { CompanyWithTaxInfo } from "../types";
 import { Root } from "../types/billing";
 import { useUser } from "../context/userContext";
 import { useNotification } from "../hooks/useNotification";
+import Loader from "../components/atom/Loader";
 
 // Catálogos completos del SAT
 const cfdiUseOptions = [
@@ -191,6 +193,30 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
   });
 
   useEffect(() => {
+    const pruebasFetch = async () => {
+      if (match) {
+        const response = await fetch(
+          `${URL}/v1/mia/solicitud/id?id=${params.id}`,
+          {
+            method: "GET",
+            headers: HEADERS_API,
+          }
+        );
+        const json = await response.json();
+        console.log("😊dddddddddddddd", json);
+        const data_solicitud = json.data[0];
+        console.log(data_solicitud);
+        const responsefiscal = await fetch(
+          `${URL}/v1/mia/datosFiscales/id?id=${idCompany}`,
+          {
+            method: "GET",
+            headers: HEADERS_API,
+          }
+        );
+        console.log(responsefiscal);
+        setSolicitud(data_solicitud);
+      }
+    };
     const fetchReservation = async () => {
       if (match) {
         const response = await fetch(
@@ -201,7 +227,7 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
           }
         );
         const json = await response.json();
-        console.log("😊", json);
+        console.log("😊dddddddddddddd", json);
         const data_solicitud = json.data[0];
         console.log(data_solicitud);
         const responsefiscal = await fetch(
@@ -318,6 +344,7 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
         });
       }
     };
+    pruebasFetch();
     if (idCompany) {
       fetchReservation();
     } else {
@@ -434,7 +461,24 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
       }
     }
   };
-
+  if (!solicitud) {
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        <Loader></Loader>
+      </div>
+    );
+  }
+  let date = new Date(solicitud.created_at_solicitud || "");
+  if (date.getMonth() < 8 && date.getFullYear() <= 2025) {
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        <h1>
+          Disculpa, esta reserva ya no se puede facturar, pero puedes contactar
+          por soporte para obtener mas ayudas
+        </h1>
+      </div>
+    );
+  }
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-600 to-blue-800 py-4">
       <div className="max-w-5xl mx-auto px-4">
