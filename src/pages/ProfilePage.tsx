@@ -207,7 +207,7 @@ export const ProfilePage = () => {
     const fetchData = async () => {
       const data = await fetchPaymentMethods();
       console.log("Payment methods data:", data);
-      setPaymentMethods(data);
+      setPaymentMethods(data.data);
       const paymentsData = await fetchPagosAgent();
       setPayments(paymentsData);
       const pendientesData = await fetchPendientesAgent();
