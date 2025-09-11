@@ -290,7 +290,7 @@ export const ProfilePage = () => {
 
   const handleDeleteMethod = async (id: string) => {
     console.log("Delete payment method:", id);
-    const id_agente = user?.id;
+    const id_agente = user?.info?.id_agente;
     const response = await fetch(`${URL}/v1/stripe/delete-payment-method`, {
       method: "POST",
       headers: {
