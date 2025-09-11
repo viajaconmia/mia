@@ -215,7 +215,16 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
     { key: "nombre_viajero_reservacion", header: "Viajero", component: "text" },
     { key: "check_in", header: "Check-in", component: "date" },
     { key: "check_out", header: "Check-out", component: "date" },
-    { key: "room", header: "Cuarto", component: "text" },
+    {
+      key: "room",
+      header: "Cuarto",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Reserva }) => (
+          <span className="uppercase">{item.room || ""}</span>
+        )
+      }
+    },
     { key: "total", header: "Precio", component: "text" },
     {
       key: "id_solicitud",
@@ -328,8 +337,8 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .catch((error) =>
                           console.log(
                             error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
+                            error.message ||
+                            "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_pdf) {
@@ -354,23 +363,21 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .then(({ data }) =>
                           downloadXMLBase64(
                             data?.Content || "",
-                            `${item.id_factura.slice(0, 8)}-${
-                              item.created_at.split("T")[0]
+                            `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                             }.xml`
                           )
                         )
                         .catch((error) =>
                           console.log(
                             error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
+                            error.message ||
+                            "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_xml) {
                       downloadXMLUrl(
                         item.url_xml,
-                        `${item.id_factura.slice(0, 8)}-${
-                          item.created_at.split("T")[0]
+                        `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                         }.xml`
                       );
                     }
