@@ -5,7 +5,7 @@ import { UserSingleton } from "./UserSingleton";
 export class FacturaService extends ApiService {
   private static instance: FacturaService;
   private user: UserSingleton = UserSingleton.getInstance();
-  private ENDPOINTS = {
+  private ENDPOINTS = { 
     GET: {
       FACTURAS_BY_AGENTE: "/get_agente_facturas",
     },
