@@ -82,7 +82,7 @@ const CheckOutForm = ({ setSuccess, setTrigger }: any) => {
     event.preventDefault();
     if (!stripe || !elements) return;
 
-    const id_agente = user?.id;
+    const id_agente = user?.info?.id_agente;
     const cardElement = elements.getElement(CardElement);
     //crear metodo de pago
     const { error, paymentMethod } = await stripe.createPaymentMethod({
