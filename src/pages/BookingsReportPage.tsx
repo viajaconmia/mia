@@ -549,8 +549,8 @@ export const BookingsReportPage = () => {
                             {Number(booking.pendiente_por_cobrar) <= 0 ? (
                               <ProtectedComponent
                                 admit={{
-                                  administrador: true,
-                                  reservante: true,
+                                  administrador: false,
+                                  reservante: false,
                                   viajero: false,
                                   consultor: false,
                                   "no-rol": false,
