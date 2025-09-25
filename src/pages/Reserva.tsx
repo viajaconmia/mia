@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Calendar,
   Hotel,
@@ -8,13 +8,15 @@ import {
   MessageCircle,
   Users,
   CupSoda,
+  FileDown,
 } from "lucide-react";
 import { useRoute } from "wouter";
 import { SupportModal } from "../components/SupportModal";
 import { ReservationDetails2 } from "../types/index";
 import { fetchReservation } from "../services/reservas";
 import ROUTES from "../constants/routes";
-import { Logo } from "../components/atom/Logo";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export function Reserva() {
   const [, params] = useRoute(`${ROUTES.BOOKINGS.ID}`);
@@ -23,12 +25,12 @@ export function Reserva() {
     useState<ReservationDetails2 | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  console.log(params);
+  // 1. Crear una referencia para el contenedor que queremos capturar
+  const pageRef = useRef(null);
 
   useEffect(() => {
     if (params?.id) {
       fetchReservation(params.id, (data) => {
-        console.log(data);
         setReservationDetails({
           ...data,
         } as ReservationDetails2);
@@ -44,16 +46,111 @@ export function Reserva() {
     return "No hay acompañantes";
   };
 
+  const cambiarLenguaje = (room: string) => {
+    let updateRoom = room;
+    if (room.toUpperCase() === "SINGLE") {
+      updateRoom = "SENCILLO";
+    } else if (room.toUpperCase() === "DOUBLE") {
+      updateRoom = "DOBLE";
+    }
+    return updateRoom;
+  };
+
+  // 2. Función para descargar el PDF
+  const handleDownloadPdf = async () => {
+    const content = pageRef.current;
+    if (content) {
+      const originalPosition = content.style.position;
+      const originalMargin = content.style.margin;
+      content.style.position = "static"; // Evitar problemas de superposición al capturar
+      content.style.margin = "0 auto";
+
+      const canvas = await html2canvas(content, {
+        scale: 2, // Aumenta la resolución del canvas
+        useCORS: true, // Importante para imágenes externas como tu logo
+        scrollY: -window.scrollY, // Capturar desde el inicio de la página
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210; // Ancho A4 en mm
+      const pageHeight = 297; // Alto A4 en mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Si el contenido es más largo que una página, crea páginas adicionales
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(
+        `reservacion-${
+          reservationDetails?.codigo_confirmacion || "sin-codigo"
+        }.pdf`
+      );
+
+      content.style.position = originalPosition;
+      content.style.margin = originalMargin;
+    }
+  };
+
   return (
-    <div className="min-h-full bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50">
-      <div className="max-w-5xl mx-auto px-4 py-12 relative">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50">
+      {/* Nuevo botón de descarga */}
+      <div className="text-right p-4 print:hidden">
+        <button
+          onClick={handleDownloadPdf}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          <FileDown className="mr-2" size={20} />
+          Descargar PDF
+        </button>
+      </div>
+
+      <div ref={pageRef} className="max-w-5xl mx-auto px-4 py-12 relative">
         <img
           src="https://luiscastaneda-tos.github.io/log/files/nokt.png"
           alt="Logo noktos"
           className="w-20 h-auto absolute top-15 left-4"
         />
         <p className="w-20 h-auto absolute top-15 right-4">
-          <Logo className="w-16 h-16"></Logo>
+          <span>
+            <svg
+              version="1.1"
+              id="Capa_1"
+              xmlns="http://www.w3.org/2000/svg"
+              x="0px"
+              y="0px"
+              viewBox="0 0 493 539"
+              className="w-16 h-16 -rotate-12 transform text-sky-950"
+            >
+              <path
+                fill="currentColor"
+                d="M205.1,500.5C205.1,500.5,205,500.6,205.1,500.5C140.5,436.1,71.7,369.1,71.7,291.1 c0-86.6,84.2-157.1,187.6-157.1S447,204.4,447,291.1c0,74.8-63.4,139.6-150.8,154.1c0,0,0,0,0,0l-8.8-53.1 c61.3-10.2,105.8-52.6,105.8-100.9c0-56.9-60-103.2-133.7-103.2s-133.7,46.3-133.7,103.2c0,49.8,48,93.6,111.7,101.8c0,0,0,0,0,0 L205.1,500.5L205.1,500.5z"
+              ></path>
+              <path
+                fill="currentColor"
+                d="M341,125.5c-2.9,0-5.8-0.7-8.6-2.1c-70.3-37.3-135.9-1.7-138.7-0.2c-8.8,4.9-20,1.8-24.9-7.1 c-4.9-8.8-1.8-20,7-24.9c3.4-1.9,85.4-47.1,173.8-0.2c9,4.8,12.4,15.9,7.6,24.8C353.9,122,347.6,125.5,341,125.5z"
+              ></path>
+              <g>
+                <path
+                  fill="currentColor"
+                  d="M248.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C257.8,277.6,255.4,268.3,248.8,263.8z"
+                ></path>
+                <path
+                  fill="currentColor"
+                  d="M348.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C357.8,277.6,355.4,268.3,348.8,263.8z"
+                ></path>
+              </g>
+            </svg>
+          </span>
         </p>
         <>
           <SupportModal
@@ -81,48 +178,52 @@ export function Reserva() {
                     <InfoCard
                       icon={User}
                       label="Huésped"
-                      value={(reservationDetails.huesped || "").toUpperCase()}
+                      value={reservationDetails.huesped || ""}
                     />
-                    <InfoCard
-                      icon={Bed}
-                      label="Tipo de Habitación"
-                      value={cambiarLenguaje(reservationDetails.room || "")}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InfoCard
                       icon={Hotel}
                       label="Hotel"
                       value={reservationDetails.hotel || ""}
                       subValue={reservationDetails.direccion || ""}
                     />
-                    <DateCard
-                      check_in={reservationDetails.check_in}
-                      check_out={reservationDetails.check_out}
-                    />
                   </div>
-                  {reservationDetails.acompañantes.trim() &&
-                    reservationDetails.acompañantes.length > 0 && (
-                      <div className="">
-                        <InfoCard
-                          icon={Users}
-                          label="Acompañantes"
-                          value={getAcompanantesValue(
-                            reservationDetails.acompañantes
-                          )}
-                        />
-                      </div>
-                    )}
+                  <div className="space-y-4">
+                    {reservationDetails.acompañantes &&
+                      reservationDetails.acompañantes.length > 0 && (
+                        <div className="">
+                          <InfoCard
+                            icon={Users}
+                            label="Acompañantes"
+                            value={getAcompanantesValue(
+                              reservationDetails.acompañantes
+                            )}
+                          />
+                        </div>
+                      )}
+                    <div className="">
+                      <InfoCard
+                        icon={CupSoda}
+                        label="Desayuno incluido"
+                        value={
+                          reservationDetails.incluye_desayuno === 1
+                            ? "Desayuno incluido"
+                            : "No incluye desayuno"
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dates */}
+                  <DateCard
+                    check_in={reservationDetails.check_in}
+                    check_out={reservationDetails.check_out}
+                  />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Room Type */}
                     <InfoCard
-                      icon={CupSoda}
-                      label="Desayuno incluido"
-                      value={
-                        reservationDetails.incluye_desayuno === 1
-                          ? "Desayuno incluido"
-                          : "No incluye desayuno"
-                      }
+                      icon={Bed}
+                      label="Tipo de Habitación"
+                      value={cambiarLenguaje(reservationDetails.room || "")}
                     />
                     <InfoCard
                       icon={MessageCircle}
@@ -189,17 +290,7 @@ export function Reserva() {
   );
 }
 
-const cambiarLenguaje = (room: string) => {
-  let updateRoom = room;
-  if (room.toUpperCase() == "SINGLE") {
-    updateRoom = "SENCILLO";
-  } else if (room.toUpperCase() == "DOUBLE") {
-    updateRoom = "DOBLE";
-  }
-  return updateRoom;
-};
-
-// Reusable components
+// Reusable components (sin cambios)
 const InfoCard = ({
   icon: Icon,
   label,
@@ -236,8 +327,8 @@ const DateCard = ({
     <div className="flex items-center space-x-2">
       <Calendar className="w-4 h-4 text-blue-600" />
       <div className="flex-1">
-        <p className="text-blue-900/60 text-xs font-semibold">
-          Fechas de estancia
+        <p className="text-xs font-medium text-blue-900/60">
+          Fechas de Estancia
         </p>
         <div className="flex items-center justify-between mt-2">
           <div>
