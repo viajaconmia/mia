@@ -33,6 +33,7 @@ const ROUTES = {
     ID: "/bookings/:id",
     ID_SOLICITUD: (id: string) => `/bookings/${id}`,
   },
+  IMPERSONADO: "/impersonado",
 };
 
 export default ROUTES;

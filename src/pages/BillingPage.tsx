@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ShoppingCart,
   AlertCircle,
+  Divide,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/format";
 import { DataInvoice, DescargaFactura, ProductInvoice } from "../types/billing";
@@ -22,20 +23,81 @@ import { DataFiscalModalWithCompanies } from "../components/DataFiscalModalWithC
 import { CompanyWithTaxInfo } from "../types";
 import { Root } from "../types/billing";
 import { useUser } from "../context/userContext";
+import { useNotification } from "../hooks/useNotification";
+import Loader from "../components/atom/Loader";
 
+// Catálogos completos del SAT
 const cfdiUseOptions = [
-  { value: "P01", label: "Por definir" },
-  { value: "G01", label: "Adquisición de mercancías" },
-  { value: "G02", label: "Devoluciones, descuentos o bonificaciones" },
-  { value: "G03", label: "Gastos en general" },
+  { value: "G01", label: "G01 - Adquisición de mercancías" },
+  { value: "G02", label: "G02 - Devoluciones, descuentos o bonificaciones" },
+  { value: "G03", label: "G03 - Gastos en general" },
+  { value: "I01", label: "I01 - Construcciones" },
+  {
+    value: "I02",
+    label: "I02 - Mobilario y equipo de oficina por inversiones",
+  },
+  { value: "I03", label: "I03 - Equipo de transporte" },
+  { value: "I04", label: "I04 - Equipo de cómputo y accesorios" },
+  {
+    value: "I05",
+    label: "I05 - Dados, troqueles, moldes, matrices y herramental",
+  },
+  { value: "I06", label: "I06 - Comunicaciones telefónicas" },
+  { value: "I07", label: "I07 - Comunicaciones satelitales" },
+  { value: "I08", label: "I08 - Otra maquinaria y equipo" },
+  {
+    value: "D01",
+    label: "D01 - Honorarios médicos, dentales y gastos hospitalarios",
+  },
+  {
+    value: "D02",
+    label: "D02 - Gastos médicos por incapacidad o discapacidad",
+  },
+  { value: "D03", label: "D03 - Gastos funerales" },
+  { value: "D04", label: "D04 - Donativos" },
+  {
+    value: "D05",
+    label:
+      "D05 - Intereses reales efectivamente pagados por créditos hipotecarios",
+  },
+  { value: "D06", label: "D06 - Aportaciones voluntarias al SAR" },
+  { value: "D07", label: "D07 - Primas por seguros de gastos médicos" },
+  { value: "D08", label: "D08 - Gastos de transportación escolar obligatoria" },
+  { value: "D09", label: "D09 - Depósitos en cuentas para el ahorro" },
+  { value: "D10", label: "D10 - Pagos por servicios educativos" },
+  { value: "S01", label: "S01 - Sin efectos fiscales" },
+  { value: "CP01", label: "CP01 - Pagos" },
+  { value: "CN01", label: "CN01 - Nómina" },
 ];
 
 const paymentFormOptions = [
-  { value: "01", label: "Efectivo" },
-  { value: "02", label: "Cheque nominativo" },
-  { value: "03", label: "Transferencia electrónica de fondos" },
-  { value: "04", label: "Tarjeta de crédito" },
-  { value: "28", label: "Tarjeta de débito" },
+  { value: "01", label: "01 - Efectivo" },
+  { value: "02", label: "02 - Cheque nominativo" },
+  { value: "03", label: "03 - Transferencia electrónica de fondos" },
+  { value: "04", label: "04 - Tarjeta de crédito" },
+  { value: "05", label: "05 - Monedero electrónico" },
+  { value: "06", label: "06 - Dinero electrónico" },
+  { value: "08", label: "08 - Vales de despensa" },
+  { value: "12", label: "12 - Dación en pago" },
+  { value: "13", label: "13 - Pago por subrogación" },
+  { value: "14", label: "14 - Pago por consignación" },
+  { value: "15", label: "15 - Condonación" },
+  { value: "17", label: "17 - Compensación" },
+  { value: "23", label: "23 - Novación" },
+  { value: "24", label: "24 - Confusión" },
+  { value: "25", label: "25 - Remisión de deuda" },
+  { value: "26", label: "26 - Prescripción o caducidad" },
+  { value: "27", label: "27 - A satisfacción del acreedor" },
+  { value: "28", label: "28 - Tarjeta de débito" },
+  { value: "29", label: "29 - Tarjeta de servicios" },
+  { value: "30", label: "30 - Aplicación de anticipos" },
+  { value: "31", label: "31 - Intermediario pagos" },
+  { value: "99", label: "99 - Por definir" },
+];
+
+const paymentMethodOptions = [
+  { value: "PUE", label: "PUE - Pago en una sola exhibición" },
+  { value: "PPD", label: "PPD - Pago en parcialidades o diferido" },
 ];
 
 interface FiscalDataModalProps {
@@ -69,10 +131,7 @@ const FiscalDataModal: React.FC<FiscalDataModalProps> = ({ isOpen }) => {
   );
 };
 
-export const BillingPage: React.FC<BillingPageProps> = ({
-  onBack,
-  invoiceData,
-}) => {
+const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
   const { authState } = useUser();
   const [match, params] = useRoute("/factura/:id");
   const [showFiscalModal, setShowFiscalModal] = useState(false);
@@ -80,6 +139,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   const [idCompany, setIdCompany] = useState<string | null>(null);
   const [selectedCfdiUse, setSelectedCfdiUse] = useState("G03");
   const [selectedPaymentForm, setSelectedPaymentForm] = useState("03");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("PUE");
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [descarga, setDescarga] = useState<DescargaFactura | null>(null);
   const [descargaxml, setDescargaxml] = useState<DescargaFactura | null>(null);
@@ -87,6 +147,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   const [isInvoiceGenerated, setIsInvoiceGenerated] = useState<Root | null>(
     null
   );
+  const { showNotification } = useNotification();
   const { crearCfdi, descargarFactura, mandarCorreo } = useApi();
   const [cfdi, setCfdi] = useState({
     Receiver: {
@@ -132,6 +193,30 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   });
 
   useEffect(() => {
+    const pruebasFetch = async () => {
+      if (match) {
+        const response = await fetch(
+          `${URL}/v1/mia/solicitud/id?id=${params.id}`,
+          {
+            method: "GET",
+            headers: HEADERS_API,
+          }
+        );
+        const json = await response.json();
+        console.log("😊dddddddddddddd", json);
+        const data_solicitud = json.data[0];
+        console.log(data_solicitud);
+        const responsefiscal = await fetch(
+          `${URL}/v1/mia/datosFiscales/id?id=${idCompany}`,
+          {
+            method: "GET",
+            headers: HEADERS_API,
+          }
+        );
+        console.log(responsefiscal);
+        setSolicitud(data_solicitud);
+      }
+    };
     const fetchReservation = async () => {
       if (match) {
         const response = await fetch(
@@ -142,7 +227,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           }
         );
         const json = await response.json();
-        console.log("😊", json);
+        console.log("😊dddddddddddddd", json);
         const data_solicitud = json.data[0];
         console.log(data_solicitud);
         const responsefiscal = await fetch(
@@ -259,6 +344,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         });
       }
     };
+    pruebasFetch();
     if (idCompany) {
       fetchReservation();
     } else {
@@ -370,14 +456,31 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           .then((factura) => setDescargaxml(factura))
           .catch((err) => console.error(err));
         setIsInvoiceGenerated(response.data);
-      } catch (error) {
-        alert("Ocurrio un error, intenta mas tarde");
+      } catch (error: any) {
+        showNotification("error", error.message);
       }
     }
   };
-
+  if (!solicitud) {
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        <Loader></Loader>
+      </div>
+    );
+  }
+  let date = new Date(solicitud.created_at_solicitud || "");
+  if (date.getMonth() < 8 && date.getFullYear() <= 2025) {
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        <h1>
+          Disculpa, esta reserva ya no se puede facturar, pero puedes contactar
+          por soporte para obtener mas ayudas
+        </h1>
+      </div>
+    );
+  }
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 py-4">
+    <div className="min-h-full bg-gradient-to-br from-blue-600 to-blue-800 py-4">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between mb-4">
           <a
@@ -528,6 +631,24 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 </div>
               </div>
 
+              {/* Payment Method Select */}
+              <div className="space-y-1 mb-4">
+                <label className="block text-xs font-medium text-gray-700">
+                  Método de Pago
+                </label>
+                <select
+                  value={selectedPaymentMethod}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                  className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  {paymentMethodOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-2">
                 {isInvoiceGenerated ? (
                   <>
@@ -633,7 +754,4 @@ interface BillingPageProps {
   invoiceData?: DataInvoice;
 }
 
-const Prueba = () =>{
-  return <></>
-}
-export default Prueba;
+export default BillingPage;

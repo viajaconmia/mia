@@ -21,7 +21,7 @@ import Button from "./atom/Button";
 import { useCart } from "../context/cartContext";
 import { CartItem } from "../types";
 import { CartService } from "../services/CartService";
-import { formatNumberWithCommas } from "../utils/format";
+import { formatDate, formatNumberWithCommas } from "../utils/format";
 import { InputRadio } from "./atom/Input";
 import { useNotification } from "../hooks/useNotification";
 import {
@@ -73,9 +73,9 @@ const CartItemComponent: React.FC<{
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {new Date(item.details.check_in).toLocaleDateString()}
+                  {formatDate(item.details.check_in)}
                   {" - "}
-                  {new Date(item.details.check_out).toLocaleDateString()}
+                  {formatDate(item.details.check_out)}
                 </span>
               </div>
             </div>
@@ -102,9 +102,9 @@ const CartItemComponent: React.FC<{
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {new Date(item.details.pickup_date).toLocaleDateString()}
+                  {formatDate(item.details.pickup_date)}
                   {" - "}
-                  {new Date(item.details.dropoff_date).toLocaleDateString()}
+                  {formatDate(item.details.dropoff_date)}
                 </span>
               </div>
             </div>
@@ -128,18 +128,12 @@ const CartItemComponent: React.FC<{
               </div>
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
-                <span>
-                  Salida:{" "}
-                  {new Date(item.details.departure_date).toLocaleDateString()}
-                </span>
+                <span>Salida: {formatDate(item.details.departure_date)}</span>
               </div>
               {item.details.return_date && (
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-4 w-4" />
-                  <span>
-                    Regreso:{" "}
-                    {new Date(item.details.return_date).toLocaleDateString()}
-                  </span>
+                  <span>Regreso: {formatDate(item.details.return_date)}</span>
                 </div>
               )}
             </div>

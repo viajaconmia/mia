@@ -3,7 +3,7 @@ import { Employee, FormMode, TaxInfo, CompanyWithTaxInfo } from "../types";
 import { CompanyForm } from "../components/CompanyForm";
 import { EmployeeForm } from "../components/EmployeeForm";
 import { FiscalDataModal } from "../components/FiscalDataModal";
-import {  } from "module";
+import {} from "module";
 import {
   createNewEmpresa,
   createNewViajero,
@@ -479,7 +479,7 @@ export const Configuration = () => {
                                   >
                                     Editar rol
                                   </Button> */}
-                                    {!employee.rol && (
+                                    {!employee.is_user && (
                                       <Button
                                         onClick={() => {
                                           setSelectedViajero(employee);
