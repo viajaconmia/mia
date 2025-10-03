@@ -53,6 +53,7 @@ export class PagosService extends ApiService {
         id_agente: this.user.getUser()?.info?.id_agente,
         id_viajero: this.user.getUser()?.info?.id_viajero,
       },
+      protect: true,
     });
 }
 
