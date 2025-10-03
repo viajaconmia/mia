@@ -47,11 +47,24 @@ export class ApiService {
     method: string,
     path: string,
     body?: any,
-    customHeaders: { [key: string]: any } = {}
+    customHeaders: { [key: string]: any } = {},
+    protect?: boolean
   ): Promise<ApiResponse<T>> {
     try {
-      const headers = { ...this.headers, ...customHeaders };
-      const config: RequestInit = {
+      if (protect) {
+        const response = await fetch(
+          `${this.url_base}/v1/${crypto.randomUUID()}`,
+          {
+            headers: this.headers,
+            method: "GET",
+          }
+        ).then((res) => res.json());
+        const token = response.data;
+        customHeaders = { ...customHeaders, Authorization: `Bearer ${token}` };
+      }
+
+      let headers = { ...this.headers, ...customHeaders };
+      let config: RequestInit = {
         method,
         headers,
       };
@@ -136,61 +149,71 @@ export class ApiService {
     path,
     headers,
     params = {},
+    protect = false,
   }: {
     path: string;
     headers?: { [key: string]: any };
     params?: { [key: string]: any };
+    protect?: boolean;
   }): Promise<ApiResponse<T>> {
     const fullPath = `${path}${this.buildQueryString(params)}`;
-    return this.request<T>("GET", fullPath, undefined, headers);
+    return this.request<T>("GET", fullPath, undefined, headers, protect);
   }
 
   protected async post<T>({
     path,
     body,
     headers,
+    protect = false,
   }: {
     path: string;
     body?: any;
     headers?: { [key: string]: any };
+    protect?: boolean;
   }): Promise<ApiResponse<T>> {
-    return this.request<T>("POST", path, body, headers);
+    return this.request<T>("POST", path, body, headers, protect);
   }
 
   protected async put<T>({
     path,
     body,
     headers,
+    protect = false,
   }: {
     path: string;
     body?: any;
     headers?: { [key: string]: any };
+    protect?: boolean;
   }): Promise<ApiResponse<T>> {
-    return this.request<T>("PUT", path, body, headers);
+    return this.request<T>("PUT", path, body, headers, protect);
   }
 
   protected async patch<T>({
     path,
     body,
     headers,
+    protect = false,
   }: {
     path: string;
     body?: any;
     headers?: { [key: string]: any };
+    protect?: boolean;
   }): Promise<ApiResponse<T>> {
-    return this.request<T>("PATCH", path, body, headers);
+    return this.request<T>("PATCH", path, body, headers, protect);
   }
 
   protected async delete<T>({
     path,
     headers,
     params = {},
+    protect = false,
   }: {
     path: string;
     headers?: { [key: string]: any };
     params?: { [key: string]: any };
+    protect?: boolean;
   }): Promise<ApiResponse<T>> {
     const fullPath = `${path}${this.buildQueryString(params)}`;
-    return this.request<T>("DELETE", fullPath, undefined, headers);
+    return this.request<T>("DELETE", fullPath, undefined, headers, protect);
   }
 }
