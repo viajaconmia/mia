@@ -66,5 +66,6 @@ export class StripeService extends ApiService {
           funding: selectedCard.card?.funding,
         },
       },
+      protect: true,
     });
 }
