@@ -30,20 +30,23 @@ export function FiscalDataModal({
   const { user } = useAuth();
   const [colonias, setColonias] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(!company.taxInfo);
-  const [formData, setFormData] = useState<TaxInfo>(
-    company.taxInfo || {
-      id_datos_fiscales: "",
-      id_empresa: company.id_empresa,
-      rfc: "",
-      calle: "",
-      colonia: "",
-      municipio: "",
-      estado: "",
-      codigo_postal_fiscal: "",
-      regimen_fiscal: "",
-      razon_social: "",
-    }
-  );
+
+  // Preparar los datos fiscales iniciales
+  const initialTaxData: TaxInfo = {
+    id_datos_fiscales: company.id_datos_fiscales || "",
+    id_empresa: company.id_empresa,
+    rfc: company.rfc || "",
+    calle: company.calle || company.empresa_direccion || "",
+    colonia: company.colonia || company.empresa_colonia || "",
+    municipio: company.municipio || company.empresa_municipio || "",
+    estado: company.estado || company.empresa_estado || "",
+    codigo_postal_fiscal: company.codigo_postal_fiscal || company.empresa_cp || "",
+    regimen_fiscal: company.regimen_fiscal || "",
+    razon_social: company.razon_social_df || company.razon_social || "",
+  };
+
+  const [formData, setFormData] = useState<TaxInfo>(initialTaxData);
+
   const regimes = {
     "601": "General de Ley Personas Morales",
     "602": "Personas Morales con fines no lucrativos (no vigente)",
@@ -77,55 +80,69 @@ export function FiscalDataModal({
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(
-        company.taxInfo || {
-          id_datos_fiscales: "",
-          id_empresa: company.id_empresa,
-          rfc: "",
-          calle: "",
-          colonia: "",
-          municipio: "",
-          estado: "",
-          codigo_postal_fiscal: "",
-          regimen_fiscal: "",
-          razon_social: "",
-        }
-      );
+      // Actualizar los datos del formulario con la información de la empresa
+      const updatedTaxData: TaxInfo = {
+        id_datos_fiscales: company.id_datos_fiscales || "",
+        id_empresa: company.id_empresa,
+        rfc: company.rfc || "",
+        calle: company.calle || company.empresa_direccion || "",
+        colonia: company.colonia || company.empresa_colonia || "",
+        municipio: company.municipio || company.empresa_municipio || "",
+        estado: company.estado || company.empresa_estado || "",
+        codigo_postal_fiscal: company.codigo_postal_fiscal || company.empresa_cp || "",
+        regimen_fiscal: company.regimen_fiscal || "",
+        razon_social: company.razon_social_df || company.razon_social || "",
+      };
+
+      setFormData(updatedTaxData);
       setIsEditing(!company.taxInfo);
       setError("");
+
+      // Si hay código postal, buscar las colonias
+      if (updatedTaxData.codigo_postal_fiscal && updatedTaxData.codigo_postal_fiscal.length > 4) {
+        fetchColonias(updatedTaxData.codigo_postal_fiscal);
+      }
     }
   }, [isOpen, company]);
 
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (formData.codigo_postal_fiscal.length > 4) {
-      fetch(
-        `${URL}/v1/sepoMex/buscar-codigo-postal?d_codigo=${formData.codigo_postal_fiscal}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...AUTH,
-          },
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.data.length > 0) {
-            setColonias(data.data.map((item: any) => item.d_asenta)); // Extraer colonias
+  // Función para buscar colonias por código postal
+  const fetchColonias = (codigoPostal: string) => {
+    fetch(
+      `${URL}/v1/sepoMex/buscar-codigo-postal?d_codigo=${codigoPostal}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...AUTH,
+        },
+      }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data.length > 0) {
+          setColonias(data.data.map((item: any) => item.d_asenta)); // Extraer colonias
+          // Si el formulario no tiene municipio o estado, actualizarlos
+          if (!formData.municipio || !formData.estado) {
             setFormData((prev) => ({
               ...prev,
               municipio: data.data[0].D_mnpio,
               estado: data.data[0].d_estado,
             }));
-          } else {
-            setColonias([]);
           }
-        })
-        .catch((error) =>
-          console.error("Error obteniendo datos de código postal:", error)
-        );
+        } else {
+          setColonias([]);
+        }
+      })
+      .catch((error) =>
+        console.error("Error obteniendo datos de código postal:", error)
+      );
+  };
+
+  useEffect(() => {
+    if (formData.codigo_postal_fiscal && formData.codigo_postal_fiscal.length > 4) {
+      fetchColonias(formData.codigo_postal_fiscal);
     }
   }, [formData.codigo_postal_fiscal]);
 
@@ -285,8 +302,11 @@ export function FiscalDataModal({
                   pattern="^[^<>]*$"
                   type="text"
                   value={formData.municipio}
-                  readOnly
-                  className="w-full p-2 border rounded-md bg-gray-100"
+                  onChange={(e) =>
+                    setFormData({ ...formData, municipio: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
                 />
               </div>
               <div>
@@ -297,8 +317,11 @@ export function FiscalDataModal({
                   pattern="^[^<>]*$"
                   type="text"
                   value={formData.estado}
-                  readOnly
-                  className="w-full p-2 border rounded-md bg-gray-100"
+                  onChange={(e) =>
+                    setFormData({ ...formData, estado: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
                 />
               </div>
 
@@ -428,20 +451,7 @@ export function FiscalDataModal({
                 <button
                   type="button"
                   onClick={() => {
-                    setFormData(
-                      company.taxInfo || {
-                        id_datos_fiscales: "",
-                        id_empresa: company.id_empresa,
-                        rfc: "",
-                        calle: "",
-                        colonia: "",
-                        municipio: "",
-                        estado: "",
-                        codigo_postal_fiscal: "",
-                        regimen_fiscal: "",
-                        razon_social: "",
-                      }
-                    );
+                    setFormData(initialTaxData);
                     setIsEditing(false);
                     setError("");
                   }}
@@ -462,15 +472,15 @@ export function FiscalDataModal({
               <div className="col-span-2 grid grid-cols-2 gap-4">
                 {Object.entries(formData).map(
                   ([key, value]) =>
-                    key != "id_empresa" &&
-                    key != "id_datos_fiscales" && (
+                    key !== "id_empresa" &&
+                    key !== "id_datos_fiscales" && (
                       <div key={key}>
                         <p className="text-sm font-medium text-gray-700">
                           {key.replace(/_/g, " ").toUpperCase()}
                         </p>
                         <p className="mt-1">
                           {key === "regimen_fiscal"
-                            ? `${value} - ${regimes[value]}`
+                            ? `${value} - ${regimes[value as keyof typeof regimes] || "Desconocido"}`
                             : value || "N/A"}
                         </p>
                       </div>

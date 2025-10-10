@@ -70,10 +70,19 @@ export const NewRegistrationPage = () => {
       );
       window.location.href = "/";
     } catch (error: any) {
-      console.error("Error during registration:", error);
-      setRegistrationError(
-        error.message || "Error al registrar. Por favor intenta de nuevo."
-      );
+      if (
+        error.message == "Email not confirmed" ||
+        error.code == "email_not_confirmed"
+      ) {
+        setRegistrationError(
+          "Te enviaremos otro correo de verificación para que puedas acceder, una ves que entres al link podras acceder a tu cuenta desde cualquier dispositivo"
+        );
+      } else {
+        console.error("Error during registration:", error);
+        setRegistrationError(
+          error.message || "Error al registrar. Por favor intenta de nuevo."
+        );
+      }
     }
   };
 

@@ -137,7 +137,7 @@ export class SupabaseClient {
 
   public sendEmailToResetPassword = async (correo: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(correo, {
-      redirectTo: `https://viajaconmia.com${ROUTES.AUTH.HOME}`,
+      redirectTo: `https://viajaconmia.com${ROUTES.AUTH.RESET_PASSWORD}`,
       // redirectTo: `http://localhost:5173${ROUTES.AUTH.HOME}`,
     });
     this.handleError(error, "Error during reset password");

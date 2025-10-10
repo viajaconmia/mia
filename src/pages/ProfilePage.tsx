@@ -82,7 +82,7 @@ const CheckOutForm = ({ setSuccess, setTrigger }: any) => {
     event.preventDefault();
     if (!stripe || !elements) return;
 
-    const id_agente = user?.id;
+    const id_agente = user?.info?.id_agente;
     const cardElement = elements.getElement(CardElement);
     //crear metodo de pago
     const { error, paymentMethod } = await stripe.createPaymentMethod({
@@ -207,7 +207,7 @@ export const ProfilePage = () => {
     const fetchData = async () => {
       const data = await fetchPaymentMethods();
       console.log("Payment methods data:", data);
-      setPaymentMethods(data);
+      setPaymentMethods(data.data);
       const paymentsData = await fetchPagosAgent();
       setPayments(paymentsData);
       const pendientesData = await fetchPendientesAgent();
@@ -290,7 +290,7 @@ export const ProfilePage = () => {
 
   const handleDeleteMethod = async (id: string) => {
     console.log("Delete payment method:", id);
-    const id_agente = user?.id;
+    const id_agente = user?.info?.id_agente;
     const response = await fetch(`${URL}/v1/stripe/delete-payment-method`, {
       method: "POST",
       headers: {

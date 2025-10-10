@@ -4,3 +4,4 @@ export const validateEmail = (email: string): void => {
     throw new Error("El formato del correo electrónico no es válido");
   }
 };
+  

@@ -12,7 +12,7 @@ const ROUTES = {
     ID_CREATE: (id: string) => `/hotels/${id}`,
   },
   FAQ: "/faq",
-  DASHBOARD: "/dashboard",
+  DASHBOARD: "/consultas/general",
   PROFILE: "/profile",
   SETTINGS: "/settings",
   NOT_FOUND: "/404",
@@ -21,8 +21,8 @@ const ROUTES = {
     HOME: "/consultas/general",
     SUBPATH: (path: string) => `/consultas/${path}`,
 
-    SEARCH: (path: string, search:string) => `/consultas/${path}?search=${search}`,
-
+    SEARCH: (path: string, search: string) =>
+      `/consultas/${path}?search=${search}`,
   },
   FACTURACION: {
     HOME: "/factura/:id",
@@ -31,8 +31,9 @@ const ROUTES = {
   BOOKINGS: {
     HOME: "/bookings",
     ID: "/bookings/:id",
-    ID_SOLICITUD: (id: string) => `/bookings/${id}`,
+    ID_SOLICITUD: (id: string) => `/bookings/${btoa(id)}`,
   },
+  IMPERSONADO: "/impersonado",
 };
 
 export default ROUTES;

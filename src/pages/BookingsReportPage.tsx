@@ -549,8 +549,8 @@ export const BookingsReportPage = () => {
                             {Number(booking.pendiente_por_cobrar) <= 0 ? (
                               <ProtectedComponent
                                 admit={{
-                                  administrador: true,
-                                  reservante: true,
+                                  administrador: false,
+                                  reservante: false,
                                   viajero: false,
                                   consultor: false,
                                   "no-rol": false,
@@ -582,7 +582,9 @@ export const BookingsReportPage = () => {
                         {/* {booking.is_booking && } */}
 
                         <Link
-                          to={`${ROUTES.BOOKINGS.HOME}/${booking.id_solicitud}`}
+                          to={`${ROUTES.BOOKINGS.ID_SOLICITUD(
+                            booking.id_solicitud
+                          )}`}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
                         >
                           <ListCollapse className="w-4 h-4" />

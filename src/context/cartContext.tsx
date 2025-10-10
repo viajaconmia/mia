@@ -87,7 +87,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       .getCartItems()
       .then((response) => {
         const { data } = response;
-        console.log(response);
         if (data == null) {
           setCart([]);
           return;

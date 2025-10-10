@@ -1,16 +1,6 @@
 // 'use client';
 
-import {
-  Card,
-  DonutChart,
-  List,
-  ListItem,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
-} from "@tremor/react";
+import { Card, DonutChart, List, ListItem } from "@tremor/react";
 
 const currencyFormatter = (number: number, simbol: string = "") => {
   return `${simbol}` + number;
@@ -33,7 +23,7 @@ export default function Donut({
   return (
     <>
       <Card className="overflow-hidden p-0 sm:mx-auto sm:max-w-lg">
-        <div className="p-3">
+        <div className="p-3 border-b">
           <h3 className="text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
             {titulo}
           </h3>
@@ -41,62 +31,50 @@ export default function Donut({
             {subtitulo}
           </p> */}
         </div>
-        <TabGroup>
-          <TabList className="px-6 pt-4">
-            {summary.map((category) => (
-              <Tab key={category.name}>By {category.name}</Tab>
-            ))}
-          </TabList>
-          <TabPanels className="mt-4">
-            {summary.map((category) => (
-              <TabPanel key={category.name}>
-                <div className="p-6">
-                  <DonutChart
-                    data={category.data}
-                    category="amount"
-                    index="name"
-                    valueFormatter={(number: number) =>
-                      currencyFormatter(number, simbol)
-                    }
-                    showTooltip={false}
-                    colors={["blue", "indigo", "cyan", "purple", "fuchsia"]}
-                  />
-                </div>
-                <List className="mt-2 border-t border-tremor-border dark:border-dark-tremor-border">
-                  {category.data.map((item) => (
-                    <ListItem
-                      key={item.name}
-                      className="group relative space-x-4 truncate !py-0 !pr-4 hover:bg-tremor-background-muted hover:dark:bg-dark-tremor-background-muted"
-                    >
-                      <div
-                        className={` flex h-12 w-full items-center truncate border-l-2 pl-4`}
-                      >
-                        <span className="truncate group-hover:text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis group-hover:dark:text-dark-tremor-content-strong">
-                          <a href={item.href} className="focus:outline-none">
-                            {/* extend link to entire list item */}
-                            <span
-                              className="absolute inset-0"
-                              aria-hidden={true}
-                            />
-                            {item.name}
-                          </a>
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1.5">
-                        <span className="font-medium tabular-nums text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                          {currencyFormatter(item.amount, simbol)}{" "}
-                          <span className="font-normal text-tremor-content dark:text-dark-tremor-content">
-                            {/* ({item.share}) */}
-                          </span>
-                        </span>
-                      </div>
-                    </ListItem>
-                  ))}
-                </List>
-              </TabPanel>
-            ))}
-          </TabPanels>
-        </TabGroup>
+        {summary.map((category) => (
+          <div key={category.name}>
+            <div className="p-6">
+              <DonutChart
+                data={category.data}
+                category="amount"
+                index="name"
+                valueFormatter={(number: number) =>
+                  currencyFormatter(number, simbol)
+                }
+                showTooltip={false}
+                colors={["blue", "indigo", "cyan", "purple", "fuchsia"]}
+              />
+            </div>
+            <List className="mt-2 border-t border-tremor-border dark:border-dark-tremor-border">
+              {category.data.map((item) => (
+                <ListItem
+                  key={item.name}
+                  className="group relative space-x-4 truncate !py-0 !pr-4 hover:bg-tremor-background-muted hover:dark:bg-dark-tremor-background-muted"
+                >
+                  <div
+                    className={` flex h-12 w-full items-center truncate border-l-2 pl-4`}
+                  >
+                    <span className="truncate group-hover:text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis group-hover:dark:text-dark-tremor-content-strong">
+                      <a href={item.href} className="focus:outline-none">
+                        {/* extend link to entire list item */}
+                        <span className="absolute inset-0" aria-hidden={true} />
+                        {item.name}
+                      </a>
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="font-medium tabular-nums text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                      {currencyFormatter(item.amount, simbol)}{" "}
+                      <span className="font-normal text-tremor-content dark:text-dark-tremor-content">
+                        {/* ({item.share}) */}
+                      </span>
+                    </span>
+                  </div>
+                </ListItem>
+              ))}
+            </List>
+          </div>
+        ))}
       </Card>
     </>
   );
