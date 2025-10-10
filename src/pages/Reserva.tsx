@@ -30,7 +30,7 @@ export function Reserva() {
 
   useEffect(() => {
     if (params?.id) {
-      fetchReservation(params.id, (data) => {
+      fetchReservation(atob(params.id), (data) => {
         setReservationDetails({
           ...data,
         } as ReservationDetails2);

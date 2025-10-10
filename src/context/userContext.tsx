@@ -27,10 +27,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   useEffect(() => {
-    console.log(authState);
-  }, [authState]);
-
-  useEffect(() => {
     const fetchInfo = async (session: Session) => {
       const info = await SupabaseClient.getInstance().getInfo(session.user.id); // aquí pasas solo el user.id
       const userAuth: UserAuth = {
@@ -40,6 +36,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         user: session.user,
         info,
       };
+      console.log(userAuth);
       UserSingleton.getInstance().setUser(userAuth);
       setAuthState({
         user: userAuth,

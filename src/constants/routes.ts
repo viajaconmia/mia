@@ -31,7 +31,7 @@ const ROUTES = {
   BOOKINGS: {
     HOME: "/bookings",
     ID: "/bookings/:id",
-    ID_SOLICITUD: (id: string) => `/bookings/${id}`,
+    ID_SOLICITUD: (id: string) => `/bookings/${btoa(id)}`,
   },
   IMPERSONADO: "/impersonado",
 };
