@@ -75,6 +75,7 @@ export const AdminDashboard = () => {
       const { data } = await BookingService.getInstance().getReservas();
       // console.log("bookings", data);
       setBookings(data || []);
+      console.log(bookings)
     } catch (error: any) {
       console.error("Error fetching bookings:", error);
       setBookings([]);
@@ -98,6 +99,8 @@ export const AdminDashboard = () => {
     pagos: <PaymentsView payments={payments} />,
     reservaciones: <BookingsView bookings={bookings} />,
   };
+
+  console.log(bookings, "cambios de bookings")
 
   return (
     <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">

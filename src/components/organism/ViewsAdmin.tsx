@@ -60,6 +60,7 @@ const ExpandedContentRenderer = ({
   const [, setLocation] = useLocation();
   const renderTypes = typesModal.filter((type) => type != itemType);
 
+
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
@@ -167,6 +168,7 @@ const ExpandedContentRenderer = ({
   };
   const left = renderData[renderTypes[0]];
   const right = renderData[renderTypes[1]];
+
 
   return (
     <TwoColumnDropdown
@@ -426,18 +428,39 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     useEffect(() => {
       const fetchMonthlyStats = async () => {
         try {
-          const response = await fetch(
-            `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${user?.info?.id_agente}&mes=${selectedMonth}`,
-            {
-              method: "GET",
-              headers: HEADERS_API,
-            }
-          );
+          const endpoint = `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${user?.info?.id_agente}&mes=${selectedMonth}`;
+
+          // 🔹 Mostrar qué se está enviando al backend
+          console.log("📤 Enviando petición a backend:");
+          console.log({
+            endpoint,
+            method: "GET",
+            headers: HEADERS_API,
+          });
+
+          const response = await fetch(endpoint, {
+            method: "GET",
+            headers: HEADERS_API,
+          });
+
+          // 🔹 Mostrar información de la respuesta HTTP
+          console.log("📥 Respuesta HTTP:");
+          console.log({
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText,
+          });
+
+
+          // 🔹 Mostrar el contenido JSON recibido del backend
+          console.log("📦 Datos recibidos deljjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj backend:");
           const json = await response.json();
-          console.log(json);
+
+          console.log(JSON.stringify(json, null, 2));
+
           // setData(json);
         } catch (error) {
-          console.error("Error al obtener estadísticas mensuales:", error);
+          console.error("❌ Error al obtener estadísticas mensuales:", error);
         }
       };
 
@@ -448,17 +471,18 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
 
     const fechaHoy = new Date();
     fechaHoy.setHours(0, 0, 0, 0);
-
     const summary = [
       {
         name: "Gastos",
         data: gastosHotel.totalByHotel.map(({ hotel, total }) => ({
           name: hotel,
-          amount: Number(total.toFixed(2)),
+          amount: Math.round((total + Number.EPSILON) * 100) / 100,
           href: "#",
         })),
       },
     ];
+
+    console.log(summary, "respestas jbsumas gasto")
     const summary1 = [
       {
         name: "Noches",
@@ -469,6 +493,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
         })),
       },
     ];
+    console.log(nightsByHotel, "respestas noches")
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -509,13 +534,18 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     const checkInDate = new Date(obj.check_in);
     const today = new Date();
 
+    const currentMonth = today.getMonth() + 1; // meses van de 0-11
+    const currentYear = today.getFullYear();
+
     return (
       obj.status_reserva === "Confirmada" &&
       checkInDate <= today &&
-      checkInDate.getMonth() + 1 === Number(selectedMonth) &&
-      checkInDate.getFullYear() === Number(selectedYear)
+      checkInDate.getMonth() + 1 === currentMonth &&
+      checkInDate.getFullYear() === currentYear
     );
   }).length;
+
+  // console.log(activeBookings, "enviados de impresion")
 
   const nightsByHotel = calculateNightsByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
@@ -523,11 +553,15 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     Number(selectedYear)
   );
 
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+
   const total = calculateGrandTotalForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
-    Number(selectedMonth),
-    Number(selectedYear)
+    currentMonth,
+    currentYear
   );
+
 
   const totalByHotel = calculateTotalByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
