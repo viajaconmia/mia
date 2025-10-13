@@ -5,6 +5,7 @@ import ROUTES from "../../constants/routes";
 import { Payment } from "../../services/PagosService";
 import Button from "../atom/Button";
 import { FacturamaService } from "../../services/FacturamaService";
+import { fetchFullDetalles } from "../../services/detalles";
 import {
   downloadXMLBase64,
   downloadXMLUrl,
@@ -58,14 +59,94 @@ const ExpandedContentRenderer = ({
   itemType: ModalType;
 }) => {
   const [, setLocation] = useLocation();
-  const renderTypes = typesModal.filter((type) => type != itemType);
+  const renderTypes = typesModal.filter((type) => type !== itemType);
+  const { user } = useAuth();
 
+  const [full, setFull] = useState<{
+    reservas: any[];
+    pagos: any[];
+    facturas: any[];
+  }>({ reservas: [], pagos: [], facturas: [] });
+  const [loading, setLoading] = useState(false);
 
+  // id a buscar según el tipo de fila expandida
+  const pickIdBuscar = (it: any, type: ModalType): string | null => {
+    switch (type) {
+      case "booking":
+        return it?.id_hospedaje || null;
+      case "payment":
+        return it?.raw_id || null;
+      case "invoice":
+        return it?.id_factura || null;
+      default:
+        return null;
+    }
+  };
+
+  // normalizadores -> mapean lo que venga del SP a las keys usadas en tus columnas
+  const normalizeReservas = (arr: any[] = []) =>
+    arr.map((r) => ({
+      ...r,
+      codigo_reservacion_hotel:
+        r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
+      hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
+      total: r.total ?? r.total_price ?? r.solicitud_total ?? r.total_solicitado ?? 0,
+    }));
+
+  const normalizePagos = (arr: any[] = []) =>
+    arr.map((p) => ({
+      ...p,
+      id_pago: p.id_pago || p.raw_id || String(p.id_saldo ?? ""),
+      raw_id: p.raw_id, // lo dejamos por si lo usas para navegar
+      monto: p.monto ?? p.total ?? p.amount ?? p.total_pago ?? 0,
+    }));
+
+  const normalizeFacturas = (arr: any[] = []) =>
+    arr.map((f) => ({
+      ...f,
+      id_factura: f.id_factura || f.folio || f.id_facturama || "",
+      total: f.total ?? f.total_factura ?? f.amount ?? 0,
+    }));
+
+  useEffect(() => {
+    const id_agente = user?.info?.id_agente;
+    const id_buscar = pickIdBuscar(item, itemType);
+
+    if (!id_agente || !id_buscar) {
+      console.warn("[Expanded] Falta id_agente o id_buscar", {
+        id_agente,
+        id_buscar,
+        itemType,
+        item,
+      });
+      return;
+    }
+
+    (async () => {
+      try {
+        setLoading(true);
+        const resp = await fetchFullDetalles({ id_agente, id_buscar });
+        console.log("getFullDetalles (Expanded):", { id_agente, id_buscar, resp });
+
+        setFull({
+          reservas: normalizeReservas(resp.reservas),
+          pagos: normalizePagos(resp.pagos),
+          facturas: normalizeFacturas(resp.facturas),
+        });
+      } catch (err) {
+        console.error("Error getFullDetalles (Expanded):", err);
+        setFull({ reservas: [], pagos: [], facturas: [] });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user?.info?.id_agente, item, itemType]);
+
+  // columnas — iguales a las tuyas
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
-
       component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
@@ -79,17 +160,10 @@ const ExpandedContentRenderer = ({
         },
       },
     },
-    {
-      key: "hotel",
-      header: "Hotel",
-      component: "text",
-    },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
-    },
+    { key: "hotel", header: "Hotel", component: "text" },
+    { key: "total", header: "Total", component: "precio" },
   ];
+
   const payment_columns: ColumnsTable<Payment & { id_pago: string }>[] = [
     {
       key: "id_pago",
@@ -98,7 +172,6 @@ const ExpandedContentRenderer = ({
       componentProps: {
         variant: "ghost",
         onClick: ({ item }: { item: Payment & { id_pago: string } }) => {
-          console.log(item);
           setLocation(
             ROUTES.CONSULTAS.SEARCH(
               "pagos",
@@ -108,12 +181,9 @@ const ExpandedContentRenderer = ({
         },
       },
     },
-    {
-      key: "monto",
-      header: "Total",
-      component: "precio",
-    },
+    { key: "monto", header: "Total", component: "precio" },
   ];
+
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
@@ -122,53 +192,31 @@ const ExpandedContentRenderer = ({
       componentProps: {
         variant: "ghost",
         onClick: ({ item }: { item: Invoice }) =>
-          setLocation(
-            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
-          ),
+          setLocation(ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")),
       },
     },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
-    },
+    { key: "total", header: "Total", component: "precio" },
   ];
 
+  // construir datasets desde la RESPUESTA del SP
   const renderData: {
-    [K in ModalType]: {
-      columns: ColumnsTable<ModalTypeMap[K]>[];
-      title: string;
-      data: ModalTypeMap[K][];
-    };
+    [K in ModalType]: { columns: ColumnsTable<any>[]; title: string; data: any[] };
   } = {
-    booking: {
-      columns: booking_columns,
-      title: "Reservas asociadas",
-      data:
-        itemType == "invoice" || itemType == "payment"
-          ? item.reservas_asociadas || []
-          : [],
-    },
-    payment: {
-      columns: payment_columns,
-      title: "Pagos asociados",
-      data:
-        itemType == "invoice" || itemType == "booking"
-          ? item.pagos_asociados || []
-          : [],
-    },
-    invoice: {
-      columns: invoice_columns,
-      title: "Facturas asociadas",
-      data:
-        itemType == "payment" || itemType == "booking"
-          ? item.facturas_asociadas || []
-          : [],
-    },
+    booking: { title: "Reservas asociadas", columns: booking_columns, data: full.reservas },
+    payment: { title: "Pagos asociados", columns: payment_columns, data: full.pagos },
+    invoice: { title: "Facturas asociadas", columns: invoice_columns, data: full.facturas },
   };
+
   const left = renderData[renderTypes[0]];
   const right = renderData[renderTypes[1]];
 
+  if (loading) {
+    return (
+      <div className="w-full p-4 text-center text-gray-500">
+        Cargando conexiones…
+      </div>
+    );
+  }
 
   return (
     <TwoColumnDropdown
@@ -455,6 +503,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
           // 🔹 Mostrar el contenido JSON recibido del backend
           console.log("📦 Datos recibidos deljjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj backend:");
           const json = await response.json();
+          // IDs estáticos de prueba
 
           console.log(JSON.stringify(json, null, 2));
 
