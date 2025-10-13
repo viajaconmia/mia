@@ -234,8 +234,8 @@ export const Table = <T extends Record<string, any>>({
                   key={String(column.key)}
                   onClick={() => handleSort(String(column.key))}
                   className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${column.key !== "__expand__"
-                      ? "cursor-pointer"
-                      : "cursor-default"
+                    ? "cursor-pointer"
+                    : "cursor-default"
                     }`}
                 >
                   <div className="flex items-center justify-start space-x-2">
