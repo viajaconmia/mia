@@ -15,7 +15,6 @@ import { Invoice, Reserva } from "../types/services";
 import { BookingService } from "../services/BookingService";
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
-import { fetchFullDetalles } from "../services/detalles"; // tu util
 import { InputText } from "../components/atom/Input";
 import {
   BookingsView,
@@ -35,8 +34,6 @@ export const AdminDashboard = () => {
   const { user } = useAuth();
   const { showNotification } = useNotification();
 
-  // estado para el botón de prueba
-  const [testingFull, setTestingFull] = useState(false);
 
   useEffect(() => {
     fetchDataPage();
@@ -91,10 +88,6 @@ export const AdminDashboard = () => {
     }
   };
 
-  // IDs estáticos de prueba
-  const DEBUG_ID_AGENTE = "6d86f110-3ea0-41ce-9afa-696738bc8daa";
-  const DEBUG_ID_BUSCAR = "fac-198632df-9fd6-4877-9235-d1af19bb734e";
-
   const views: Record<ViewsConsultas, React.ReactNode> = {
     general: <OverviewView bookings={bookings} />,
     facturas: <InvoicesView invoices={invoices} />,
@@ -139,29 +132,6 @@ export const AdminDashboard = () => {
           <div /> /* placeholder para mantener el botón a la derecha */
         )}
 
-        <button
-          onClick={async () => {
-            try {
-              setTestingFull(true);
-              const resp = await fetchFullDetalles({
-                id_agente: DEBUG_ID_AGENTE,
-                id_buscar: DEBUG_ID_BUSCAR,
-              });
-              console.log("getFullDetalles (onClick):", resp);
-              showNotification("success", "SP ejecutado (revisa consola)");
-            } catch (e: any) {
-              console.error(e);
-              showNotification("error", e?.message || "Error al ejecutar SP");
-            } finally {
-              setTestingFull(false);
-            }
-          }}
-          className={`px-3 py-2 rounded text-white ${testingFull ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          disabled={testingFull}
-        >
-          {testingFull ? "Cargando..." : "Probar getFullDetalles"}
-        </button>
 
       </div>
 
