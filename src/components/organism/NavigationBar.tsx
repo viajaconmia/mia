@@ -150,7 +150,7 @@ export const AuthLinks: React.FC<AuthLinksProps> = ({
             }
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             variant="ghost"
-            className="w-full flex items-center space-x-2 text-gray-800"
+            className="w-full flex items-center space-x-2 text-gray-800 md:order-5"
             icon={User2}
           >
             Mi cuenta

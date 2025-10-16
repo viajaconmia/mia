@@ -24,15 +24,8 @@ import { Building2, Calendar, DollarSign } from "lucide-react";
 import { formatNumberWithCommas } from "../../utils/format";
 import { StatCard } from "../atom/StatCard";
 import { SelectInput } from "../atom/Input";
-import { HEADERS_API, URL } from "../../constants/apiConstant";
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
-
-type ModalTypeMap = {
-  booking: Reserva;
-  payment: Payment & { id_pago: string };
-  invoice: Invoice;
-};
 
 interface TwoColumnDropdownProps {
   leftContent: React.ReactNode;
@@ -304,13 +297,31 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
     { key: "total", header: "Precio", component: "text" },
     {
       key: "id_solicitud",
-      header: "Detalles",
-      component: "button",
+      header: "Acciones",
+      component: "custom",
       componentProps: {
-        label: "Detalles",
-        onClick: ({ item }: { item: Reserva }) => {
-          console.log(item);
-          setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+        component: ({ item }: { item: Reserva }) => {
+          return (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setLocation(ROUTES.FACTURACION.ID(item.id_solicitud));
+                }}
+              >
+                Facturar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+                }}
+              >
+                Ver Reserva
+              </Button>
+            </div>
+          );
         },
       },
     },
