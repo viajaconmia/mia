@@ -117,7 +117,7 @@ const Chat = () => {
       {/* Chat Panel - Left Side */}
       <div className="flex justify-end">
         <div
-          className={`w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100vh-3rem)]`}
+          className={`w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]`}
         >
           <div className="flex flex-col h-full border-r">
             {/* Manual Reservation Button */}
@@ -205,7 +205,7 @@ const Chat = () => {
               </>
             ) : (
               <div className="p-4 flex justify-center">
-                <div className="bg-white h-[calc(100vh-5rem)] rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
+                <div className="bg-white h-[calc(100dvh-5rem)] rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
                   <TabsList
                     activeTab={activeTab}
                     onChange={(tab) => {
@@ -226,7 +226,7 @@ const Chat = () => {
           </div>
         </div>
 
-        <div className=" hidden md:flex md:w-1/3 h-[calc(100vh-4rem)] p-6 justify-center">
+        <div className=" hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
           <div className="bg-white rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
             <TabsList
               activeTab={activeTab}
