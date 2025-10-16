@@ -5,7 +5,7 @@ const PageContainer = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className={`h-screen w-screen`}>
       <div
-        className={`max-w-screen mx-auto h-[100dhv] overflow-auto bg-gradient-to-br from-blue-600 via-blue-500 to-blue-300 ${
+        className={`max-w-screen mx-auto h-[100hv] overflow-auto bg-gradient-to-br from-blue-600 via-blue-500 to-blue-300 ${
           user ? "pb-18 md:pt-16 md:pb-0" : ""
         }`}
       >
