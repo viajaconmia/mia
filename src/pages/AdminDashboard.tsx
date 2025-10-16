@@ -132,7 +132,7 @@ export const AdminDashboard = () => {
         )}
       </div>
 
-      <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
+      <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto rounded-b-lg">
         <Switch>
           {Object.entries(views).map(([key, Component]) => (
             <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>
