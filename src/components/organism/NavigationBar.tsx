@@ -267,7 +267,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
               className="!justify-start !items-start text-gray-700"
               onClick={handleClose}
             >
-              Mis reservas
+              Consultas
             </NavigationLink>
             <NavigationLink
               href={ROUTES.SETTINGS}
