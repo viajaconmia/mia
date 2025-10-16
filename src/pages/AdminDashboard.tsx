@@ -34,7 +34,6 @@ export const AdminDashboard = () => {
   const { user } = useAuth();
   const { showNotification } = useNotification();
 
-
   useEffect(() => {
     fetchDataPage();
   }, []);
@@ -72,7 +71,7 @@ export const AdminDashboard = () => {
     try {
       const { data } = await BookingService.getInstance().getReservas();
       setBookings(data || []);
-      console.log(bookings);
+      // console.log(bookings);
     } catch (error: any) {
       console.error("Error fetching bookings:", error);
       setBookings([]);
@@ -95,7 +94,7 @@ export const AdminDashboard = () => {
     reservaciones: <BookingsView bookings={bookings} />,
   };
 
-  console.log(bookings, "cambios de bookings");
+  // console.log(bookings, "cambios de bookings");
 
   return (
     <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
@@ -131,11 +130,9 @@ export const AdminDashboard = () => {
         ) : (
           <div /> /* placeholder para mantener el botón a la derecha */
         )}
-
-
       </div>
 
-      <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
+      <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto rounded-b-lg">
         <Switch>
           {Object.entries(views).map(([key, Component]) => (
             <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>

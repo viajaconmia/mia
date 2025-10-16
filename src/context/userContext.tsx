@@ -36,7 +36,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         user: session.user,
         info,
       };
-      console.log(userAuth);
+      // console.log(userAuth);
       UserSingleton.getInstance().setUser(userAuth);
       setAuthState({
         user: userAuth,

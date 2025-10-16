@@ -24,15 +24,8 @@ import { Building2, Calendar, DollarSign } from "lucide-react";
 import { formatNumberWithCommas } from "../../utils/format";
 import { StatCard } from "../atom/StatCard";
 import { SelectInput } from "../atom/Input";
-import { HEADERS_API } from "../../constants/apiConstant";
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
-
-type ModalTypeMap = {
-  booking: Reserva;
-  payment: Payment & { id_pago: string };
-  invoice: Invoice;
-};
 
 interface TwoColumnDropdownProps {
   leftContent: React.ReactNode;
@@ -90,7 +83,12 @@ const ExpandedContentRenderer = ({
       codigo_reservacion_hotel:
         r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
       hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
-      total: r.total ?? r.total_price ?? r.solicitud_total ?? r.total_solicitado ?? 0,
+      total:
+        r.total ??
+        r.total_price ??
+        r.solicitud_total ??
+        r.total_solicitado ??
+        0,
     }));
 
   const normalizePagos = (arr: any[] = []) =>
@@ -113,12 +111,12 @@ const ExpandedContentRenderer = ({
     const id_buscar = pickIdBuscar(item, itemType);
 
     if (!id_agente || !id_buscar) {
-      console.warn("[Expanded] Falta id_agente o id_buscar", {
-        id_agente,
-        id_buscar,
-        itemType,
-        item,
-      });
+      // console.warn("[Expanded] Falta id_agente o id_buscar", {
+      //   id_agente,
+      //   id_buscar,
+      //   itemType,
+      //   item,
+      // });
       return;
     }
 
@@ -126,7 +124,11 @@ const ExpandedContentRenderer = ({
       try {
         setLoading(true);
         const resp = await fetchFullDetalles({ id_agente, id_buscar });
-        console.log("getFullDetalles (Expanded):", { id_agente, id_buscar, resp });
+        console.log("getFullDetalles (Expanded):", {
+          id_agente,
+          id_buscar,
+          resp,
+        });
 
         setFull({
           reservas: normalizeReservas(resp.reservas),
@@ -192,7 +194,9 @@ const ExpandedContentRenderer = ({
       componentProps: {
         variant: "ghost",
         onClick: ({ item }: { item: Invoice }) =>
-          setLocation(ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")),
+          setLocation(
+            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
+          ),
       },
     },
     { key: "total", header: "Total", component: "precio" },
@@ -200,11 +204,27 @@ const ExpandedContentRenderer = ({
 
   // construir datasets desde la RESPUESTA del SP
   const renderData: {
-    [K in ModalType]: { columns: ColumnsTable<any>[]; title: string; data: any[] };
+    [K in ModalType]: {
+      columns: ColumnsTable<any>[];
+      title: string;
+      data: any[];
+    };
   } = {
-    booking: { title: "Reservas asociadas", columns: booking_columns, data: full.reservas },
-    payment: { title: "Pagos asociados", columns: payment_columns, data: full.pagos },
-    invoice: { title: "Facturas asociadas", columns: invoice_columns, data: full.facturas },
+    booking: {
+      title: "Reservas asociadas",
+      columns: booking_columns,
+      data: full.reservas,
+    },
+    payment: {
+      title: "Pagos asociados",
+      columns: payment_columns,
+      data: full.pagos,
+    },
+    invoice: {
+      title: "Facturas asociadas",
+      columns: invoice_columns,
+      data: full.facturas,
+    },
   };
 
   const left = renderData[renderTypes[0]];
@@ -246,7 +266,6 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
-  console.log(bookings);
 
   let search = params ? params : "";
   const filterBookings = bookings.filter(
@@ -272,19 +291,37 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
       componentProps: {
         component: ({ item }: { item: Reserva }) => (
           <span className="uppercase">{item.room || ""}</span>
-        )
-      }
+        ),
+      },
     },
     { key: "total", header: "Precio", component: "text" },
     {
       key: "id_solicitud",
-      header: "Detalles",
-      component: "button",
+      header: "Acciones",
+      component: "custom",
       componentProps: {
-        label: "Detalles",
-        onClick: ({ item }: { item: Reserva }) => {
-          console.log(item);
-          setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+        component: ({ item }: { item: Reserva }) => {
+          return (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setLocation(ROUTES.FACTURACION.ID(item.id_solicitud));
+                }}
+              >
+                Facturar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+                }}
+              >
+                Ver Reserva
+              </Button>
+            </div>
+          );
         },
       },
     },
@@ -387,8 +424,8 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .catch((error) =>
                           console.log(
                             error.response ||
-                            error.message ||
-                            "Error al obtener la factura"
+                              error.message ||
+                              "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_pdf) {
@@ -413,21 +450,23 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .then(({ data }) =>
                           downloadXMLBase64(
                             data?.Content || "",
-                            `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
+                            `${item.id_factura.slice(0, 8)}-${
+                              item.created_at.split("T")[0]
                             }.xml`
                           )
                         )
                         .catch((error) =>
                           console.log(
                             error.response ||
-                            error.message ||
-                            "Error al obtener la factura"
+                              error.message ||
+                              "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_xml) {
                       downloadXMLUrl(
                         item.url_xml,
-                        `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
+                        `${item.id_factura.slice(0, 8)}-${
+                          item.created_at.split("T")[0]
                         }.xml`
                       );
                     }
@@ -474,48 +513,22 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
   // Componente para mostrar las gráficas
   const GraphContainer = () => {
     useEffect(() => {
-      const fetchMonthlyStats = async () => {
-        try {
-          const endpoint = `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${user?.info?.id_agente}&mes=${selectedMonth}`;
-
-          // 🔹 Mostrar qué se está enviando al backend
-          console.log("📤 Enviando petición a backend:");
-          console.log({
-            endpoint,
-            method: "GET",
-            headers: HEADERS_API,
-          });
-
-          const response = await fetch(endpoint, {
-            method: "GET",
-            headers: HEADERS_API,
-          });
-
-          // 🔹 Mostrar información de la respuesta HTTP
-          console.log("📥 Respuesta HTTP:");
-          console.log({
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText,
-          });
-
-
-          // 🔹 Mostrar el contenido JSON recibido del backend
-          console.log("📦 Datos recibidos deljjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj backend:");
-          const json = await response.json();
-          // IDs estáticos de prueba
-
-          console.log(JSON.stringify(json, null, 2));
-
-          // setData(json);
-        } catch (error) {
-          console.error("❌ Error al obtener estadísticas mensuales:", error);
-        }
-      };
-
-      if (user?.info?.id_agente) {
-        fetchMonthlyStats();
-      }
+      // const fetchMonthlyStats = async () => {
+      //   try {
+      //     const endpoint = `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${user?.info?.id_agente}&mes=${selectedMonth}`;
+      //     const response = await fetch(endpoint, {
+      //       method: "GET",
+      //       headers: HEADERS_API,
+      //     });
+      //     const json = await response.json();
+      //     // setData(json);
+      //   } catch (error) {
+      //     console.error("❌ Error al obtener estadísticas mensuales:", error);
+      //   }
+      // };
+      // if (user?.info?.id_agente) {
+      //   fetchMonthlyStats();
+      // }
     }, [selectedMonth, selectedYear, user?.info?.id_agente]);
 
     const fechaHoy = new Date();
@@ -531,7 +544,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
       },
     ];
 
-    console.log(summary, "respestas jbsumas gasto")
+    // console.log(summary, "respestas jbsumas gasto");
     const summary1 = [
       {
         name: "Noches",
@@ -542,7 +555,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
         })),
       },
     ];
-    console.log(nightsByHotel, "respestas noches")
+    // console.log(nightsByHotel, "respestas noches");
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -610,7 +623,6 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     currentMonth,
     currentYear
   );
-
 
   const totalByHotel = calculateTotalByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,

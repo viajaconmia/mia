@@ -1,4 +1,14 @@
-type GeneralInputProps = {
+interface GeneralInputProps
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    | "onChange"
+    | "value"
+    | "label"
+    | "placeholder"
+    | "disabled"
+    | "required"
+    | "type"
+  > {
   onChange: (value: string) => void;
   value: string;
   label?: string;
@@ -7,7 +17,7 @@ type GeneralInputProps = {
   required?: boolean;
   icon?: React.ElementType;
   type?: "text" | "email" | "password" | "tel";
-};
+}
 
 interface InputDateProps extends GeneralInputProps {
   min?: string; // Fecha mínima permitida (YYYY-MM-DD)
@@ -23,6 +33,7 @@ export const InputText: React.FC<GeneralInputProps> = ({
   required,
   icon: Icon,
   type = "text",
+  ...props
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -44,6 +55,7 @@ export const InputText: React.FC<GeneralInputProps> = ({
             </div>
           )}
           <input
+            {...props}
             pattern="^[^<>]*$"
             type={type}
             disabled={disabled}

@@ -2,34 +2,30 @@ import { MiaLogoIcon } from "../../lib/icons";
 import { NavigationLink } from "../atom/NavigationLink";
 import { useEffect, useRef, useState } from "react";
 import {
-  Menu,
-  X,
-  HelpCircle,
   MessageSquare,
-  FileText,
-  LifeBuoy,
   User2,
   Settings,
   LogOut,
   BookOpen,
   BarChart,
   ShoppingCart,
+  Headphones,
+  Plus,
 } from "lucide-react";
-import type { User } from "../../types";
 import { AuthModal } from "../AuthModal";
 import ROUTES from "../../constants/routes";
 import Button from "../atom/Button";
 import useAuth from "../../hooks/useAuth";
 import { SupportModal } from "../SupportModal";
-import { SupabaseClient } from "../../services/supabaseClient";
 import { ProtectedComponent } from "../../middleware/ProtectedComponent";
 import Modal from "../molecule/Modal";
 import { Cart } from "../Cart";
 import { useCart } from "../../context/cartContext";
 import { formatNumberWithCommas } from "../../utils/format";
+import useResize from "../../hooks/useResize";
+import { useLocation } from "wouter";
 
 export const NavigationBar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [openCart, setOpenCart] = useState(false);
@@ -41,7 +37,11 @@ export const NavigationBar = () => {
 
   return (
     <>
-      <nav className="bg-gradient-to-br from-blue-100 to-blue-200  shadow-lg fixed w-full top-0 z-50">
+      <nav
+        className={`${
+          user ? "hidden md:block" : ""
+        } bg-gradient-to-br from-blue-100 to-blue-200  shadow-lg fixed w-full top-0 z-50`}
+      >
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -54,150 +54,168 @@ export const NavigationBar = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex md:items-center md:space-x-4">
-              {user ? (
+              {user && (
                 <AuthLinks
-                  user={user}
-                  handleLogout={() => {
-                    SupabaseClient.getInstance()
-                      .logOut()
-                      .then(() => {})
-                      .catch((error) => console.log(error));
-                  }}
+                  handleLogout={handleLogout}
                   onSupportClick={onSupportClick}
                   onCart={() => setOpenCart(true)}
                 />
-              ) : (
-                <GuestLinks onLogin={() => setIsModalOpen(true)} />
               )}
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="inline-flex items-center justify-center p-2 "
-              >
-                {isMenuOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Menu className="w-6 h-6" />
-                )}
-              </button>
             </div>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <MobileMenu
-            onCart={() => setOpenCart(true)}
-            user={user ?? null}
-            handleLogout={handleLogout}
-            onSupportClick={onSupportClick}
-            setIsModalOpen={setIsModalOpen}
-          />
-        )}
       </nav>
       <SupportModal
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}
       />
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      <Modal
-        open={openCart}
-        onClose={() => {
-          setOpenCart(false);
-        }}
-        icon={ShoppingCart}
-        title="Carrito"
-        subtitle="Selecciona los items que deseas pagar"
-      >
-        <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-11rem)]">
-          <Cart></Cart>
-        </div>
-      </Modal>
+      {user && (
+        <>
+          <Modal
+            open={openCart}
+            onClose={() => {
+              setOpenCart(false);
+            }}
+            icon={ShoppingCart}
+            title="Carrito"
+            subtitle="Selecciona los items que deseas pagar"
+          >
+            <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-11rem)]">
+              <Cart></Cart>
+            </div>
+          </Modal>
+          <div className="md:hidden bg-white shadow-2xl squad-t-lg border-t border-gray-100 fixed bottom-0 z-50 w-full">
+            <AuthLinks
+              onCart={() => setOpenCart(true)}
+              handleLogout={handleLogout}
+              onSupportClick={onSupportClick}
+            />
+          </div>
+        </>
+      )}
     </>
   );
 };
 
-interface MobileMenuProps {
-  user: User | null;
-  handleLogout: () => void;
-  onSupportClick: () => void;
-  setIsModalOpen: (value: boolean) => void;
-  onCart: () => void;
-}
-
-export const MobileMenu: React.FC<MobileMenuProps> = ({
-  user,
-  onCart,
-  handleLogout,
-  onSupportClick,
-  setIsModalOpen,
-}) => {
-  return (
-    <div className="md:hidden bg-white border-t border-gray-100">
-      <div className="px-2 pt-2 pb-3 space-y-1">
-        {user ? (
-          <AuthLinks
-            onCart={onCart}
-            user={user}
-            handleLogout={handleLogout}
-            onSupportClick={onSupportClick}
-          />
-        ) : (
-          <GuestLinks onLogin={() => setIsModalOpen(true)} />
-        )}
-      </div>
-    </div>
-  );
-};
-
 interface AuthLinksProps {
-  user: User | null;
   handleLogout: () => void;
   onSupportClick: () => void;
   onCart: () => void;
 }
 
 export const AuthLinks: React.FC<AuthLinksProps> = ({
-  user,
   handleLogout,
   onSupportClick,
   onCart,
 }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [_, setLocation] = useLocation();
   const { totalCart } = useCart();
+  const { setSize } = useResize();
+
   return (
     <>
-      <NavigationLink href={ROUTES.HOME} icon={MessageSquare}>
-        Habla con MIA
-      </NavigationLink>
-      <NavigationLink href={ROUTES.BOOKINGS.HOME} icon={FileText}>
-        Reporte de Reservas
-      </NavigationLink>
-      <Button onClick={onSupportClick} icon={LifeBuoy} className="w-full">
-        Contactar a Soporte
-      </Button>
-      <UserDropdown user={user} handleLogout={handleLogout} />
-      <Button
-        variant="ghost"
-        icon={ShoppingCart}
-        className="w-full text-gray-700"
-        onClick={onCart}
-      >
-        {formatNumberWithCommas(totalCart)}
-      </Button>
+      <div className="relative flex flex-col md:flex-row">
+        <div>
+          <UserDropdown
+            handleLogout={handleLogout}
+            setIsDropdownOpen={setIsDropdownOpen}
+            isDropdownOpen={isDropdownOpen}
+          />
+        </div>
+        <div className=" p-1 md:p-3 flex justify-around gap-4">
+          <Button
+            variant="ghost"
+            className="w-full text-gray-700"
+            size={
+              setSize([
+                { size: "base", obj: "squad" },
+                { size: "sm", obj: "md" },
+              ]) as unknown as "squad" | "md"
+            }
+            icon={MessageSquare}
+            onClick={() => {
+              setLocation(ROUTES.MIA.HOME);
+            }}
+          >
+            MIA
+          </Button>
+          <Button
+            size={
+              setSize([
+                { size: "base", obj: "squad" },
+                { size: "sm", obj: "md" },
+              ]) as unknown as "squad" | "md"
+            }
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            variant="ghost"
+            className="w-full flex items-center space-x-2 text-gray-800 md:order-5"
+            icon={User2}
+          >
+            Mi cuenta
+          </Button>
+          <Button
+            variant="primary"
+            className="text-gray-700"
+            size={
+              setSize([
+                { size: "base", obj: "squad" },
+                { size: "sm", obj: "md" },
+              ]) as unknown as "squad" | "md"
+            }
+            icon={Plus}
+            onClick={() => {
+              setLocation(ROUTES.HOTELS.SEARCH);
+            }}
+          >
+            Reservar
+          </Button>
+          <Button
+            variant="ghost"
+            size={
+              setSize([
+                { size: "base", obj: "squad" },
+                { size: "sm", obj: "md" },
+              ]) as unknown as "squad" | "md"
+            }
+            onClick={onSupportClick}
+            icon={Headphones}
+            className="w-full text-gray-700"
+          >
+            Soporte
+          </Button>
+          <Button
+            variant="ghost"
+            size={
+              setSize([
+                { size: "base", obj: "squad" },
+                { size: "sm", obj: "md" },
+              ]) as unknown as "squad" | "md"
+            }
+            icon={ShoppingCart}
+            className="w-full text-gray-700"
+            onClick={onCart}
+          >
+            {formatNumberWithCommas(totalCart)}
+          </Button>
+        </div>
+      </div>
     </>
   );
 };
 
 interface UserDropdownProps {
-  user: User | null;
   handleLogout: () => void;
+  setIsDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isDropdownOpen: boolean;
 }
 
-const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+const UserDropdown: React.FC<UserDropdownProps> = ({
+  handleLogout,
+  setIsDropdownOpen,
+  isDropdownOpen,
+}) => {
   const groupRef = useRef<HTMLDivElement>(null);
   const handleClose = () => {
     setIsDropdownOpen(false);
@@ -220,18 +238,12 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
   }, []);
 
   return (
-    <div className="relative" ref={groupRef}>
-      <Button
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        variant="ghost"
-        className="flex items-center space-x-2 text-gray-800 w-full"
-        icon={User2}
-      >
-        {user?.name || "Usuario"}
-      </Button>
-
+    <>
       {isDropdownOpen && (
-        <div className="absolute w-full right-0 mt-2 md:w-40 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-100">
+        <div
+          ref={groupRef}
+          className="absolute w-full right-0 h-fit bottom-[100%] md:top-[80%] mt-2 md:w-40 bg-white squad-lg shadow-lg py-1 z-[90] border border-gray-100"
+        >
           <ProtectedComponent
             admit={{
               administrador: true,
@@ -244,7 +256,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
             <NavigationLink
               href={ROUTES.PROFILE}
               icon={User2}
-              className="!justify-start !items-start"
+              className="!justify-start !items-start text-gray-700"
               onClick={handleClose}
             >
               Mi Perfil
@@ -252,23 +264,15 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
             <NavigationLink
               href={ROUTES.CONSULTAS.HOME}
               icon={BookOpen}
-              className="!justify-start !items-start"
+              className="!justify-start !items-start text-gray-700"
               onClick={handleClose}
             >
               Consultas
             </NavigationLink>
             <NavigationLink
-              href={ROUTES.DASHBOARD}
-              icon={BarChart}
-              className="!justify-start !items-start"
-              onClick={handleClose}
-            >
-              Dashboard
-            </NavigationLink>
-            <NavigationLink
               href={ROUTES.SETTINGS}
               icon={Settings}
-              className="!justify-start !items-start"
+              className="!justify-start !items-start text-gray-700"
               onClick={handleClose}
             >
               Configuración
@@ -288,23 +292,6 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user, handleLogout }) => {
           </Button>
         </div>
       )}
-    </div>
+    </>
   );
 };
-
-export const GuestLinks: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
-  <>
-    <NavigationLink href={ROUTES.HOME} icon={MessageSquare}>
-      Habla con MIA
-    </NavigationLink>
-    <NavigationLink href={ROUTES.FAQ} icon={HelpCircle}>
-      FAQ
-    </NavigationLink>
-    <Button onClick={onLogin} variant="secondary" className="w-full">
-      Iniciar Sesión
-    </Button>
-    <NavigationLink variant="primary" href={ROUTES.AUTH.REGISTER}>
-      Regístrate
-    </NavigationLink>
-  </>
-);
