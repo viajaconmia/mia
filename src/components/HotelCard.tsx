@@ -35,7 +35,6 @@ export const HotelCard: React.FC<HotelCardProps> = ({ id_hotel }) => {
   useEffect(() => {
     try {
       fetchHotelById(id_hotel, (hotel_response) => {
-        console.log(hotel_response);
         setHotel(hotel_response);
       });
     } catch (error) {}

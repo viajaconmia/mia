@@ -1,5 +1,8 @@
 const ROUTES = {
   HOME: "/",
+  MIA: {
+    HOME: "/mia",
+  },
   LOGIN: "/login",
   AUTH: {
     HOME: "/auth/",
