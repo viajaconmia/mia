@@ -25,6 +25,7 @@ import { formatNumberWithCommas } from "../../utils/format";
 import { StatCard } from "../atom/StatCard";
 import { SelectInput } from "../atom/Input";
 
+
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
 interface TwoColumnDropdownProps {
@@ -342,6 +343,7 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
 export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
+  const [, setLocation] = useLocation();   // <-- agrega esta línea
 
   let search = params ? params : "";
   const filterPayments = payments.filter((payment) =>
@@ -358,17 +360,29 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
     { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
-    // {
-    //   key: null,
-    //   header: "Acción",
-    //   component: "button",
-    //   componentProps: {
-    //     label: "Facturar",
-    //     onClick: ({ item }: { item: Payment }) => {
-    //       console.log(item);
-    //     },
-    //   },
-    // },
+    {
+      key: null,
+      header: "Acciones",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Payment }) => (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                // Navega a tu pantalla "facturas pagos" con el raw_id como search
+                // Ajusta el subpath si tu ruta real usa otro nombre
+                setLocation(
+                  ROUTES.CONSULTAS.SEARCH("facturas-pagos", String(item.raw_id ?? ""))
+                );
+              }}
+            >
+              Facturar
+            </Button>
+          </div>
+        ),
+      },
+    },
   ];
 
   return (
@@ -424,8 +438,8 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .catch((error) =>
                           console.log(
                             error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
+                            error.message ||
+                            "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_pdf) {
@@ -450,23 +464,21 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         .then(({ data }) =>
                           downloadXMLBase64(
                             data?.Content || "",
-                            `${item.id_factura.slice(0, 8)}-${
-                              item.created_at.split("T")[0]
+                            `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                             }.xml`
                           )
                         )
                         .catch((error) =>
                           console.log(
                             error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
+                            error.message ||
+                            "Error al obtener la factura"
                           )
                         );
                     } else if (item.url_xml) {
                       downloadXMLUrl(
                         item.url_xml,
-                        `${item.id_factura.slice(0, 8)}-${
-                          item.created_at.split("T")[0]
+                        `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                         }.xml`
                       );
                     }
