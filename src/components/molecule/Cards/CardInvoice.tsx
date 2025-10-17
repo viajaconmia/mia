@@ -1,4 +1,4 @@
-import { FileText, ChevronDown, Download } from "lucide-react";
+import { FileText, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Invoice } from "../../../types/services";
 import { formatNumberWithCommas } from "../../../utils/format";
