@@ -205,7 +205,7 @@ const Chat = () => {
               </>
             ) : (
               <div className="p-4 flex justify-center">
-                <div className="bg-white h-[calc(100dvh-5rem)] rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
+                <div className="bg-white h-[75vh] rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
                   <TabsList
                     activeTab={activeTab}
                     onChange={(tab) => {
