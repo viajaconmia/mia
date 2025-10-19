@@ -24,6 +24,10 @@ import { Building2, Calendar, DollarSign } from "lucide-react";
 import { formatNumberWithCommas } from "../../utils/format";
 import { StatCard } from "../atom/StatCard";
 import { SelectInput } from "../atom/Input";
+import useResize from "../../hooks/useResize";
+import { BookingCard } from "../molecule/Cards/CardBooking";
+import { PaymentCard } from "../molecule/Cards/CardPayment";
+import { InvoiceCard } from "../molecule/Cards/CardInvoice";
 
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
@@ -38,7 +42,7 @@ const TwoColumnDropdown: React.FC<TwoColumnDropdownProps> = ({
   rightContent,
 }) => {
   return (
-    <div className="flex justify-around w-full p-4 bg-white rounded-lg shadow-sm border border-gray-200 grid-cols-2">
+    <div className="flex justify-around flex-col md:flex-row  w-full p-4 bg-white rounded-lg shadow-sm border border-gray-200 grid-cols-2">
       <div className="flex-1 px-4 text-center">{leftContent}</div>
       <div className="flex-1 px-4 text-center">{rightContent}</div>
     </div>
@@ -65,6 +69,7 @@ const ExpandedContentRenderer = ({
 
   // id a buscar según el tipo de fila expandida
   const pickIdBuscar = (it: any, type: ModalType): string | null => {
+    console.log(it, type);
     switch (type) {
       case "booking":
         return it?.id_hospedaje || null;
@@ -112,12 +117,12 @@ const ExpandedContentRenderer = ({
     const id_buscar = pickIdBuscar(item, itemType);
 
     if (!id_agente || !id_buscar) {
-      // console.warn("[Expanded] Falta id_agente o id_buscar", {
-      //   id_agente,
-      //   id_buscar,
-      //   itemType,
-      //   item,
-      // });
+      console.warn("[Expanded] Falta id_agente o id_buscar", {
+        id_agente,
+        id_buscar,
+        itemType,
+        item,
+      });
       return;
     }
 
@@ -125,11 +130,6 @@ const ExpandedContentRenderer = ({
       try {
         setLoading(true);
         const resp = await fetchFullDetalles({ id_agente, id_buscar });
-        console.log("getFullDetalles (Expanded):", {
-          id_agente,
-          id_buscar,
-          resp,
-        });
 
         setFull({
           reservas: normalizeReservas(resp.reservas),
@@ -234,7 +234,7 @@ const ExpandedContentRenderer = ({
   if (loading) {
     return (
       <div className="w-full p-4 text-center text-gray-500">
-        Cargando conexiones…
+        Buscando relaciones…
       </div>
     );
   }
@@ -266,6 +266,7 @@ const ExpandedContentRenderer = ({
 export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
+  const { setSize } = useResize();
   const params = searchParams.get("search");
 
   let search = params ? params : "";
@@ -304,15 +305,17 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
         component: ({ item }: { item: Reserva }) => {
           return (
             <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setLocation(ROUTES.FACTURACION.ID(item.id_solicitud));
-                }}
-              >
-                Facturar
-              </Button>
+              {!item.id_credito && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setLocation(ROUTES.FACTURACION.ID(item.id_solicitud));
+                  }}
+                >
+                  Facturar
+                </Button>
+              )}
               <Button
                 size="sm"
                 onClick={() => {
@@ -329,22 +332,65 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   ];
 
   return (
-    <Table<Reserva>
-      id="bookingsTable"
-      data={filterBookings}
-      columns={bookingColumns}
-      expandableContent={(booking) => (
-        <ExpandedContentRenderer item={booking} itemType="booking" />
-      )}
-    />
+    <>
+      {setSize([
+        {
+          size: "base",
+          obj: (
+            <div className="space-y-3 px-2">
+              {filterBookings
+                .filter((it) => it.id_hospedaje != null)
+                .map((booking) => (
+                  <BookingCard
+                    key={
+                      booking.id_booking + (Math.random() * 9999999).toFixed(0)
+                    }
+                    data={booking}
+                    OnToggleExpand={() => (
+                      <ExpandedContentRenderer
+                        item={booking}
+                        itemType={"booking"}
+                      />
+                    )}
+                    onViewDetails={(item: Reserva) => {
+                      setLocation(
+                        ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud)
+                      );
+                    }}
+                  />
+                ))}
+            </div>
+          ),
+        },
+        {
+          size: "md",
+          obj: (
+            <>
+              <Table<Reserva>
+                id="bookingsTable"
+                data={filterBookings}
+                columns={bookingColumns}
+                expandableContent={(booking) => (
+                  <ExpandedContentRenderer item={booking} itemType="booking" />
+                )}
+              />
+            </>
+          ),
+        },
+      ])}
+    </>
   );
 };
 
 export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
+
   const [, setLocation] = useLocation();   // <-- agrega esta línea
 
+  const { setSize } = useResize();
+
+  console.log(payments);
   let search = params ? params : "";
   const filterPayments = payments.filter((payment) =>
     String(payment.raw_id)?.includes(search)
@@ -386,20 +432,56 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   ];
 
   return (
-    <Table<Payment>
-      id="paymentsTable"
-      data={filterPayments}
-      columns={paymentColumns}
-      expandableContent={(payment) => (
-        <ExpandedContentRenderer item={payment} itemType="payment" />
-      )}
-    />
+    <>
+      {setSize([
+        {
+          size: "base",
+          obj: (
+            <div className="space-y-3 px-2">
+              {filterPayments
+                // .filter((it) => it.id_hospedaje != null)
+                .map((payment) => (
+                  <PaymentCard
+                    key={
+                      payment.id_movimiento +
+                      (Math.random() * 9999999).toFixed(0)
+                    }
+                    data={payment}
+                    OnToggleExpand={() => (
+                      <ExpandedContentRenderer
+                        item={payment}
+                        itemType={"payment"}
+                      />
+                    )}
+                  />
+                ))}
+            </div>
+          ),
+        },
+        {
+          size: "md",
+          obj: (
+            <>
+              <Table<Payment>
+                id="paymentsTable"
+                data={filterPayments}
+                columns={paymentColumns}
+                expandableContent={(payment) => (
+                  <ExpandedContentRenderer item={payment} itemType="payment" />
+                )}
+              />
+            </>
+          ),
+        },
+      ])}
+    </>
   );
 };
 
 export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
+  const { setSize } = useResize();
 
   let search = params ? params : "";
   const filterInvoices = invoices.filter((invoice) =>
@@ -495,14 +577,48 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   ];
 
   return (
-    <Table<Invoice>
-      id="invoicesTable"
-      data={filterInvoices}
-      columns={invoiceColumns}
-      expandableContent={(invoice) => (
-        <ExpandedContentRenderer item={invoice} itemType="invoice" />
-      )}
-    />
+    <>
+      {setSize([
+        {
+          size: "base",
+          obj: (
+            <div className="space-y-3 px-2">
+              {filterInvoices
+                // .filter((it) => it.id_hospedaje != null)
+                .map((invoice) => (
+                  <InvoiceCard
+                    key={
+                      invoice.id_factura + (Math.random() * 9999999).toFixed(0)
+                    }
+                    data={invoice}
+                    OnToggleExpand={() => (
+                      <ExpandedContentRenderer
+                        item={invoice}
+                        itemType={"invoice"}
+                      />
+                    )}
+                  />
+                ))}
+            </div>
+          ),
+        },
+        {
+          size: "md",
+          obj: (
+            <>
+              <Table<Invoice>
+                id="invoicesTable"
+                data={filterInvoices}
+                columns={invoiceColumns}
+                expandableContent={(invoice) => (
+                  <ExpandedContentRenderer item={invoice} itemType="invoice" />
+                )}
+              />
+            </>
+          ),
+        },
+      ])}
+    </>
   );
 };
 
