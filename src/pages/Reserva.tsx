@@ -194,126 +194,200 @@ export function Reserva() {
     }
   }
 
-  function drawContactInfoOnCurrentPage(pdf: jsPDF) {
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
+ function drawContactInfoOnCurrentPage(pdf: jsPDF) {
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
 
-    // === Colores Tailwind ===
-    const BLUE_50 = { r: 239, g: 246, b: 255 }; // #eff6ff
-    const BLUE_200 = { r: 191, g: 219, b: 254 }; // #bfdbfe
-    const BLUE_600 = { r: 37, g: 99, b: 235 }; // #2563eb
-    const BLUE_900 = { r: 30, g: 58, b: 138 }; // #1e3a8a
-    const TEXT_DARK = { r: 30, g: 41, b: 59 }; // gris oscuro legible
+  // === Colores Tailwind ===
+  const BLUE_50 = { r: 239, g: 246, b: 255 }; // #eff6ff
+  const BLUE_200 = { r: 191, g: 219, b: 254 }; // #bfdbfe
+  const BLUE_600 = { r: 37, g: 99, b: 235 };  // #2563eb
+  const BLUE_900 = { r: 30, g: 58, b: 138 };  // #1e3a8a
+  const TEXT_DARK = { r: 30, g: 41, b: 59 };
 
-    // — Layout —
-    const marginX = 12;            // margen lateral
-    const bottomMargin = 12;       // margen inferior
-    const boxW = pageW - marginX * 2;
+  // — Layout / tamaños reducidos —
+  const marginX = 12;
+  const bottomMargin = 12;
+  const boxW = pageW - marginX * 2;
 
-    const title = "DATOS DE CONTACTO 24/7";
+  const title = "DATOS DE CONTACTO 24/7";
 
-    // Contenido (con partes linkeables)
-    const whatsappLabel = "Whatsapp:";
-    const whatsappNumber = "5510445254";
-    const mailLabel = "Correo:";
-    const mail = "support@noktos.zohodesk.com";
-    const phoneLabel = "Teléfono:";
-    const phone = "800 666 5867 opción 2";
+  // Contenido
+  const whatsappLabel = "Whatsapp:";
+  const whatsappNumber = "5510445254";
+  const mailLabel = "Correo:";
+  const mail = "support@noktos.zohodesk.com";
+  const phoneLabel = "Teléfono:";
+  const phone = "800 666 5867 opción 2";
 
-    // Métricas tipográficas
-    const paddingX = 8;
-    const paddingY = 8;
-    const titleBarH = 11; // barra superior azul
-    const lineGap = 4;
+  // Métricas tipográficas (más pequeño)
+  const paddingX = 7;
+  const paddingY = 6;
+  const titleBarH = 9;
+  const lineGap = 3;
+  const topPaddingFromPolicies = -3; // ← separación superior entre políticas y contacto
 
-    // Medimos altura aproximada de contenido
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(11);
-    const lineH = 6;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  const lineH = 5;
 
-    // 3 líneas de contenido principales
-    const contentH = lineH * 3 + lineGap * 2;
+  // 3 líneas
+  const contentH = lineH * 3 + lineGap * 2;
+  const boxH = paddingY + titleBarH + paddingY + contentH + paddingY;
 
-    // Alto total de la tarjeta
-    const boxH = paddingY + titleBarH + paddingY + contentH + paddingY;
+  // Ajustamos la posición para incluir padding desde las políticas
+  const x = marginX;
+  const y = pageH - bottomMargin - boxH - topPaddingFromPolicies;
 
-    // Posición de la tarjeta pegada al pie
-    const x = marginX;
-    const y = pageH - bottomMargin - boxH;
-
-    // — Caja de fondo (blue-50) con borde (blue-200)
-    pdf.setDrawColor(BLUE_200.r, BLUE_200.g, BLUE_200.b);
-    pdf.setFillColor(BLUE_50.r, BLUE_50.g, BLUE_50.b);
-    if ((pdf as any).roundedRect) {
-      (pdf as any).roundedRect(x, y, boxW, boxH, 3, 3, "FD");
-    } else {
-      pdf.rect(x, y, boxW, boxH, "FD");
-    }
-
-    // — Barra superior azul-600
-    pdf.setFillColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.rect(x, y, boxW, titleBarH, "F");
-
-    // — Título (blanco) dentro de la barra
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12.5);
-    pdf.setTextColor(255, 255, 255);
-    // centrado vertical dentro de la barra
-    pdf.text(title, x + paddingX, y + titleBarH - 3);
-
-    // — Contenido
-    let cursorY = y + titleBarH + paddingY + lineH - 2;
-
-    // Label helpers
-    const drawLabel = (label: string, baseX: number, baseY: number) => {
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.setTextColor(BLUE_900.r, BLUE_900.g, BLUE_900.b);
-      pdf.text(label, baseX, baseY);
-    };
-    const drawValue = (value: string, baseX: number, baseY: number) => {
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(11);
-      pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-      pdf.text(value, baseX, baseY);
-    };
-
-    // Columna texto
-    const textX = x + paddingX;
-
-    // 1) Whatsapp (texto + link a wa.me)
-    drawLabel(whatsappLabel, textX, cursorY);
-    const wsLabelW = pdf.getTextWidth(whatsappLabel + " ");
-    pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.textWithLink(whatsappNumber, textX + wsLabelW, cursorY, {
-      url: "https://wa.me/5215510445254",
-    });
-
-    // 2) Correo (texto + mailto)
-    cursorY += lineH + lineGap;
-    drawLabel(mailLabel, textX, cursorY);
-    const mailLabelW = pdf.getTextWidth(mailLabel + " ");
-    pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.textWithLink(mail, textX + mailLabelW, cursorY, {
-      url: `mailto:${mail}`,
-    });
-
-    // 3) Teléfono (texto + tel:)
-    cursorY += lineH + lineGap;
-    drawLabel(phoneLabel, textX, cursorY);
-    const phoneLabelW = pdf.getTextWidth(phoneLabel + " ");
-    pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-    drawValue(phone, textX + phoneLabelW, cursorY);
-    // Si quieres link "tel:" (algunos viewers lo respetan)
-    pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.textWithLink(" Llamar", textX + phoneLabelW + pdf.getTextWidth(phone) + 1, cursorY, {
-      url: "tel:+528006665867",
-    });
-
-    // — Reset de estilos
-    pdf.setTextColor(0, 0, 0);
-    pdf.setDrawColor(0, 0, 0);
+  // Caja
+  pdf.setDrawColor(BLUE_200.r, BLUE_200.g, BLUE_200.b);
+  pdf.setFillColor(BLUE_50.r, BLUE_50.g, BLUE_50.b);
+  if ((pdf as any).roundedRect) {
+    (pdf as any).roundedRect(x, y, boxW, boxH, 3, 3, "FD");
+  } else {
+    pdf.rect(x, y, boxW, boxH, "FD");
   }
+
+  // Barra título
+  pdf.setFillColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
+  pdf.rect(x, y, boxW, titleBarH, "F");
+
+  // Título más pequeño
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(title, x + paddingX, y + titleBarH - 2.2);
+
+  // Contenido
+  let cursorY = y + titleBarH + paddingY + lineH - 2;
+
+  const drawLabel = (label: string, baseX: number, baseY: number) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(BLUE_900.r, BLUE_900.g, BLUE_900.b);
+    pdf.text(label, baseX, baseY);
+  };
+  const drawValue = (value: string, baseX: number, baseY: number) => {
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+    pdf.text(value, baseX, baseY);
+  };
+
+  const textX = x + paddingX;
+
+  // 1) Whatsapp
+  drawLabel(whatsappLabel, textX, cursorY);
+  const wsLabelW = pdf.getTextWidth(whatsappLabel + " ");
+  pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
+  pdf.textWithLink(whatsappNumber, textX + wsLabelW, cursorY, {
+    url: "https://wa.me/5215510445254",
+  });
+
+  // 2) Correo
+  cursorY += lineH + lineGap;
+  drawLabel(mailLabel, textX, cursorY);
+  const mailLabelW = pdf.getTextWidth(mailLabel + " ");
+  pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
+  pdf.textWithLink(mail, textX + mailLabelW, cursorY, { url: `mailto:${mail}` });
+
+  // 3) Teléfono
+  cursorY += lineH + lineGap;
+  drawLabel(phoneLabel, textX, cursorY);
+  const phoneLabelW = pdf.getTextWidth(phoneLabel + " ");
+  pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+  drawValue(phone, textX + phoneLabelW, cursorY);
+  pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
+  pdf.textWithLink(" Llamar", textX + phoneLabelW + pdf.getTextWidth(phone) + 1, cursorY, {
+    url: "tel:+528006665867",
+  });
+
+  // reset
+  pdf.setTextColor(0, 0, 0);
+  pdf.setDrawColor(0, 0, 0);
+}
+  
+function drawPoliciesOnCurrentPage(pdf: jsPDF) {
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+
+  const BLUE_50 = { r: 239, g: 246, b: 255 };
+  const BLUE_200 = { r: 191, g: 219, b: 254 };
+  const BLUE_600 = { r: 37, g: 99, b: 235 };
+  const TEXT_DARK = { r: 30, g: 41, b: 59 };
+
+  const marginX = 12;
+  const sideW = pageW - marginX * 2;
+
+  const politicas = [
+    "1.- Los cambios y cancelaciones solo aplican cuando se tratan de Tarifas Reembolsables y están sujetas a disponibilidad.",
+    "2.- Cualquier cambio o cancelación a la reservación deberá ser solicitada a los canales de contacto oficiales con una anticipación mínima de 72 horas antes de la fecha de llegada o inicio de servicios proporcionando la (s) clave (s) de confirmación y la sede.",
+    "3.- El huésped debe realizar el check out con base en los horarios y formas establecidas por cada hotel, si el huésped no ejecuta la actividad en tiempo y forma, el proveedor podrá cobrar al viajero penalizaciones.",
+    "4.- En caso de que el viajero realice una salida anticipada o desee extender su estadía (sujeto a disponibilidad), deberá notificarlo al proveedor y a Noktos a través de correo electrónico, teléfono o whatsapp: para evitar penalizaciones adicionales.",
+    "5.- El viajero debe respetar las políticas y lineamientos de cada proveedor para evitar incurrir en multas y penalizaciones. En caso de que el hotel reporte algún mal comportamiento o una penalización que el viajero se haya negado a pagar, MIA by NOKTOS se reserva el derecho de seguirle brindando servicio al cliente / huésped involucrado.",
+    "6.- El link de google maps es aproximado, favor de validar la dirección abajo del nombre del proveedor.",
+  ];
+
+  // Títulos/tipo más pequeño
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.5);          // antes 12.5
+  const title = "POLÍTICAS";
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);           // antes 11
+  const paddingX = 1;             // antes 8
+  const paddingY = 6;             // antes 8
+  const titleBarH = 9;            // antes 11
+  const maxTextWidth = sideW - paddingX * 2;
+
+  const wrapped = politicas.flatMap(p => pdf.splitTextToSize(p, maxTextWidth));
+  const lineH = 5;                // antes 6
+  const contentH = wrapped.length * lineH;
+
+  const boxH = paddingY + titleBarH + paddingY + contentH + paddingY;
+
+  // La colocamos arriba del bloque de contacto reducido
+  const bottomMargin = 12;
+  const contactApproxH = 42;      // antes 50 (porque también lo hicimos más pequeño)
+  const gapBetweenCards = 6;
+  const y = pageH - bottomMargin - contactApproxH - gapBetweenCards - boxH;
+  const x = marginX;
+
+  // Fondo y borde
+  pdf.setDrawColor(BLUE_200.r, BLUE_200.g, BLUE_200.b);
+  pdf.setFillColor(BLUE_50.r, BLUE_50.g, BLUE_50.b);
+  if ((pdf as any).roundedRect) {
+    (pdf as any).roundedRect(x, y, sideW, boxH, 3, 3, "FD");
+  } else {
+    pdf.rect(x, y, sideW, boxH, "FD");
+  }
+
+  // Barra de título
+  pdf.setFillColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
+  pdf.rect(x, y, sideW, titleBarH, "F");
+
+  // Título
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(title, x + paddingX, y + titleBarH - 2.2);
+
+  // Contenido
+  let cursorY = y + titleBarH + paddingY;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
+
+  for (const line of wrapped) {
+    pdf.text(line as string, x + paddingX, cursorY);
+    cursorY += lineH;
+  }
+
+  // reset
+  pdf.setTextColor(0, 0, 0);
+  pdf.setDrawColor(0, 0, 0);
+}
+
 
   function paintFullBluePage(pdf: jsPDF) {
     const w = pdf.internal.pageSize.getWidth();
@@ -371,22 +445,25 @@ export function Reserva() {
       heightLeft -= pageHeight;
 
       // Páginas siguientes
-      // Páginas siguientes
-      while (heightLeft > 0) {
-        paintFullBluePage(pdf);                              // ← pinta fondo azul completo
-        pdf.addPage();
-        position = heightLeft - imgHeight; // negativo, desplaza hacia arriba
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        drawLogosOnPage(pdf, logos);
-        heightLeft -= pageHeight;
-      }
+while (heightLeft > 0) {
+  pdf.addPage();
+  paintFullBluePage(pdf); // pinta fondo de ESTA nueva página
+  position = heightLeft - imgHeight; // negativo, desplaza hacia arriba
+  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  drawLogosOnPage(pdf, logos);
+  heightLeft -= pageHeight;
+}
+
 
       // ➜ Coloca el bloque de soporte en la ÚLTIMA página
       const total = (pdf as any).getNumberOfPages ? (pdf as any).getNumberOfPages() : pdf.getNumberOfPages?.();
-      if (total && total > 0) {
-        pdf.setPage(total);
-        drawContactInfoOnCurrentPage(pdf);
-      }
+if (total && total > 0) {
+  pdf.setPage(total);
+  // Primero políticas (arriba) y luego contacto (abajo).
+  drawPoliciesOnCurrentPage(pdf);
+  drawContactInfoOnCurrentPage(pdf);
+}
+
 
       pdf.save(
         `reservacion-${reservationDetails?.codigo_confirmacion || "sin-codigo"}.pdf`
