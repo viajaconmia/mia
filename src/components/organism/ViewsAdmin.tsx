@@ -5,6 +5,7 @@ import ROUTES from "../../constants/routes";
 import { Payment } from "../../services/PagosService";
 import Button from "../atom/Button";
 import { FacturamaService } from "../../services/FacturamaService";
+import { fetchFullDetalles } from "../../services/detalles";
 import {
   downloadXMLBase64,
   downloadXMLUrl,
@@ -23,15 +24,13 @@ import { Building2, Calendar, DollarSign } from "lucide-react";
 import { formatNumberWithCommas } from "../../utils/format";
 import { StatCard } from "../atom/StatCard";
 import { SelectInput } from "../atom/Input";
-import { HEADERS_API } from "../../constants/apiConstant";
+import useResize from "../../hooks/useResize";
+import { BookingCard } from "../molecule/Cards/CardBooking";
+import { PaymentCard } from "../molecule/Cards/CardPayment";
+import { InvoiceCard } from "../molecule/Cards/CardInvoice";
+
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
-
-type ModalTypeMap = {
-  booking: Reserva;
-  payment: Payment & { id_pago: string };
-  invoice: Invoice;
-};
 
 interface TwoColumnDropdownProps {
   leftContent: React.ReactNode;
@@ -43,7 +42,7 @@ const TwoColumnDropdown: React.FC<TwoColumnDropdownProps> = ({
   rightContent,
 }) => {
   return (
-    <div className="flex justify-around w-full p-4 bg-white rounded-lg shadow-sm border border-gray-200 grid-cols-2">
+    <div className="flex justify-around flex-col md:flex-row  w-full p-4 bg-white rounded-lg shadow-sm border border-gray-200 grid-cols-2">
       <div className="flex-1 px-4 text-center">{leftContent}</div>
       <div className="flex-1 px-4 text-center">{rightContent}</div>
     </div>
@@ -58,13 +57,99 @@ const ExpandedContentRenderer = ({
   itemType: ModalType;
 }) => {
   const [, setLocation] = useLocation();
-  const renderTypes = typesModal.filter((type) => type != itemType);
+  const renderTypes = typesModal.filter((type) => type !== itemType);
+  const { user } = useAuth();
 
+  const [full, setFull] = useState<{
+    reservas: any[];
+    pagos: any[];
+    facturas: any[];
+  }>({ reservas: [], pagos: [], facturas: [] });
+  const [loading, setLoading] = useState(false);
+
+  // id a buscar según el tipo de fila expandida
+  const pickIdBuscar = (it: any, type: ModalType): string | null => {
+    console.log(it, type);
+    switch (type) {
+      case "booking":
+        return it?.id_hospedaje || null;
+      case "payment":
+        return it?.raw_id || null;
+      case "invoice":
+        return it?.id_factura || null;
+      default:
+        return null;
+    }
+  };
+
+  // normalizadores -> mapean lo que venga del SP a las keys usadas en tus columnas
+  const normalizeReservas = (arr: any[] = []) =>
+    arr.map((r) => ({
+      ...r,
+      codigo_reservacion_hotel:
+        r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
+      hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
+      total:
+        r.total ??
+        r.total_price ??
+        r.solicitud_total ??
+        r.total_solicitado ??
+        0,
+    }));
+
+  const normalizePagos = (arr: any[] = []) =>
+    arr.map((p) => ({
+      ...p,
+      id_pago: p.id_pago || p.raw_id || String(p.id_saldo ?? ""),
+      raw_id: p.raw_id, // lo dejamos por si lo usas para navegar
+      monto: p.monto ?? p.total ?? p.amount ?? p.total_pago ?? 0,
+    }));
+
+  const normalizeFacturas = (arr: any[] = []) =>
+    arr.map((f) => ({
+      ...f,
+      id_factura: f.id_factura || f.folio || f.id_facturama || "",
+      total: f.total ?? f.total_factura ?? f.amount ?? 0,
+    }));
+
+  useEffect(() => {
+    const id_agente = user?.info?.id_agente;
+    const id_buscar = pickIdBuscar(item, itemType);
+
+    if (!id_agente || !id_buscar) {
+      console.warn("[Expanded] Falta id_agente o id_buscar", {
+        id_agente,
+        id_buscar,
+        itemType,
+        item,
+      });
+      return;
+    }
+
+    (async () => {
+      try {
+        setLoading(true);
+        const resp = await fetchFullDetalles({ id_agente, id_buscar });
+
+        setFull({
+          reservas: normalizeReservas(resp.reservas),
+          pagos: normalizePagos(resp.pagos),
+          facturas: normalizeFacturas(resp.facturas),
+        });
+      } catch (err) {
+        console.error("Error getFullDetalles (Expanded):", err);
+        setFull({ reservas: [], pagos: [], facturas: [] });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user?.info?.id_agente, item, itemType]);
+
+  // columnas — iguales a las tuyas
   const booking_columns: ColumnsTable<Reserva>[] = [
     {
       key: "codigo_reservacion_hotel",
       header: "ID",
-
       component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
@@ -78,17 +163,10 @@ const ExpandedContentRenderer = ({
         },
       },
     },
-    {
-      key: "hotel",
-      header: "Hotel",
-      component: "text",
-    },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
-    },
+    { key: "hotel", header: "Hotel", component: "text" },
+    { key: "total", header: "Total", component: "precio" },
   ];
+
   const payment_columns: ColumnsTable<Payment & { id_pago: string }>[] = [
     {
       key: "id_pago",
@@ -97,7 +175,6 @@ const ExpandedContentRenderer = ({
       componentProps: {
         variant: "ghost",
         onClick: ({ item }: { item: Payment & { id_pago: string } }) => {
-          console.log(item);
           setLocation(
             ROUTES.CONSULTAS.SEARCH(
               "pagos",
@@ -107,12 +184,9 @@ const ExpandedContentRenderer = ({
         },
       },
     },
-    {
-      key: "monto",
-      header: "Total",
-      component: "precio",
-    },
+    { key: "monto", header: "Total", component: "precio" },
   ];
+
   const invoice_columns: ColumnsTable<Invoice>[] = [
     {
       key: "id_factura",
@@ -126,47 +200,44 @@ const ExpandedContentRenderer = ({
           ),
       },
     },
-    {
-      key: "total",
-      header: "Total",
-      component: "precio",
-    },
+    { key: "total", header: "Total", component: "precio" },
   ];
 
+  // construir datasets desde la RESPUESTA del SP
   const renderData: {
     [K in ModalType]: {
-      columns: ColumnsTable<ModalTypeMap[K]>[];
+      columns: ColumnsTable<any>[];
       title: string;
-      data: ModalTypeMap[K][];
+      data: any[];
     };
   } = {
     booking: {
-      columns: booking_columns,
       title: "Reservas asociadas",
-      data:
-        itemType == "invoice" || itemType == "payment"
-          ? item.reservas_asociadas || []
-          : [],
+      columns: booking_columns,
+      data: full.reservas,
     },
     payment: {
-      columns: payment_columns,
       title: "Pagos asociados",
-      data:
-        itemType == "invoice" || itemType == "booking"
-          ? item.pagos_asociados || []
-          : [],
+      columns: payment_columns,
+      data: full.pagos,
     },
     invoice: {
-      columns: invoice_columns,
       title: "Facturas asociadas",
-      data:
-        itemType == "payment" || itemType == "booking"
-          ? item.facturas_asociadas || []
-          : [],
+      columns: invoice_columns,
+      data: full.facturas,
     },
   };
+
   const left = renderData[renderTypes[0]];
   const right = renderData[renderTypes[1]];
+
+  if (loading) {
+    return (
+      <div className="w-full p-4 text-center text-gray-500">
+        Buscando relaciones…
+      </div>
+    );
+  }
 
   return (
     <TwoColumnDropdown
@@ -195,8 +266,8 @@ const ExpandedContentRenderer = ({
 export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
+  const { setSize } = useResize();
   const params = searchParams.get("search");
-  console.log(bookings);
 
   let search = params ? params : "";
   const filterBookings = bookings.filter(
@@ -222,33 +293,92 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
       componentProps: {
         component: ({ item }: { item: Reserva }) => (
           <span className="uppercase">{item.room || ""}</span>
-        )
-      }
+        ),
+      },
     },
     { key: "total", header: "Precio", component: "text" },
     {
       key: "id_solicitud",
-      header: "Detalles",
-      component: "button",
+      header: "Acciones",
+      component: "custom",
       componentProps: {
-        label: "Detalles",
-        onClick: ({ item }: { item: Reserva }) => {
-          console.log(item);
-          setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+        component: ({ item }: { item: Reserva }) => {
+          return (
+            <div className="flex gap-2">
+              {!item.id_credito && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setLocation(ROUTES.FACTURACION.ID(item.id_solicitud));
+                  }}
+                >
+                  Facturar
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => {
+                  setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
+                }}
+              >
+                Ver Reserva
+              </Button>
+            </div>
+          );
         },
       },
     },
   ];
 
   return (
-    <Table<Reserva>
-      id="bookingsTable"
-      data={filterBookings}
-      columns={bookingColumns}
-      expandableContent={(booking) => (
-        <ExpandedContentRenderer item={booking} itemType="booking" />
-      )}
-    />
+    <>
+      {setSize([
+        {
+          size: "base",
+          obj: (
+            <div className="space-y-3 px-2">
+              {filterBookings
+                .filter((it) => it.id_hospedaje != null)
+                .map((booking) => (
+                  <BookingCard
+                    key={
+                      booking.id_booking + (Math.random() * 9999999).toFixed(0)
+                    }
+                    data={booking}
+                    OnToggleExpand={() => (
+                      <ExpandedContentRenderer
+                        item={booking}
+                        itemType={"booking"}
+                      />
+                    )}
+                    onViewDetails={(item: Reserva) => {
+                      setLocation(
+                        ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud)
+                      );
+                    }}
+                  />
+                ))}
+            </div>
+          ),
+        },
+        {
+          size: "md",
+          obj: (
+            <>
+              <Table<Reserva>
+                id="bookingsTable"
+                data={filterBookings}
+                columns={bookingColumns}
+                expandableContent={(booking) => (
+                  <ExpandedContentRenderer item={booking} itemType="booking" />
+                )}
+              />
+            </>
+          ),
+        },
+      ])}
+    </>
   );
 };
 
@@ -256,6 +386,11 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
 
+  const [, setLocation] = useLocation();   // <-- agrega esta línea
+
+  const { setSize } = useResize();
+
+  console.log(payments);
   let search = params ? params : "";
   const filterPayments = payments.filter((payment) =>
     String(payment.raw_id)?.includes(search)
@@ -271,34 +406,82 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     { key: "monto", header: "Monto", component: "precio" },
     { key: "metodo", header: "Forma de Pago", component: "text" },
     { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
-    // {
-    //   key: null,
-    //   header: "Acción",
-    //   component: "button",
-    //   componentProps: {
-    //     label: "Facturar",
-    //     onClick: ({ item }: { item: Payment }) => {
-    //       console.log(item);
-    //     },
-    //   },
-    // },
+    {
+      key: null,
+      header: "Acciones",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Payment }) => (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                // Navega a tu pantalla "facturas pagos" con el raw_id como search
+                // Ajusta el subpath si tu ruta real usa otro nombre
+                setLocation(
+                  ROUTES.CONSULTAS.SEARCH("facturas-pagos", String(item.raw_id ?? ""))
+                );
+              }}
+            >
+              Facturar
+            </Button>
+          </div>
+        ),
+      },
+    },
   ];
 
   return (
-    <Table<Payment>
-      id="paymentsTable"
-      data={filterPayments}
-      columns={paymentColumns}
-      expandableContent={(payment) => (
-        <ExpandedContentRenderer item={payment} itemType="payment" />
-      )}
-    />
+    <>
+      {setSize([
+        {
+          size: "base",
+          obj: (
+            <div className="space-y-3 px-2">
+              {filterPayments
+                // .filter((it) => it.id_hospedaje != null)
+                .map((payment) => (
+                  <PaymentCard
+                    key={
+                      payment.id_movimiento +
+                      (Math.random() * 9999999).toFixed(0)
+                    }
+                    data={payment}
+                    OnToggleExpand={() => (
+                      <ExpandedContentRenderer
+                        item={payment}
+                        itemType={"payment"}
+                      />
+                    )}
+                  />
+                ))}
+            </div>
+          ),
+        },
+        {
+          size: "md",
+          obj: (
+            <>
+              <Table<Payment>
+                id="paymentsTable"
+                data={filterPayments}
+                columns={paymentColumns}
+                expandableContent={(payment) => (
+                  <ExpandedContentRenderer item={payment} itemType="payment" />
+                )}
+              />
+            </>
+          ),
+        },
+      ])}
+    </>
   );
 };
 
 export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
+  const { setSize } = useResize();
 
   let search = params ? params : "";
   const filterInvoices = invoices.filter((invoice) =>
@@ -394,14 +577,48 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   ];
 
   return (
-    <Table<Invoice>
-      id="invoicesTable"
-      data={filterInvoices}
-      columns={invoiceColumns}
-      expandableContent={(invoice) => (
-        <ExpandedContentRenderer item={invoice} itemType="invoice" />
-      )}
-    />
+    <>
+      {setSize([
+        {
+          size: "base",
+          obj: (
+            <div className="space-y-3 px-2">
+              {filterInvoices
+                // .filter((it) => it.id_hospedaje != null)
+                .map((invoice) => (
+                  <InvoiceCard
+                    key={
+                      invoice.id_factura + (Math.random() * 9999999).toFixed(0)
+                    }
+                    data={invoice}
+                    OnToggleExpand={() => (
+                      <ExpandedContentRenderer
+                        item={invoice}
+                        itemType={"invoice"}
+                      />
+                    )}
+                  />
+                ))}
+            </div>
+          ),
+        },
+        {
+          size: "md",
+          obj: (
+            <>
+              <Table<Invoice>
+                id="invoicesTable"
+                data={filterInvoices}
+                columns={invoiceColumns}
+                expandableContent={(invoice) => (
+                  <ExpandedContentRenderer item={invoice} itemType="invoice" />
+                )}
+              />
+            </>
+          ),
+        },
+      ])}
+    </>
   );
 };
 
@@ -424,41 +641,38 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
   // Componente para mostrar las gráficas
   const GraphContainer = () => {
     useEffect(() => {
-      const fetchMonthlyStats = async () => {
-        try {
-          const response = await fetch(
-            `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${user?.info?.id_agente}&mes=${selectedMonth}`,
-            {
-              method: "GET",
-              headers: HEADERS_API,
-            }
-          );
-          const json = await response.json();
-          console.log(json);
-          // setData(json);
-        } catch (error) {
-          console.error("Error al obtener estadísticas mensuales:", error);
-        }
-      };
-
-      if (user?.info?.id_agente) {
-        fetchMonthlyStats();
-      }
+      // const fetchMonthlyStats = async () => {
+      //   try {
+      //     const endpoint = `${URL}/v1/mia/stats/year?year=${selectedYear}&id_user=${user?.info?.id_agente}&mes=${selectedMonth}`;
+      //     const response = await fetch(endpoint, {
+      //       method: "GET",
+      //       headers: HEADERS_API,
+      //     });
+      //     const json = await response.json();
+      //     // setData(json);
+      //   } catch (error) {
+      //     console.error("❌ Error al obtener estadísticas mensuales:", error);
+      //   }
+      // };
+      // if (user?.info?.id_agente) {
+      //   fetchMonthlyStats();
+      // }
     }, [selectedMonth, selectedYear, user?.info?.id_agente]);
 
     const fechaHoy = new Date();
     fechaHoy.setHours(0, 0, 0, 0);
-
     const summary = [
       {
         name: "Gastos",
         data: gastosHotel.totalByHotel.map(({ hotel, total }) => ({
           name: hotel,
-          amount: Number(total.toFixed(2)),
+          amount: Math.round((total + Number.EPSILON) * 100) / 100,
           href: "#",
         })),
       },
     ];
+
+    // console.log(summary, "respestas jbsumas gasto");
     const summary1 = [
       {
         name: "Noches",
@@ -469,6 +683,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
         })),
       },
     ];
+    // console.log(nightsByHotel, "respestas noches");
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -509,13 +724,18 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     const checkInDate = new Date(obj.check_in);
     const today = new Date();
 
+    const currentMonth = today.getMonth() + 1; // meses van de 0-11
+    const currentYear = today.getFullYear();
+
     return (
       obj.status_reserva === "Confirmada" &&
       checkInDate <= today &&
-      checkInDate.getMonth() + 1 === Number(selectedMonth) &&
-      checkInDate.getFullYear() === Number(selectedYear)
+      checkInDate.getMonth() + 1 === currentMonth &&
+      checkInDate.getFullYear() === currentYear
     );
   }).length;
+
+  // console.log(activeBookings, "enviados de impresion")
 
   const nightsByHotel = calculateNightsByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
@@ -523,10 +743,13 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     Number(selectedYear)
   );
 
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+
   const total = calculateGrandTotalForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
-    Number(selectedMonth),
-    Number(selectedYear)
+    currentMonth,
+    currentYear
   );
 
   const totalByHotel = calculateTotalByHotelForMonthYear(

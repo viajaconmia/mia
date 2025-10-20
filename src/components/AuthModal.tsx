@@ -14,6 +14,8 @@ import {
 import { OtpService } from "../services/OtpService";
 import useAuth from "../hooks/useAuth";
 import { useLocation } from "wouter";
+import { NavigationLink } from "./atom/NavigationLink";
+import ROUTES from "../constants/routes";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -297,12 +299,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             {/* Footer */}
             <div className="mt-6 text-center">
-              <button
-                onClick={handleRegisterClick}
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-              >
+              <NavigationLink className="underline" href={ROUTES.AUTH.REGISTER}>
                 ¿No tienes cuenta? Regístrate
-              </button>
+              </NavigationLink>
             </div>
           </div>
         )}

@@ -31,9 +31,9 @@ export const ChatMessagesController: React.FC<{
         if (item.component_type === "hotel") {
           return (
             <div key={index} className="overflow-x-auto p-4 pt-0 ">
-              <div className="flex gap-2">
+              <div className="flex flex-col md:flex-row gap-2">
                 {item.id_hoteles.map((hotelId) => (
-                  <div key={hotelId + `${index}`} className="min-w-[300px]">
+                  <div key={hotelId + `${index}`} className="md:min-w-[300px]">
                     <HotelCard key={hotelId + `${index}`} id_hotel={hotelId} />
                   </div>
                 ))}
@@ -63,28 +63,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   isLoading,
 }) => {
   const [displayContent, setDisplayContent] = useState("");
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     if (!isUser && !isLoading) {
       setIsTyping(true);
-      setCurrentIndex(0);
       setDisplayContent("");
-
-      const interval = setInterval(() => {
-        setCurrentIndex((prev) => {
-          if (prev < content.length) {
-            setDisplayContent((prevContent) => prevContent + content[prev]);
-            return prev + 1;
-          }
-          clearInterval(interval);
-          setIsTyping(false);
-          return prev;
-        });
-      }, 10);
-
-      return () => clearInterval(interval);
     } else {
       setDisplayContent(content);
     }

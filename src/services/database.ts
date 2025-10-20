@@ -14,7 +14,6 @@ export const fetchHotelById = async (
         },
       }
     ).then((res) => res.json());
-    console.log("Data:", data);
     callback(data);
   } catch (error) {
     console.log(error);

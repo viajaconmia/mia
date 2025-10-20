@@ -1,3 +1,4 @@
+import useResize from "../../hooks/useResize";
 import Button from "../atom/Button";
 
 interface TabsListProps {
@@ -16,6 +17,7 @@ const medidas = [
 ];
 
 export const TabsList = ({ onChange, tabs, activeTab }: TabsListProps) => {
+  const { setSize } = useResize();
   return (
     <div className="border-b border-gray-200 rounded-t-md @container">
       <nav className={`-mb-px flex`}>
@@ -23,10 +25,17 @@ export const TabsList = ({ onChange, tabs, activeTab }: TabsListProps) => {
           <div key={tab} className=" w-full">
             <Button
               variant="ghost"
-              size="full"
+              size={
+                setSize([
+                  { size: "base", obj: "squad" },
+                  { size: "sm", obj: "full" },
+                ]) as unknown as "squad" | "full"
+              }
               onClick={() => onChange(tab)}
               icon={icon}
-              className={`${activeTab !== tab && "text-gray-500"} py-4   ${
+              className={`${
+                activeTab !== tab && "text-gray-500"
+              } py-2 md:py-4   ${
                 tabs.length < 3
                   ? "text-xs flex-col gap-[2px] px-0"
                   : medidas[tabs.length - 1]

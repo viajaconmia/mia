@@ -39,7 +39,6 @@ export const AdminDashboard = () => {
   }, []);
 
   const fetchDataPage = () => {
-    // fetchDashboardData();
     fetchBookings();
     fetchUsers();
     fetchPayments();
@@ -49,7 +48,6 @@ export const AdminDashboard = () => {
   const fetchInvoices = async () => {
     try {
       const { data } = await FacturaService.getInstance().getFacturasByAgente();
-      // console.log("invoices", data);
       setInvoices(data || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -61,7 +59,6 @@ export const AdminDashboard = () => {
   const fetchPayments = async () => {
     try {
       const { data } = await PagosService.getInstance().getPagosConsultas();
-      // console.log("payments", data?.pagos);
       setPayments(data?.pagos || []);
     } catch (error: any) {
       console.error("Error fetching payments:", error);
@@ -73,8 +70,8 @@ export const AdminDashboard = () => {
   const fetchBookings = async () => {
     try {
       const { data } = await BookingService.getInstance().getReservas();
-      // console.log("bookings", data);
       setBookings(data || []);
+      // console.log(bookings);
     } catch (error: any) {
       console.error("Error fetching bookings:", error);
       setBookings([]);
@@ -84,9 +81,7 @@ export const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      if (!user) {
-        throw new Error("No hay usuario autenticado");
-      }
+      if (!user) throw new Error("No hay usuario autenticado");
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -99,12 +94,13 @@ export const AdminDashboard = () => {
     reservaciones: <BookingsView bookings={bookings} />,
   };
 
+  // console.log(bookings, "cambios de bookings");
+
   return (
     <div className="max-w-7xl w-[90vw] mx-auto mt-4 bg-white rounded-md space-y-4">
       <TabsList
         tabs={[
           { icon: BarChart3, tab: "general" },
-          // { icon: Users, tab: "usuarios" },
           { icon: Building2, tab: "reservaciones" },
           { icon: CreditCardIcon, tab: "pagos" },
           { icon: File, tab: "facturas" },
@@ -116,8 +112,10 @@ export const AdminDashboard = () => {
           (location.split("/").slice(-1)[0] as ViewsConsultas) || "general"
         }
       />
-      <div className="px-4">
-        {location != ROUTES.CONSULTAS.SUBPATH("general") && (
+
+      {/* Barra superior: buscador + botón de prueba */}
+      <div className="px-4 flex items-center justify-between gap-3">
+        {location != ROUTES.CONSULTAS.SUBPATH("general") ? (
           <InputText
             icon={Search}
             onChange={(value) => {
@@ -129,9 +127,12 @@ export const AdminDashboard = () => {
             }}
             value={searchParams.get("search") || ""}
           />
+        ) : (
+          <div /> /* placeholder para mantener el botón a la derecha */
         )}
       </div>
-      <div className="max-h-[calc(100vh-11rem)] overflow-y-auto rounded-b-lg">
+
+      <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto rounded-b-lg">
         <Switch>
           {Object.entries(views).map(([key, Component]) => (
             <Route key={key} path={ROUTES.CONSULTAS.SUBPATH(key)}>

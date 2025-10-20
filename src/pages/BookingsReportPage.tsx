@@ -120,7 +120,7 @@ export const BookingsReportPage = () => {
       const checkOut = booking.check_out
         ? new Date(booking.check_out).toLocaleDateString("es-MX")
         : "N/A";
-
+      console.log(filteredBookings);
       return {
         Hotel: booking.hotel || "N/A",
         "Nombre del Viajero": booking.nombre_viajero_reservacion || "N/A",
@@ -129,6 +129,11 @@ export const BookingsReportPage = () => {
         "Check-out": checkOut,
         "Código Reservación": booking.codigo_reservacion_hotel || "N/A",
         Total: booking.total ? `$${parseFloat(booking.total).toFixed(2)}` : "",
+        "Forma de pago": booking.id_credito
+          ? booking.codigo_reservacion_hotel == "5989"
+            ? "Prepago"
+            : "Credito"
+          : "Prepago",
       };
     });
 
@@ -582,7 +587,9 @@ export const BookingsReportPage = () => {
                         {/* {booking.is_booking && } */}
 
                         <Link
-                          to={`${ROUTES.BOOKINGS.HOME}/${booking.id_solicitud}`}
+                          to={`${ROUTES.BOOKINGS.ID_SOLICITUD(
+                            booking.id_solicitud
+                          )}`}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
                         >
                           <ListCollapse className="w-4 h-4" />

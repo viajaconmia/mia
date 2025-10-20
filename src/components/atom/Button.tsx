@@ -10,7 +10,7 @@ interface CommonInteractiveElementProps {
    * 'ghost': Elemento transparente con texto blue-700 y borde transparente.
    */
   variant?: "primary" | "secondary" | "ghost" | "warning";
-  size?: "sm" | "md" | "lg" | "full" | "rounded";
+  size?: "sm" | "md" | "lg" | "full" | "squad" | "rounded";
   /**
    * Contenido del elemento (texto, otros elementos, etc.).
    */
@@ -72,7 +72,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
 }) => {
   // Clases base para todos los elementos interactivos
   const baseClasses = `
-    flex items-center gap-x-2 justify-center rounded-md
+    flex items-center gap-x-2 justify-center squad-md
     font-normal
     transition-all duration-200 ease-in-out
     focus:outline-none whitespace-nowrap
@@ -85,9 +85,11 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
   const sizeClasses = {
     sm: "text-xs px-2 py-1",
     md: "text-sm px-4 py-2", // ya es tu base
-    lg: "text-base px-6 py-3",
+    lg: "text-base px-6 py-2",
     full: "w-full text-base px-6 py-3",
-    rounded: "rounded p-2",
+    squad: "text-[10px] w-full flex flex-col gap-1 p-1",
+    rounded:
+      "text-[10px] w-10 h-10 flex justify-center items-center rounded-full",
   };
 
   // Clases específicas para cada variante
@@ -123,7 +125,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
     `,
   };
 
-  const combinedClasses = `${baseClasses} ${
+  const combinedClasses = `${baseClasses}  rounded-md ${
     disabled ? "" : variantClasses[variant]
   } ${sizeClasses[size]} ${className} `;
 
@@ -131,9 +133,17 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
   const content = (
     <>
       {rest.icon && (
-        <span className="">{<rest.icon className="w-4 h-4" />}</span>
+        <span className="">
+          {
+            <rest.icon
+              className={`${
+                size != "squad" && size != "rounded" ? "w-4 h-4" : "w-5 h-5"
+              }`}
+            />
+          }
+        </span>
       )}
-      {children}
+      {size != "rounded" && children}
     </>
   );
 
@@ -162,7 +172,7 @@ const InteractiveElement: React.FC<InteractiveElementProps> = ({
   // Por defecto, o si 'as' es 'button', renderiza como un botón HTML
   return (
     <button
-      className={`${combinedClasses} `}
+      className={`${combinedClasses}`}
       disabled={disabled}
       {...(rest as ButtonHTMLAttributes<HTMLButtonElement>)} // Asegura que se pasen las props correctas
     >

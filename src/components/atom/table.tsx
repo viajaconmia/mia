@@ -31,8 +31,7 @@ type ComponentPropsMap<T> = {
     item: T;
   };
 
-  acciones: { onClick: () => void, value: string }
-
+  acciones: { onClick: () => void; value: string };
 };
 
 export interface ColumnsTable<
@@ -120,7 +119,7 @@ export const Table = <T extends Record<string, any>>({
             {String(value)}
           </Button>
           <Button
-            size="rounded"
+            size="squad"
             onClick={() => {
               try {
                 copyToClipboard(value);
@@ -133,17 +132,20 @@ export const Table = <T extends Record<string, any>>({
                 );
               }
             }}
-            variant="secondary"
+            variant="ghost"
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="w-4 h-4"></Copy>
           </Button>
         </div>
       ),
 
       custom: ({ item, component: Comp }) => <Comp item={item} />,
 
-      acciones: ({ value, onClick }) => (<><button onClick={onClick}>{value}</button></>)
-
+      acciones: ({ value, onClick }) => (
+        <>
+          <button onClick={onClick}>{value}</button>
+        </>
+      ),
     };
     return map;
   }
@@ -233,18 +235,20 @@ export const Table = <T extends Record<string, any>>({
                 <th
                   key={String(column.key)}
                   onClick={() => handleSort(String(column.key))}
-                  className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${column.key !== "__expand__"
+                  className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${
+                    column.key !== "__expand__"
                       ? "cursor-pointer"
                       : "cursor-default"
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center justify-start space-x-2">
                     <span>{column.header}</span>
                     {currentSort.key === column.key &&
                       column.key !== "__expand__" && (
                         <ArrowDown
-                          className={`w-4 h-4 transition-transform ${currentSort.direction === "asc" ? "rotate-180" : ""
-                            }`}
+                          className={`w-4 h-4 transition-transform ${
+                            currentSort.direction === "asc" ? "rotate-180" : ""
+                          }`}
                         />
                       )}
                   </div>
@@ -305,10 +309,6 @@ export const Table = <T extends Record<string, any>>({
                       );
                     }
 
-                    // Columnas normales
-                    if (column.component == "copiar_and_button") {
-                      console.log(baseProps, column);
-                    }
                     return (
                       <td
                         key={`${index}-${columnKey}`}
