@@ -416,15 +416,12 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
             <Button
               size="sm"
               onClick={() => {
-                // Navega a tu pantalla "facturas pagos" con el raw_id como search
-                // Ajusta el subpath si tu ruta real usa otro nombre
-                setLocation(
-                  ROUTES.CONSULTAS.SEARCH("facturas-pagos", String(item.raw_id ?? ""))
-                );
-              }}
-            >
+                setLocation(ROUTES.FACTURACION.ID_PAGOS(item.raw_id));
+              }}>
+
               Facturar
             </Button>
+
           </div>
         ),
       },
