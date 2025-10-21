@@ -30,6 +30,8 @@ const ROUTES = {
   FACTURACION: {
     HOME: "/factura/:id",
     ID: (path: string) => `/factura/${path}`,
+    ID_PAGOS: (id: string )=>`/factura/pagos/${id}`,
+    PAGOS: `/factura/pagos/:id`
   },
   BOOKINGS: {
     HOME: "/bookings",

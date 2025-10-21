@@ -85,37 +85,40 @@ export const Table = <T extends Record<string, any>>({
 
   function createComponents<T>() {
     const map: {
-      [K in keyof ComponentPropsMap<T>]: React.FC<
-        ComponentPropsMap<T>[K] & { index: number; newValue: (keyof T)[] }
+      [K in keyof ComponentPropsMap<T> | "card_type" | "payment_method"]: React.FC<
+        (ComponentPropsMap<T>[K & keyof ComponentPropsMap<T>] extends never ? {} : ComponentPropsMap<T>[K & keyof ComponentPropsMap<T>]) &
+        { index: number; newValue: (keyof T)[] }
       >;
     } = {
-      text: ({ value }) => <span className="text-xs">{value}</span>,
+      // ========== TEXTO BASE (todo mayúsculas por estilo del TD) ==========
+      text: ({ value }) => <span className="text-xs">{String(value ?? "")}</span>,
+
       id: ({ value, index }) => (
-        <span className="text-xs">{value.slice(0, index)}</span>
+        <span className="text-xs">{String(value ?? "").slice(0, index)}</span>
       ),
+
       number: ({ value }) => <strong className="text-xs">{value}</strong>,
+
       button: ({ item, onClick, label, variant }) => (
         <div className="w-full flex items-center">
-          <Button
-            size="sm"
-            onClick={() => onClick?.({ item })}
-            variant={variant}
-          >
+          <Button size="sm" onClick={() => onClick?.({ item })} variant={variant}>
             {String(label)}
           </Button>
         </div>
       ),
-      date: ({ value }) => <span className="text-xs">{formatDate(value)}</span>,
+
+      date: ({ value }) => <span className="text-xs">{formatDate(String(value))}</span>,
+
+      // ========== PRECIO: derecha + separador de miles ==========
       precio: ({ value }) => (
-        <span className="text-xs">{formatNumberWithCommas(value)}</span>
+        <span className="text-xs block w-full text-right tabular-nums">
+          {formatNumberWithCommas(value)}
+        </span>
       ),
+
       copiar_and_button: ({ item, onClick, value, variant }) => (
         <div className="w-full flex justify-between items-center">
-          <Button
-            size="sm"
-            onClick={() => onClick?.({ item })}
-            variant={variant}
-          >
+          <Button size="sm" onClick={() => onClick?.({ item })} variant={variant}>
             {String(value)}
           </Button>
           <Button
@@ -126,27 +129,59 @@ export const Table = <T extends Record<string, any>>({
                 showNotification("success", "Se ha copiado con exito");
               } catch (error: any) {
                 console.error(error);
-                showNotification(
-                  "error",
-                  error.message || "sucedio un error al copiar el valor"
-                );
+                showNotification("error", error.message || "sucedio un error al copiar el valor");
               }
             }}
             variant="ghost"
           >
-            <Copy className="w-4 h-4"></Copy>
+            <Copy className="w-4 h-4" />
           </Button>
         </div>
       ),
 
       custom: ({ item, component: Comp }) => <Comp item={item} />,
 
-      acciones: ({ value, onClick }) => (
-        <>
-          <button onClick={onClick}>{value}</button>
-        </>
-      ),
-    };
+      acciones: ({ value, onClick }) => <button onClick={onClick}>{value}</button>,
+
+      // ========== NUEVO: normaliza “tipo de tarjeta” a CRÉDITO / DÉBITO ==========
+      card_type: ({ value }) => {
+        const s = String(value ?? "").trim().toLowerCase();
+
+        // Si está vacío, no renderiza nada
+        if (!s) return <span className="text-xs"></span>;
+
+        const isDebit =
+          /deb|debi|debito|débito|debit/.test(s) ||
+          (s.includes("db") && !s.includes("cr"));
+
+        const label = isDebit ? "DÉBITO" : "CRÉDITO";
+        return <span className="text-xs">{label}</span>;
+      },
+
+
+      // ========== NUEVO: forma de pago en mayúsculas uniforme ==========
+      payment_method: ({ value }) => {
+        const s = String(value ?? "").trim();
+        // Mapea algunos alias comunes, agrega más si los usas
+        const dict: Record<string, string> = {
+          transferencia: "TRANSFERENCIA",
+          transfer: "TRANSFERENCIA",
+          spei: "SPEI",
+          efectivo: "EFECTIVO",
+          cash: "EFECTIVO",
+          tarjeta: "TARJETA",
+          "tarjeta crédito": "TARJETA",
+          "tarjeta debito": "TARJETA",
+          "tarjeta débito": "TARJETA",
+          paypal: "PAYPAL",
+          oxxo: "OXXO",
+        };
+        const k = s.toLowerCase();
+        const label = dict[k] || s.toUpperCase();
+        return <span className="text-xs">{label}</span>;
+      },
+    } as any;
+
     return map;
   }
 
@@ -231,31 +266,33 @@ export const Table = <T extends Record<string, any>>({
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="sticky z-10 bg-gray-100 top-0">
             <tr>
-              {tableColumns.map((column) => (
-                <th
-                  key={String(column.key)}
-                  onClick={() => handleSort(String(column.key))}
-                  className={`px-6 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${
-                    column.key !== "__expand__"
-                      ? "cursor-pointer"
-                      : "cursor-default"
-                  }`}
-                >
-                  <div className="flex items-center justify-start space-x-2">
-                    <span>{column.header}</span>
-                    {currentSort.key === column.key &&
-                      column.key !== "__expand__" && (
+              {tableColumns.map((column) => {
+                const isExpand = column.key === "__expand__";
+                const isPrecio = column.component === "precio";
+                return (
+                  <th
+                    key={String(column.key)}
+                    onClick={() => handleSort(String(column.key))}
+                    className={`px-6 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wider ${isExpand ? "cursor-default" : "cursor-pointer"
+                      } ${isPrecio ? "text-right" : "text-left"}`}
+                  >
+                    <div
+                      className={`flex items-center justify-${isPrecio ? "end" : "start"} space-x-2`}
+                    >
+                      <span>{column.header}</span>
+                      {currentSort.key === column.key && !isExpand && (
                         <ArrowDown
-                          className={`w-4 h-4 transition-transform ${
-                            currentSort.direction === "asc" ? "rotate-180" : ""
-                          }`}
+                          className={`w-4 h-4 transition-transform ${currentSort.direction === "asc" ? "rotate-180" : ""
+                            }`}
                         />
                       )}
-                  </div>
-                </th>
-              ))}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
+
           <tbody className="bg-white divide-y divide-gray-200">
             {displayData.map((item, index) => (
               <React.Fragment key={index}>
@@ -263,37 +300,34 @@ export const Table = <T extends Record<string, any>>({
                   {tableColumns.map((column) => {
                     const columnKey = String(column.key);
                     const value = (item as any)[columnKey];
-                    const Comp = components[column.component];
+                    const Comp = (components as any)[column.component]; // podría ser "precio", "card_type", etc.
+
                     const baseProps: any = {
                       item,
                       index,
                       ...(column.componentProps ?? {}),
+                      value,
                     };
-                    baseProps.value = value;
 
-                    // Only access newValue if it exists on componentProps
                     if (
                       column.componentProps &&
                       "newValue" in column.componentProps
                     ) {
-                      let columnas = (
-                        column.componentProps.newValue as string[]
-                      ).map((prop: string) => item[prop]);
+                      const columnas = (column.componentProps as any)
+                        .newValue as string[];
                       let newValue;
                       for (let i = 0; i < columnas.length; i++) {
-                        if (columnas[i] != undefined && columnas[i] != null) {
-                          newValue = columnas[i];
-                        }
+                        if (item[columnas[i]] != null) newValue = item[columnas[i]];
                       }
-                      baseProps.value = newValue ? newValue : "";
+                      baseProps.value = newValue ?? "";
                     }
 
-                    // Columna de expansión
+                    // Celda expandible
                     if (columnKey === "__expand__" && expandableContent) {
                       return (
                         <td
                           key={`${index}-${columnKey}`}
-                          className="px-2 py-2 whitespace-nowrap text-sm text-gray-800 text-left"
+                          className="px-2 py-2 whitespace-nowrap text-xs text-gray-700 uppercase"
                         >
                           <button
                             onClick={() => toggleRowExpansion(index)}
@@ -309,31 +343,30 @@ export const Table = <T extends Record<string, any>>({
                       );
                     }
 
+                    const isPrecio = column.component === "precio";
+
                     return (
                       <td
                         key={`${index}-${columnKey}`}
-                        className="px-6 py-2 whitespace-nowrap text-sm text-gray-800 text-left"
+                        className={`px-6 py-2 whitespace-nowrap text-xs text-gray-700 uppercase ${isPrecio ? "text-right" : "text-left"
+                          }`}
                       >
                         {column.component ? (
                           <Comp {...baseProps} />
                         ) : (
-                          String(
-                            value !== undefined && value !== null ? value : ""
-                          )
-                        )}
+                          String(value ?? "")
+                        )
+                          // Asegura mayúsculas si cae en fallback
+                          .toUpperCase()}
                       </td>
                     );
                   })}
                 </tr>
 
-                {/* Fila expandible */}
                 {expandableContent && expandedRows.has(index) && (
                   <tr>
-                    <td
-                      colSpan={tableColumns.length}
-                      className="p-2 py-4 bg-blue-100"
-                    >
-                      <div className=" rounded-lg shadow-sm border">
+                    <td colSpan={tableColumns.length} className="p-2 py-4 bg-blue-100">
+                      <div className="rounded-lg shadow-sm border">
                         {expandableContent(item)}
                       </div>
                     </td>

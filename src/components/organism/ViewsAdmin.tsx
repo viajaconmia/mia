@@ -29,6 +29,7 @@ import { BookingCard } from "../molecule/Cards/CardBooking";
 import { PaymentCard } from "../molecule/Cards/CardPayment";
 import { InvoiceCard } from "../molecule/Cards/CardInvoice";
 
+
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
 interface TwoColumnDropdownProps {
@@ -280,7 +281,7 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
     { key: "created_at", header: "Creado", component: "date" },
-    { key: "codigo_reservacion_hotel", header: "Codigo", component: "text" },
+    { key: "codigo_reservacion_hotel", header: "Código", component: "text" },
     { key: "hotel", header: "Hotel", component: "text" },
     { key: "nombre_viajero_reservacion", header: "Viajero", component: "text" },
     { key: "check_in", header: "Check-in", component: "date" },
@@ -291,41 +292,35 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
       component: "custom",
       componentProps: {
         component: ({ item }: { item: Reserva }) => (
-          <span className="uppercase">{item.room || ""}</span>
+          <span className="font-semibold">{(item.room || "").toUpperCase()}</span>
         ),
       },
     },
-    { key: "total", header: "Precio", component: "text" },
+    { key: "total", header: "Precio", component: "precio" },
     {
       key: "id_solicitud",
       header: "Acciones",
       component: "custom",
       componentProps: {
-        component: ({ item }: { item: Reserva }) => {
-          return (
-            <div className="flex gap-2">
-              {!item.id_credito && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    setLocation(ROUTES.FACTURACION.ID(item.id_solicitud));
-                  }}
-                >
-                  Facturar
-                </Button>
-              )}
+        component: ({ item }: { item: Reserva }) => (
+          <div className="flex gap-2">
+            {!item.id_credito && (
               <Button
+                variant="secondary"
                 size="sm"
-                onClick={() => {
-                  setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud));
-                }}
+                onClick={() => setLocation(ROUTES.FACTURACION.ID(item.id_solicitud))}
               >
-                Ver Reserva
+                FACTURAR
               </Button>
-            </div>
-          );
-        },
+            )}
+            <Button
+              size="sm"
+              onClick={() => setLocation(ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud))}
+            >
+              VER RESERVA
+            </Button>
+          </div>
+        ),
       },
     },
   ];
@@ -384,6 +379,9 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
 export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const [searchParams] = useSearchParams();
   const params = searchParams.get("search");
+
+  const [, setLocation] = useLocation();   // <-- agrega esta línea
+
   const { setSize } = useResize();
 
   console.log(payments);
@@ -392,28 +390,42 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     String(payment.raw_id)?.includes(search)
   );
   const paymentColumns: ColumnsTable<Payment>[] = [
-    {
-      key: "raw_id",
-      header: "ID",
-      component: "id",
-      componentProps: { index: 12 },
-    },
+    { key: "raw_id", header: "ID", component: "id", componentProps: { index: 12 } },
     { key: "fecha_pago", header: "Fecha de Pago", component: "date" },
     { key: "monto", header: "Monto", component: "precio" },
-    { key: "metodo", header: "Forma de Pago", component: "text" },
-    { key: "tipo", header: "Tipo de Tarjeta", component: "text" },
+    // Forma de pago con render en MAYÚSCULAS uniforme
+    { key: "metodo", header: "Forma de Pago", component: "payment_method" },
+    // Tipo de tarjeta normalizado a CRÉDITO / DÉBITO
+    { key: "tipo", header: "Tipo de Tarjeta", component: "card_type" },
     // {
     //   key: null,
-    //   header: "Acción",
-    //   component: "button",
+    //   header: "Acciones",
+    //   component: "custom",
     //   componentProps: {
-    //     label: "Facturar",
-    //     onClick: ({ item }: { item: Payment }) => {
-    //       console.log(item);
+    //     component: ({ item }: { item: Payment }) => {
+    //       // Si tiene monto pendiente diferente de 0, no muestra el botón
+    //       if (Number(item.monto_pendiente_relacionar) <= 0 || item.is_facturable == "0") {
+    //         return null;
+    //       }
+
+    //       return (
+    //         <div className="flex gap-2">
+    //           <Button
+    //             size="sm"
+    //             onClick={() =>
+    //               setLocation(ROUTES.FACTURACION.ID_PAGOS(item.raw_id))
+    //             }
+    //           >
+    //             FACTURAR
+    //           </Button>
+    //         </div>
+    //       );
     //     },
     //   },
     // },
+
   ];
+
 
   return (
     <>
@@ -472,12 +484,7 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
     invoice.id_factura?.includes(search)
   );
   const invoiceColumns: ColumnsTable<Invoice>[] = [
-    {
-      key: "id_factura",
-      header: "ID",
-      component: "id",
-      componentProps: { index: 12 },
-    },
+    { key: "id_factura", header: "ID", component: "id", componentProps: { index: 12 } },
     { key: "uuid_factura", header: "Folio fiscal", component: "text" },
     { key: "fecha_emision", header: "Fecha Facturación", component: "date" },
     { key: "total", header: "Total", component: "precio" },
@@ -486,81 +493,67 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
       header: "Detalles",
       component: "custom",
       componentProps: {
-        component: ({ item }: { item: Invoice }) => {
-          return (
-            <div className="flex w-full gap-2">
-              {(item.id_facturama || item.url_pdf) && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    if (item.id_facturama) {
-                      FacturamaService.getInstance()
-                        .downloadCFDI({
-                          id: item.id_facturama,
-                          type: "pdf",
-                        })
-                        .then(({ data }) => viewPDFBase64(data?.Content || ""))
-                        .catch((error) =>
-                          console.log(
-                            error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
-                          )
-                        );
-                    } else if (item.url_pdf) {
-                      viewPDFUrl(item.url_pdf);
-                    }
-                  }}
-                >
-                  PDF
-                </Button>
-              )}
-              {(item.id_facturama || item.url_xml) && (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => {
-                    if (item.id_facturama) {
-                      FacturamaService.getInstance()
-                        .downloadCFDI({
-                          id: item.id_facturama,
-                          type: "xml",
-                        })
-                        .then(({ data }) =>
-                          downloadXMLBase64(
-                            data?.Content || "",
-                            `${item.id_factura.slice(0, 8)}-${
-                              item.created_at.split("T")[0]
-                            }.xml`
-                          )
+        component: ({ item }: { item: Invoice }) => (
+          <div className="flex w-full gap-2">
+            {(item.id_facturama || item.url_pdf) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (item.id_facturama) {
+                    FacturamaService.getInstance()
+                      .downloadCFDI({ id: item.id_facturama, type: "pdf" })
+                      .then(({ data }) => viewPDFBase64(data?.Content || ""))
+                      .catch((error) =>
+                        console.log(
+                          error.response || error.message || "Error al obtener la factura"
                         )
-                        .catch((error) =>
-                          console.log(
-                            error.response ||
-                              error.message ||
-                              "Error al obtener la factura"
-                          )
-                        );
-                    } else if (item.url_xml) {
-                      downloadXMLUrl(
-                        item.url_xml,
-                        `${item.id_factura.slice(0, 8)}-${
-                          item.created_at.split("T")[0]
-                        }.xml`
                       );
-                    }
-                  }}
-                >
-                  XML
-                </Button>
-              )}
-            </div>
-          );
-        },
+                  } else if (item.url_pdf) {
+                    viewPDFUrl(item.url_pdf);
+                  }
+                }}
+              >
+                PDF
+              </Button>
+            )}
+
+            {(item.id_facturama || item.url_xml) && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  if (item.id_facturama) {
+                    FacturamaService.getInstance()
+                      .downloadCFDI({ id: item.id_facturama, type: "xml" })
+                      .then(({ data }) =>
+                        downloadXMLBase64(
+                          data?.Content || "",
+                          `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]}.xml`
+                        )
+                      )
+                      .catch((error) =>
+                        console.log(
+                          error.response || error.message || "Error al obtener la factura"
+                        )
+                      );
+                  } else if (item.url_xml) {
+                    downloadXMLUrl(
+                      item.url_xml,
+                      `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]}.xml`
+                    );
+                  }
+                }}
+              >
+                XML
+              </Button>
+            )}
+          </div>
+        ),
       },
     },
   ];
+
 
   return (
     <>

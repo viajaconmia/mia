@@ -351,6 +351,8 @@ export const ProfilePage = () => {
     setShowAddPaymentForm(true);
   };
 
+  console.log("informacion", user)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 pt-16">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -373,7 +375,7 @@ export const ProfilePage = () => {
             </div>
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {user?.user_metadata?.full_name || "Usuario"}
+                {user?.name || user?.info || "Usuario"}
               </h1>
               <p className="text-gray-500 mb-4">{user?.email}</p>
               {/* <div className="flex flex-wrap gap-4 justify-center md:justify-start">
@@ -398,11 +400,10 @@ export const ProfilePage = () => {
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => setActiveTab("profile")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${
-              activeTab === "profile"
-                ? "bg-white text-blue-600"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === "profile"
+              ? "bg-white text-blue-600"
+              : "bg-white/10 text-white hover:bg-white/20"
+              }`}
           >
             <User2 className="w-5 h-5" />
             <span>Perfil</span>
@@ -419,11 +420,10 @@ export const ProfilePage = () => {
           </button> */}
           <button
             onClick={() => setActiveTab("payments")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${
-              activeTab === "payments"
-                ? "bg-white text-blue-600"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === "payments"
+              ? "bg-white text-blue-600"
+              : "bg-white/10 text-white hover:bg-white/20"
+              }`}
           >
             <CreditCard className="w-5 h-5" />
             <span>Metodos de pago</span>
@@ -467,7 +467,7 @@ export const ProfilePage = () => {
                 <div className="bg-white rounded-xl shadow-lg p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Información Personal
+                      Informacrión personal
                     </h2>
                     {/* <button className="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
                       <Edit2 className="w-5 h-5" />
@@ -479,15 +479,15 @@ export const ProfilePage = () => {
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm text-gray-500">
-                          Nombre Completo
+                          Nombre completo
                         </label>
                         <p className="text-lg font-medium text-gray-900">
-                          {user?.user_metadata?.full_name || "No especificado"}
+                          {user?.name || "No especificado"}
                         </p>
                       </div>
                       <div>
                         <label className="text-sm text-gray-500">
-                          Correo Electrónico
+                          Correo electrónico
                         </label>
                         <p className="text-lg font-medium text-gray-900">
                           {user?.email}
@@ -500,15 +500,15 @@ export const ProfilePage = () => {
                           Teléfono
                         </label>
                         <p className="text-lg font-medium text-gray-900">
-                          {user?.user_metadata?.phone || "No especificado"}
+                          {user?.user.phone || "No especificado"}
                         </p>
                       </div>
-                      <div>
+                      {/* <div>
                         <label className="text-sm text-gray-500">RFC</label>
                         <p className="text-lg font-medium text-gray-900">
                           {companyProfile?.rfc || "No especificado"}
                         </p>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
@@ -564,7 +564,7 @@ export const ProfilePage = () => {
                 <div className="bg-white rounded-xl shadow-lg p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Preferencias de Viaje
+                      Preferencias de viaje
                     </h2>
                     {!isEditingPreferences ? (
                       <button
@@ -615,7 +615,7 @@ export const ProfilePage = () => {
                         <div className="flex items-center space-x-2 mb-2">
                           <Hotel className="w-5 h-5 text-gray-400" />
                           <label className="text-sm font-medium text-gray-700">
-                            Hotel Preferido
+                            Hotel preferido
                           </label>
                         </div>
                         {isEditingPreferences ? (
@@ -711,7 +711,7 @@ export const ProfilePage = () => {
                 <div className="bg-white rounded-xl shadow-lg p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Metodos de pago
+                      Métodos de pago
                     </h2>
                   </div>
 
@@ -862,8 +862,8 @@ export const ProfilePage = () => {
                                 {payment.pendiente_por_cobrar === 0
                                   ? "Completado"
                                   : payment.pendiente_por_cobrar != 0
-                                  ? "Pendiente"
-                                  : "Fallido"}
+                                    ? "Pendiente"
+                                    : "Fallido"}
                               </span>
                             </div>
                           </div>
