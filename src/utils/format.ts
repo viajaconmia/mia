@@ -17,6 +17,7 @@ export const formatCurrency = (amount: number) => {
 //     year: "numeric",
 //   });
 // };
+
 export const formatDate = (dateString: string) => {
   if (!dateString) return "";
   const [year, month, day] = dateString.split("T")[0].split("-");
@@ -27,6 +28,7 @@ export const formatDate = (dateString: string) => {
     year: "numeric",
   });
 };
+
 // export const formatDate = (input?: string | Date | null): string => {
 //   // Logs útiles (corrige tu console.log)
 //   // console.log("formatDate input:", input);
