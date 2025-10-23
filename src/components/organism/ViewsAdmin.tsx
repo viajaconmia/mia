@@ -337,7 +337,6 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
           size: "base",
           obj: (
             <div className="space-y-3 px-2">
-              <h1>hola</h1>
               {filterBookings.map((booking) => (
                 <BookingCard
                   key={
