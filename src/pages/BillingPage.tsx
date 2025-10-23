@@ -757,7 +757,7 @@ interface BillingPageProps {
   invoiceData?: DataInvoice;
 }
 
-export const Impersonado = () => {
+export const TemporalComponent = () => {
   return (
     <>
       <div className="w-full h-full flex flex-col justify-center items-center ">
@@ -780,4 +780,4 @@ export const Impersonado = () => {
     </>
   );
 };
-export default BillingPage;
+export default TemporalComponent;
