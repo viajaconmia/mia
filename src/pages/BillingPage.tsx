@@ -25,6 +25,9 @@ import { Root } from "../types/billing";
 import { useUser } from "../context/userContext";
 import { useNotification } from "../hooks/useNotification";
 import Loader from "../components/atom/Loader";
+import { Logo } from "../components/atom/Logo";
+import Button from "../components/atom/Button";
+import ROUTES from "../constants/routes";
 
 // Catálogos completos del SAT
 const cfdiUseOptions = [
@@ -754,4 +757,27 @@ interface BillingPageProps {
   invoiceData?: DataInvoice;
 }
 
+export const Impersonado = () => {
+  return (
+    <>
+      <div className="w-full h-full flex flex-col justify-center items-center ">
+        <div className="bg-gray-50 flex flex-col justify-center items-center p-4 space-y-2 rounded-md">
+          <Logo className="w-20 h-20"></Logo>
+          <h1>{`UPS!`}</h1>
+          <p>
+            Esta pagina se movio temporalmente, pero puedes ir a ver tus
+            registros si quieres
+          </p>
+          <Button
+            onClick={() =>
+              window.location.replace(ROUTES.CONSULTAS.SUBPATH("general"))
+            }
+          >
+            Ir a ver sus registros
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+};
 export default BillingPage;
