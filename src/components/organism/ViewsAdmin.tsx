@@ -328,6 +328,8 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
     },
   ];
 
+  console.log("filterBookings", filterBookings);
+
   return (
     <>
       {setSize([
@@ -335,27 +337,26 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
           size: "base",
           obj: (
             <div className="space-y-3 px-2">
-              {filterBookings
-                .filter((it) => it.id_hospedaje != null)
-                .map((booking) => (
-                  <BookingCard
-                    key={
-                      booking.id_booking + (Math.random() * 9999999).toFixed(0)
-                    }
-                    data={booking}
-                    OnToggleExpand={() => (
-                      <ExpandedContentRenderer
-                        item={booking}
-                        itemType={"booking"}
-                      />
-                    )}
-                    onViewDetails={(item: Reserva) => {
-                      setLocation(
-                        ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud)
-                      );
-                    }}
-                  />
-                ))}
+              <h1>hola</h1>
+              {filterBookings.map((booking) => (
+                <BookingCard
+                  key={
+                    booking.id_booking + (Math.random() * 9999999).toFixed(0)
+                  }
+                  data={booking}
+                  OnToggleExpand={() => (
+                    <ExpandedContentRenderer
+                      item={booking}
+                      itemType={"booking"}
+                    />
+                  )}
+                  onViewDetails={(item: Reserva) => {
+                    setLocation(
+                      ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud)
+                    );
+                  }}
+                />
+              ))}
             </div>
           ),
         },
@@ -580,22 +581,20 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
           size: "base",
           obj: (
             <div className="space-y-3 px-2">
-              {filterInvoices
-                // .filter((it) => it.id_hospedaje != null)
-                .map((invoice) => (
-                  <InvoiceCard
-                    key={
-                      invoice.id_factura + (Math.random() * 9999999).toFixed(0)
-                    }
-                    data={invoice}
-                    OnToggleExpand={() => (
-                      <ExpandedContentRenderer
-                        item={invoice}
-                        itemType={"invoice"}
-                      />
-                    )}
-                  />
-                ))}
+              {filterInvoices.map((invoice) => (
+                <InvoiceCard
+                  key={
+                    invoice.id_factura + (Math.random() * 9999999).toFixed(0)
+                  }
+                  data={invoice}
+                  OnToggleExpand={() => (
+                    <ExpandedContentRenderer
+                      item={invoice}
+                      itemType={"invoice"}
+                    />
+                  )}
+                />
+              ))}
             </div>
           ),
         },
