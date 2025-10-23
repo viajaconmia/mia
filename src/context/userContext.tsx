@@ -28,7 +28,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     console.log(authState);
-  }, []);
+  }, [authState]);
 
   useEffect(() => {
     const fetchInfo = async (session: Session) => {

@@ -1,4 +1,5 @@
 import { URL, HEADERS_API } from "../constants/apiConstant";
+import { UserSingleton } from "../services/UserSingleton";
 
 export const useSolicitud = () => {
   const crearSolicitud = async (solicitud: any, id_usuario: any) =>
@@ -161,6 +162,8 @@ async function postChatSolicitud(solicitud: any, id_usuario: string) {
         status: "pending",
         id_agente: id_usuario,
         nombre_viajero: solicitud.nombre_viajero,
+        usuario_creador:
+          UserSingleton.getInstance().getUser()?.info?.id_viajero,
       },
     ], // Establecemos el estado por defecto como "pending"
   };
@@ -206,6 +209,8 @@ async function postSolicitud(solicitud: any, id_usuario: string) {
         id_agente: id_usuario,
         nombre_viajero: null,
         viajeros_adicionales: solicitud.viajeros_adicionales || [], // Aseguramos que este campo sea un array, aunque esté vacío
+        usuario_creador:
+          UserSingleton.getInstance().getUser()?.info?.id_viajero,
       },
     ], // Establecemos el estado por defecto como "pending"
   };

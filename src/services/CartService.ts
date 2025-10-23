@@ -34,7 +34,12 @@ export class CartService extends ApiService {
   public getCartItems = async (): Promise<ApiResponse<CartItem[]>> =>
     this.get<CartItem[]>({
       path: this.formatPath(this.ENDPOINTS.GET.obtener_items),
-      params: { id_agente: this.user.getUser()?.info?.id_agente },
+      params: {
+        id_agente: this.user.getUser()?.info?.id_agente,
+        ...(this.user.getUser()?.info?.rol == "reservante"
+          ? { usuario_creador: this.user.getUser()?.info?.id_viajero }
+          : {}),
+      },
     });
 
   public createCartItem = async (body: {

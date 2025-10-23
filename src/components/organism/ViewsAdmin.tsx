@@ -328,8 +328,6 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
     },
   ];
 
-  console.log("filterBookings", filterBookings);
-
   return (
     <>
       {setSize([

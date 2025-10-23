@@ -240,6 +240,8 @@ export const Cart = () => {
       });
   };
 
+  console.log(cart);
+
   if (cart.length == 0) {
     return (
       <div className="w-full h-full flex justify-center items-center flex-col">
@@ -257,7 +259,7 @@ export const Cart = () => {
     <ProtectedComponent
       admit={{
         administrador: true,
-        reservante: false,
+        reservante: true,
         viajero: false,
         consultor: false,
         "no-rol": false,

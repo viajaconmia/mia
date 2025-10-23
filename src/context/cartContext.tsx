@@ -40,7 +40,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     handleActualizarCarrito();
     handleActualizarMetodosPago();
   }, [user?.id]);
-  useEffect(() => {}, []);
+
+  // useEffect(() => {
+  //   console.log(cart);
+  // }, [cart]);
 
   const handleActualizarMetodosPago = () => {
     if (!user) {
