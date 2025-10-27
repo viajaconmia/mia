@@ -502,15 +502,15 @@ export const Configuration = () => {
                                       Definir rol
                                     </Button>
                                   )}
-                                  {employee.rol && (
-                                    <>
-                                      <div className="px-2 py-1 rounded-full bg-green-50 border border-green-300 text-xs text-green-800 flex gap-1 items-center">
-                                        <User className="w-4 h-4" />{" "}
-                                        {employee.rol}
-                                      </div>
-                                    </>
-                                  )}
                                 </ProtectedComponent>
+                                {employee.rol && (
+                                  <>
+                                    <div className="px-2 py-1 rounded-full bg-green-50 border border-green-300 text-xs text-green-800 flex gap-1 items-center">
+                                      <User className="w-4 h-4" />{" "}
+                                      {employee.rol}
+                                    </div>
+                                  </>
+                                )}
                               </td>
                             </tr>
                           ))}
