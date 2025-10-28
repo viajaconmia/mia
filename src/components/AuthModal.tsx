@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { OtpService } from "../services/OtpService";
 import useAuth from "../hooks/useAuth";
-import { useLocation } from "wouter";
 import { NavigationLink } from "./atom/NavigationLink";
 import ROUTES from "../constants/routes";
 
@@ -32,7 +31,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // onLogin,
   // onNavigateToRegister,
 }) => {
-  const [_, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -44,12 +42,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [notif, setNotif] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const {
-    handleLogin,
-    sendEmailToResetPassword,
-    handleValidateRegistroUsuario,
-    handleRegisterOldUser,
-  } = useAuth();
+  const { handleLogin, sendEmailToResetPassword } = useAuth();
 
   useEffect(() => {
     setPage("inicio");
@@ -63,18 +56,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const { data } = await handleValidateRegistroUsuario(email.toLowerCase());
-      console.log(data);
-      if (data?.registrar) {
-        if (!data?.usuario) {
-          throw new Error(
-            "Información de usuario no encontrada para registro."
-          );
-        }
-        await handleRegisterOldUser(email, password, data.usuario);
-      } else {
-        await handleLogin(email, password);
-      }
+      await handleLogin(email, password);
       onClose();
     } catch (error: any) {
       if (
@@ -144,12 +126,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setIsLoading(false);
-  };
-
-  const handleRegisterClick = () => {
-    onClose();
-    // onNavigateToRegister();
-    setLocation("/registration");
   };
 
   return (
