@@ -17,9 +17,102 @@ interface FiscalDataModalProps {
 
 const API_KEY =
   "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
-const AUTH = {
-  "x-api-key": API_KEY,
+const AUTH = { "x-api-key": API_KEY };
+
+// Catálogo resumido y tipado por persona (PF, PM o AMBOS)
+const REGIMENES: Record<
+  string,
+  { label: string; persona: "PF" | "PM" | "AMBOS" }
+> = {
+  // PM
+  "601": { label: "General de Ley Personas Morales", persona: "PM" },
+  "603": { label: "Personas Morales con Fines no Lucrativos", persona: "PM" },
+  "609": { label: "Consolidación", persona: "PM" },
+  "617": { label: "Sociedades Cooperativas de Producción", persona: "PM" },
+  "618": { label: "Sociedades Cooperativas de Consumo", persona: "PM" },
+  "619": { label: "Sociedades Cooperativas de Ahorro y Préstamo", persona: "PM" },
+  "620": {
+    label:
+      "Sociedades Coop. de Producción que optan por diferir sus ingresos",
+    persona: "PM",
+  },
+  "623": { label: "Opcional para Grupos de Sociedades", persona: "PM" },
+  "624": { label: "Coordinados", persona: "PM" },
+  "627": { label: "Régimen Simplificado de Confianza (RESICO) - Personas Morales", persona: "PM" },
+  "628": { label: "Hidrocarburos", persona: "PM" },
+  "629": {
+    label: "Regímenes Fiscales Preferentes y Empresas Multinacionales",
+    persona: "PM",
+  },
+  // PF
+  "604": { label: "Servicios Profesionales (Honorarios)", persona: "PF" },
+  "605": {
+    label: "Sueldos y Salarios e Ingresos Asimilados a Salarios",
+    persona: "PF",
+  },
+  "606": { label: "Arrendamiento", persona: "PF" },
+  "607": {
+    label: "Régimen de Enajenación o Adquisición de Bienes",
+    persona: "PF",
+  },
+  "608": { label: "Demás ingresos", persona: "PF" },
+  "610": {
+    label:
+      "Residentes en el Extranjero sin Establecimiento Permanente en México",
+    persona: "PF",
+  },
+  "611": {
+    label: "Ingresos por Dividendos (socios y accionistas)",
+    persona: "PF",
+  },
+  "612": {
+    label: "Actividades Empresariales y Profesionales",
+    persona: "PF",
+  },
+  "613": {
+    label: "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF)",
+    persona: "PF",
+  },
+  "614": { label: "Ingresos por intereses", persona: "PF" },
+  "615": {
+    label: "Ingresos por obtención de premios",
+    persona: "PF",
+  },
+  "616": { label: "Sin obligaciones fiscales", persona: "PF" },
+  "621": { label: "Incorporación Fiscal", persona: "PF" },
+  "625": {
+    label: "Actividades Empresariales a través de Plataformas Tecnológicas",
+    persona: "PF",
+  },
+  "626": {
+    label: "Régimen Simplificado de Confianza (RESICO) - Personas Físicas",
+    persona: "PF",
+  },
+  "630": {
+    label: "Enajenación de acciones en bolsa de valores",
+    persona: "PF",
+  },
+  // AMBOS
+  "622": {
+    label:
+      "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF y PM)",
+    persona: "AMBOS",
+  },
+  // (Opcional, no vigente, PM)
+  "602": {
+    label: "Personas Morales con fines no lucrativos (no vigente)",
+    persona: "PM",
+  },
 };
+
+function normalizePersona(input?: string): "PF" | "PM" {
+  const s = (input || "").toLowerCase();
+  if (s.includes("física") || s.includes("fisica") || s === "pf" || s === "f")
+    return "PF";
+  if (s.includes("moral") || s === "pm" || s === "m") return "PM";
+  // Default razonable si viene vacío o raro:
+  return "PM";
+}
 
 export function FiscalDataModal({
   company,
@@ -30,8 +123,10 @@ export function FiscalDataModal({
   const { user } = useAuth();
   const [colonias, setColonias] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(!company.taxInfo);
+  const [error, setError] = useState("");
 
-  // Preparar los datos fiscales iniciales
+  const persona = normalizePersona(company.tipo_persona);
+
   const initialTaxData: TaxInfo = {
     id_datos_fiscales: company.id_datos_fiscales || "",
     id_empresa: company.id_empresa,
@@ -47,41 +142,16 @@ export function FiscalDataModal({
 
   const [formData, setFormData] = useState<TaxInfo>(initialTaxData);
 
-  const regimes = {
-    "601": "General de Ley Personas Morales",
-    "602": "Personas Morales con fines no lucrativos (no vigente)",
-    "603": "Personas Morales con Fines no Lucrativos",
-    "604": "Servicios Profesionales (Honorarios)",
-    "605": "Sueldos y Salarios e Ingresos Asimilados a Salarios",
-    "606": "Arrendamiento",
-    "607": "Régimen de Enajenación o Adquisición de Bienes",
-    "608": "Demás ingresos",
-    "609": "Consolidación",
-    "610":
-      "Residentes en el Extranjero sin Establecimiento Permanente en México",
-    "611": "Ingresos por Dividendos (socios y accionistas)",
-    "612": "Actividades Empresariales y Profesionales",
-    "613": "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF)",
-    "614": "Ingresos por intereses",
-    "615": "Régimen de los ingresos por obtención de premios",
-    "616": "Sin obligaciones fiscales",
-    "617": "Sociedades Cooperativas de Producción",
-    "618": "Sociedades Cooperativas de Consumo",
-    "619": "Sociedades Cooperativas de Ahorro y Préstamo",
-    "620":
-      "Sociedades Cooperativas de Producción que optan por diferir sus ingresos",
-    "621": "Incorporación Fiscal",
-    "622": "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF y PM)",
-    "623": "Opcional para Grupos de Sociedades",
-    "624": "Coordinados",
-    "625": "Actividades Empresariales a través de Plataformas Tecnológicas",
-    "626": "Régimen Simplificado de Confianza (RESICO) - Personas Físicas",
-  };
+  // Opciones filtradas por tipo de persona
+  const regimenOptions = Object.entries(REGIMENES)
+    .filter(
+      ([, meta]) => meta.persona === persona || meta.persona === "AMBOS"
+    )
+    .map(([code, meta]) => ({ code, label: `${code} - ${meta.label}` }));
 
   useEffect(() => {
     if (isOpen) {
-      // Actualizar los datos del formulario con la información de la empresa
-      const updatedTaxData: TaxInfo = {
+      const updated: TaxInfo = {
         id_datos_fiscales: company.id_datos_fiscales || "",
         id_empresa: company.id_empresa,
         rfc: company.rfc || "",
@@ -94,36 +164,28 @@ export function FiscalDataModal({
         razon_social: company.razon_social_df || company.razon_social || "",
       };
 
-      setFormData(updatedTaxData);
+      setFormData(updated);
       setIsEditing(!company.taxInfo);
       setError("");
 
-      // Si hay código postal, buscar las colonias
-      if (updatedTaxData.codigo_postal_fiscal && updatedTaxData.codigo_postal_fiscal.length > 4) {
-        fetchColonias(updatedTaxData.codigo_postal_fiscal);
+      if (
+        updated.codigo_postal_fiscal &&
+        updated.codigo_postal_fiscal.length > 4
+      ) {
+        fetchColonias(updated.codigo_postal_fiscal);
       }
     }
   }, [isOpen, company]);
 
-  const [error, setError] = useState("");
-
-  // Función para buscar colonias por código postal
   const fetchColonias = (codigoPostal: string) => {
-    fetch(
-      `${URL}/v1/sepoMex/buscar-codigo-postal?d_codigo=${codigoPostal}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...AUTH,
-        },
-      }
-    )
+    fetch(`${URL}/v1/sepoMex/buscar-codigo-postal?d_codigo=${codigoPostal}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", ...AUTH },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.data.length > 0) {
-          setColonias(data.data.map((item: any) => item.d_asenta)); // Extraer colonias
-          // Si el formulario no tiene municipio o estado, actualizarlos
+          setColonias(data.data.map((item: any) => item.d_asenta));
           if (!formData.municipio || !formData.estado) {
             setFormData((prev) => ({
               ...prev,
@@ -135,32 +197,29 @@ export function FiscalDataModal({
           setColonias([]);
         }
       })
-      .catch((error) =>
-        console.error("Error obteniendo datos de código postal:", error)
+      .catch((err) =>
+        console.error("Error obteniendo datos de código postal:", err)
       );
   };
 
   useEffect(() => {
-    if (formData.codigo_postal_fiscal && formData.codigo_postal_fiscal.length > 4) {
+    if (
+      formData.codigo_postal_fiscal &&
+      formData.codigo_postal_fiscal.length > 4
+    ) {
       fetchColonias(formData.codigo_postal_fiscal);
     }
   }, [formData.codigo_postal_fiscal]);
 
   if (!isOpen) return null;
 
-  const validateRFC = (rfc: string) => {
-    const rfcRegex = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/;
-    return rfcRegex.test(rfc);
-  };
+  const validateRFC = (rfc: string) =>
+    /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(rfc);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
-      if (!user) {
-        throw new Error("No hay usuario autenticado");
-      }
-
+      if (!user) throw new Error("No hay usuario autenticado");
       if (!validateRFC(formData.rfc)) {
         setError("El formato del RFC no es válido");
         return;
@@ -168,29 +227,23 @@ export function FiscalDataModal({
       let responseCompany;
       if (formData?.id_datos_fiscales) {
         responseCompany = await updateNewDatosFiscales(formData);
-        if (!responseCompany.success) {
-          throw new Error("No se pudo registrar los datos fiscales");
-        }
       } else {
         responseCompany = await createNewDatosFiscales(formData);
-        if (!responseCompany.success) {
-          throw new Error("No se pudo registrar los datos fiscales");
-        }
       }
-      console.log("Datos fiscales guardados:", responseCompany);
+      if (!responseCompany?.success)
+        throw new Error("No se pudo registrar los datos fiscales");
+
       onSave(company.id_empresa, formData);
       setIsEditing(false);
       setError("");
-    } catch (error) {
-      console.error("Error creando nuevos datos fiscales", error);
-      setError(
-        "Hubo un error al guardar los datos fiscales. Inténtalo de nuevo."
-      );
+    } catch (err) {
+      console.error("Error creando nuevos datos fiscales", err);
+      setError("Hubo un error al guardar los datos fiscales. Inténtalo de nuevo.");
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-semibold">
@@ -222,6 +275,7 @@ export function FiscalDataModal({
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   RFC
@@ -241,6 +295,7 @@ export function FiscalDataModal({
                 />
                 {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Código Postal
@@ -259,6 +314,7 @@ export function FiscalDataModal({
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Calle y número
@@ -274,6 +330,7 @@ export function FiscalDataModal({
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Colonia
@@ -287,13 +344,14 @@ export function FiscalDataModal({
                   required
                 >
                   <option value="">Selecciona una colonia</option>
-                  {colonias.map((colonia, index) => (
-                    <option key={index} value={colonia}>
+                  {colonias.map((colonia, i) => (
+                    <option key={i} value={colonia}>
                       {colonia}
                     </option>
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Municipio
@@ -309,6 +367,7 @@ export function FiscalDataModal({
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Estado
@@ -325,9 +384,10 @@ export function FiscalDataModal({
                 />
               </div>
 
+              {/* Select de Régimen fiscal (filtrado por PF/PM) */}
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Régimen fiscal
+                  Régimen fiscal {persona === "PF" ? "(Persona Física)" : "(Persona Moral)"}
                 </label>
                 <select
                   name="regimen_fiscal"
@@ -335,115 +395,17 @@ export function FiscalDataModal({
                   onChange={(e) =>
                     setFormData({ ...formData, regimen_fiscal: e.target.value })
                   }
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md bg-white"
                   required
                 >
-                  <option value="">Selecciona un régimen fiscal</option>
-                  <option value="601">
-                    601 - Persona Moral - General de Ley Personas Morales
+                  <option value="">
+                    Selecciona un régimen fiscal {persona}
                   </option>
-                  <option value="602">
-                    602 - Persona Moral - Personas Morales con Fines no
-                    Lucrativos (No vigente)
-                  </option>
-                  <option value="603">
-                    603 - Persona Moral - Personas Morales con Fines no
-                    Lucrativos
-                  </option>
-                  <option value="604">
-                    604 - Persona Física - Servicios Profesionales (Honorarios)
-                  </option>
-                  <option value="605">
-                    605 - Persona Física - Sueldos y Salarios e Ingresos
-                    Asimilados a Salarios
-                  </option>
-                  <option value="606">
-                    606 - Persona Física - Arrendamiento
-                  </option>
-                  <option value="607">
-                    607 - Persona Física - Régimen de Enajenación o Adquisición
-                    de Bienes
-                  </option>
-                  <option value="608">
-                    608 - Persona Física - Demás ingresos
-                  </option>
-                  <option value="609">
-                    609 - Persona Moral - Consolidación
-                  </option>
-                  <option value="610">
-                    610 - Persona Física - Residentes en el Extranjero sin
-                    Establecimiento Permanente en México
-                  </option>
-                  <option value="611">
-                    611 - Persona Física - Ingresos por Dividendos (socios y
-                    accionistas)
-                  </option>
-                  <option value="612">
-                    612 - Persona Física - Actividades Empresariales y
-                    Profesionales
-                  </option>
-                  <option value="613">
-                    613 - Persona Física - Actividades Agrícolas, Ganaderas,
-                    Silvícolas y Pesqueras
-                  </option>
-                  <option value="614">
-                    614 - Persona Física - Ingresos por intereses
-                  </option>
-                  <option value="615">
-                    615 - Persona Física - Régimen de los ingresos por obtención
-                    de premios
-                  </option>
-                  <option value="616">
-                    616 - Persona Física - Sin obligaciones fiscales
-                  </option>
-                  <option value="617">
-                    617 - Persona Moral - Sociedades Cooperativas de Producción
-                  </option>
-                  <option value="618">
-                    618 - Persona Moral - Sociedades Cooperativas de Consumo
-                  </option>
-                  <option value="619">
-                    619 - Persona Moral - Sociedades Cooperativas de Ahorro y
-                    Préstamo
-                  </option>
-                  <option value="620">
-                    620 - Persona Moral - Sociedades Cooperativas de Producción
-                    que optan por diferir sus ingresos
-                  </option>
-                  <option value="621">
-                    621 - Persona Física - Incorporación Fiscal
-                  </option>
-                  <option value="622">
-                    622 - Persona Física y Moral - Actividades Agrícolas,
-                    Ganaderas, Silvícolas y Pesqueras
-                  </option>
-                  <option value="623">
-                    623 - Persona Moral - Opcional para Grupos de Sociedades
-                  </option>
-                  <option value="624">624 - Persona Moral - Coordinados</option>
-                  <option value="625">
-                    625 - Persona Física - Actividades Empresariales a través de
-                    Plataformas Tecnológicas
-                  </option>
-                  <option value="626">
-                    626 - Persona Física - Régimen Simplificado de Confianza
-                    (RESICO)
-                  </option>
-                  <option value="627">
-                    627 - Persona Moral - Régimen Simplificado de Confianza
-                    (RESICO)
-                  </option>
-                  <option value="628">
-                    628 - Persona Moral - Hidrocarburos
-                  </option>
-                  <option value="629">
-                    629 - Persona Moral - Regímenes Fiscales Preferentes y
-                    Empresas Multinacionales
-                  </option>
-                  <option value="630">
-                    630 - Persona Física - Enajenación de acciones en bolsa de
-                    valores
-                  </option>
+                  {regimenOptions.map((opt) => (
+                    <option key={opt.code} value={opt.code}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -470,22 +432,23 @@ export function FiscalDataModal({
           ) : (
             <div className="space-y-4">
               <div className="col-span-2 grid grid-cols-2 gap-4">
-                {Object.entries(formData).map(
-                  ([key, value]) =>
-                    key !== "id_empresa" &&
-                    key !== "id_datos_fiscales" && (
-                      <div key={key}>
-                        <p className="text-sm font-medium text-gray-700">
-                          {key.replace(/_/g, " ").toUpperCase()}
-                        </p>
-                        <p className="mt-1">
-                          {key === "regimen_fiscal"
-                            ? `${value} - ${regimes[value as keyof typeof regimes] || "Desconocido"}`
-                            : value || "N/A"}
-                        </p>
-                      </div>
-                    )
-                )}
+                {Object.entries(formData).map(([key, value]) => {
+                  if (key === "id_empresa" || key === "id_datos_fiscales") return null;
+                  const title = key.replace(/_/g, " ").toUpperCase();
+                  const isReg = key === "regimen_fiscal";
+                  const regText = isReg
+                    ? `${value || "N/A"}${value && REGIMENES[String(value)]
+                      ? ` - ${REGIMENES[String(value)].label}`
+                      : ""
+                    }`
+                    : value || "N/A";
+                  return (
+                    <div key={key}>
+                      <p className="text-sm font-medium text-gray-700">{title}</p>
+                      <p className="mt-1">{regText}</p>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex justify-end mt-6">
                 <button

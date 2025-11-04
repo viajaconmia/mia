@@ -385,6 +385,7 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   const { setSize } = useResize();
 
   console.log(payments);
+
   let search = params ? params : "";
   const filterPayments = payments.filter((payment) =>
     String(payment.raw_id)?.includes(search)
@@ -397,35 +398,33 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     { key: "metodo", header: "Forma de Pago", component: "payment_method" },
     // Tipo de tarjeta normalizado a CRÉDITO / DÉBITO
     { key: "tipo", header: "Tipo de Tarjeta", component: "card_type" },
-    // {
-    //   key: null,
-    //   header: "Acciones",
-    //   component: "custom",
-    //   componentProps: {
-    //     component: ({ item }: { item: Payment }) => {
-    //       // Si tiene monto pendiente diferente de 0, no muestra el botón
-    //       if (Number(item.monto_pendiente_relacionar) <= 0 || item.is_facturable == "0") {
-    //         return null;
-    //       }
-
-    //       return (
-    //         <div className="flex gap-2">
-    //           <Button
-    //             size="sm"
-    //             onClick={() =>
-    //               setLocation(ROUTES.FACTURACION.ID_PAGOS(item.raw_id))
-    //             }
-    //           >
-    //             FACTURAR
-    //           </Button>
-    //         </div>
-    //       );
-    //     },
-    //   },
-    // },
+    {
+      key: null,
+      header: "Acciones",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Payment }) => {
+          // Si tiene monto pendiente diferente de 0, no muestra el botón
+          if (Number(item.monto_pendiente_relacionar) <= 0 || item.is_facturable == "0") {
+            return null;
+          }
+          return (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() =>
+                  setLocation(ROUTES.FACTURACION.ID_PAGOS(item.raw_id))
+                }
+              >
+                FACTURAR
+              </Button>
+            </div>
+          );
+        },
+      },
+    },
 
   ];
-
 
   return (
     <>

@@ -3,7 +3,7 @@ import { Employee, FormMode, TaxInfo, CompanyWithTaxInfo } from "../types";
 import { CompanyForm } from "../components/CompanyForm";
 import { EmployeeForm } from "../components/EmployeeForm";
 import { FiscalDataModal } from "../components/FiscalDataModal";
-import {} from "module";
+import { } from "module";
 import {
   createNewEmpresa,
   createNewViajero,
@@ -220,6 +220,8 @@ export const Configuration = () => {
         );
     }
   };
+  // 
+  // console.log("informacion", selectedCompany)
 
   return (
     <>
@@ -432,8 +434,8 @@ export const Configuration = () => {
                               <td className="px-6 py-4">
                                 {employee.fecha_nacimiento
                                   ? new Date(
-                                      employee.fecha_nacimiento
-                                    ).toLocaleDateString()
+                                    employee.fecha_nacimiento
+                                  ).toLocaleDateString()
                                   : ""}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -547,7 +549,7 @@ const DefinirRol = ({
 
   if (!viajero) return null;
 
-  const showNotification = notificationContext?.showNotification ?? (() => {});
+  const showNotification = notificationContext?.showNotification ?? (() => { });
 
   const roles = [
     {
