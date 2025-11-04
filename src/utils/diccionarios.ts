@@ -31,6 +31,7 @@ export const estadosDict = [
     "YUCATAN",
     "ZACATECAS"
 ];
+  
 
     export const regimenDict = [
     "Régimen General de Ley Personas Morales",
