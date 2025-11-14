@@ -38,6 +38,9 @@ import {
 import { URL } from "../constants/apiConstant";
 import useAuth from "../hooks/useAuth";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
+import { CheckboxInput } from "../components/atom/Input";
+import { useNotification } from "../hooks/useNotification";
+import { AgenteService } from "../services/AgenteService";
 // import { useNavigate } from "react-router";
 
 const stripePromise = loadStripe(
@@ -150,7 +153,6 @@ const CheckOutForm = ({ setSuccess, setTrigger }: any) => {
 
 export const ProfilePage = () => {
   // const navigate = useNavigate();
-  const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
   const [paymentsPendientes, setPaymentsPendientes] = useState<
@@ -175,14 +177,31 @@ export const ProfilePage = () => {
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [message, setMessage] = useState("");
-  const [creditoValue, setCreditoValue] = useState([]);
   const { user } = useAuth();
+  const [restricted, setRestricted] = useState<boolean | null>(null);
+  const { showNotification } = useNotification();
 
-  const fetchCredit = async () => {
-    const data = await fetchCreditAgent();
-    console.log("Credito del agente", data);
-    setCreditoValue(data);
+  const fetchRestricted = async () => {
+    try {
+      const response = await AgenteService.getInstance().getRestricted();
+      setRestricted(response.data);
+    } catch (error: any) {
+      showNotification("error", error.message);
+    }
   };
+
+  const handleRestricted = async (value: boolean) => {
+    try {
+      const response = await AgenteService.getInstance().updateRestricted(
+        value
+      );
+      setRestricted(response.data);
+      showNotification("success", response.message);
+    } catch (error: any) {
+      showNotification("error", error.message);
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -200,7 +219,7 @@ export const ProfilePage = () => {
     };
 
     fetchUserData();
-    fetchCredit();
+    fetchRestricted();
   }, []);
 
   useEffect(() => {
@@ -351,7 +370,7 @@ export const ProfilePage = () => {
     setShowAddPaymentForm(true);
   };
 
-  console.log("informacion", user)
+  console.log("informacion", user);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 pt-16">
@@ -400,10 +419,11 @@ export const ProfilePage = () => {
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => setActiveTab("profile")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === "profile"
-              ? "bg-white text-blue-600"
-              : "bg-white/10 text-white hover:bg-white/20"
-              }`}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+              activeTab === "profile"
+                ? "bg-white text-blue-600"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
           >
             <User2 className="w-5 h-5" />
             <span>Perfil</span>
@@ -420,10 +440,11 @@ export const ProfilePage = () => {
           </button> */}
           <button
             onClick={() => setActiveTab("payments")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === "payments"
-              ? "bg-white text-blue-600"
-              : "bg-white/10 text-white hover:bg-white/20"
-              }`}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+              activeTab === "payments"
+                ? "bg-white text-blue-600"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
           >
             <CreditCard className="w-5 h-5" />
             <span>Metodos de pago</span>
@@ -467,7 +488,7 @@ export const ProfilePage = () => {
                 <div className="bg-white rounded-xl shadow-lg p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Informacrión personal
+                      Información personal
                     </h2>
                     {/* <button className="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
                       <Edit2 className="w-5 h-5" />
@@ -503,12 +524,32 @@ export const ProfilePage = () => {
                           {user?.user.phone || "No especificado"}
                         </p>
                       </div>
-                      {/* <div>
-                        <label className="text-sm text-gray-500">RFC</label>
-                        <p className="text-lg font-medium text-gray-900">
-                          {companyProfile?.rfc || "No especificado"}
-                        </p>
-                      </div> */}
+                      <ProtectedComponent
+                        admit={{
+                          administrador: true,
+                          reservante: false,
+                          viajero: false,
+                          consultor: false,
+                          "no-rol": false,
+                        }}
+                      >
+                        <>
+                          {restricted != null && (
+                            <div>
+                              <label className="text-xs text-gray-500">
+                                <CheckboxInput
+                                  label={"Restringir reservas por usuario"}
+                                  checked={restricted}
+                                  onChange={handleRestricted}
+                                ></CheckboxInput>
+                                Que los usuarios puedan ver solamente las
+                                reservas que ellos realizan (admin si puede ver
+                                todas las reservas)
+                              </label>
+                            </div>
+                          )}
+                        </>
+                      </ProtectedComponent>
                     </div>
                   </div>
                 </div>
@@ -862,8 +903,8 @@ export const ProfilePage = () => {
                                 {payment.pendiente_por_cobrar === 0
                                   ? "Completado"
                                   : payment.pendiente_por_cobrar != 0
-                                    ? "Pendiente"
-                                    : "Fallido"}
+                                  ? "Pendiente"
+                                  : "Fallido"}
                               </span>
                             </div>
                           </div>

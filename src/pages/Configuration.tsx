@@ -481,17 +481,37 @@ export const Configuration = () => {
                                   >
                                     Editar rol
                                   </Button> */}
-                                    {!employee.is_user && (
-                                      <Button
-                                        onClick={() => {
-                                          setSelectedViajero(employee);
-                                        }}
-                                        variant="secondary"
-                                      >
-                                        Definir rol
-                                      </Button>
-                                    )}
                                   </ProtectedComponent>
+                                )}
+                              </td>
+                              <td>
+                                <ProtectedComponent
+                                  admit={{
+                                    administrador: true,
+                                    reservante: false,
+                                    viajero: false,
+                                    consultor: false,
+                                    "no-rol": false,
+                                  }}
+                                >
+                                  {(!employee.is_user || !employee.rol) && (
+                                    <Button
+                                      onClick={() => {
+                                        setSelectedViajero(employee);
+                                      }}
+                                      variant="secondary"
+                                    >
+                                      Definir rol
+                                    </Button>
+                                  )}
+                                </ProtectedComponent>
+                                {employee.rol && (
+                                  <>
+                                    <div className="px-2 py-1 rounded-full bg-green-50 border border-green-300 text-xs text-green-800 flex gap-1 items-center">
+                                      <User className="w-4 h-4" />{" "}
+                                      {employee.rol}
+                                    </div>
+                                  </>
                                 )}
                               </td>
                             </tr>
@@ -533,6 +553,37 @@ export const Configuration = () => {
   );
 };
 
+const roles = [
+  {
+    id: "consultor",
+    label: "Consultor",
+    icon: CheckCircle,
+    color: "bg-blue",
+    description: "Puede ver la información",
+  },
+  {
+    id: "viajero",
+    label: "Viajero",
+    icon: User,
+    color: "bg-blue",
+    description: "Puede ver las reservas",
+  },
+  {
+    id: "reservante",
+    label: "Reservante",
+    icon: Shield,
+    color: "bg-green",
+    description: "Gestión del sistema",
+  },
+  {
+    id: "administrador",
+    label: "Administrador",
+    icon: UserCog,
+    color: "bg-purple",
+    description: "Acceso completo",
+  },
+];
+
 const DefinirRol = ({
   viajero,
   onClose,
@@ -550,37 +601,6 @@ const DefinirRol = ({
   if (!viajero) return null;
 
   const showNotification = notificationContext?.showNotification ?? (() => { });
-
-  const roles = [
-    {
-      id: "consultor",
-      label: "Consultor",
-      icon: CheckCircle,
-      color: "bg-blue",
-      description: "Puede ver la información",
-    },
-    {
-      id: "viajero",
-      label: "Viajero",
-      icon: User,
-      color: "bg-blue",
-      description: "Puede ver las reservas",
-    },
-    {
-      id: "reservante",
-      label: "Reservante",
-      icon: Shield,
-      color: "bg-green",
-      description: "Gestión del sistema",
-    },
-    {
-      id: "administrador",
-      label: "Administrador",
-      icon: UserCog,
-      color: "bg-purple",
-      description: "Acceso completo",
-    },
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

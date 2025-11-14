@@ -272,3 +272,106 @@ export const InputRadio = <T,>({
     </label>
   );
 };
+interface CheckboxInputProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  fieldLabel?: string;
+  id?: string;
+  disabled?: boolean;
+}
+export const CheckboxInput = ({
+  // Asumiendo que este es el wrapper de tu componente
+  label, // Texto descriptivo para el interruptor
+  checked,
+  onChange,
+  fieldLabel,
+  id,
+  disabled = false,
+}: CheckboxInputProps) => {
+  // Usando la interfaz de props que definimos antes
+  const uniqueId =
+    id ||
+    `toggle-${label.replace(/\s+/g, "-").toLowerCase()}-${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+
+  return (
+    <div className="flex flex-col space-y-1">
+      {/* Muestra la fieldLabel (etiqueta de campo) si se proporciona */}
+      {fieldLabel && (
+        <label htmlFor={uniqueId} className="text-sm text-gray-900 font-medium">
+          {fieldLabel}
+        </label>
+      )}
+
+      {/* Contenedor para el interruptor visual y su etiqueta descriptiva adyacente */}
+      <div className="flex items-center">
+        {/* === Inicio del Interruptor Visual === */}
+        <label
+          htmlFor={uniqueId} // Asocia este label (el riel) con el input oculto
+          className={`
+            relative inline-flex items-center w-10 h-6 rounded-full cursor-pointer select-none
+            transition-colors duration-200 ease-in-out
+            ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+            ${checked ? "bg-green-500" : "bg-gray-300"} 
+            /* Estilo de foco para el riel cuando el input interno está enfocado */
+            focus-within:ring-2 focus-within:ring-offset-2 
+            ${
+              disabled
+                ? "focus-within:ring-transparent"
+                : "focus-within:ring-green-400 dark:focus-within:ring-green-600"
+            }
+          `}
+        >
+          <input
+            type="checkbox"
+            id={uniqueId}
+            checked={checked}
+            onChange={(e) => !disabled && onChange(e.target.checked)} // Previene el cambio si está deshabilitado
+            disabled={disabled}
+            className="hidden peer" // Input oculto, 'peer' es útil si quieres estilizar hermanos basado en su estado
+          />
+          {/* Botón Deslizante (Knob) */}
+          <span
+            aria-hidden="true" // Es un elemento decorativo
+            className={`
+              absolute top-1 left-1 inline-block w-4 h-4 rounded-full shadow-md
+              transform transition-transform duration-200 ease-in-out
+              ${disabled ? "bg-gray-100" : "bg-white"}
+              ${checked ? "translate-x-4" : "translate-x-0"}
+            `}
+          ></span>
+        </label>
+        {/* === Fin del Interruptor Visual === */}
+
+        {/* Etiqueta de Texto Descriptivo (movida aquí, fuera del label del interruptor) */}
+        {label && ( // Solo muestra si hay texto de etiqueta
+          <span
+            onClick={() => {
+              // Permite hacer clic en el texto para cambiar el estado del interruptor
+              if (!disabled) {
+                const inputElement = document.getElementById(
+                  uniqueId
+                ) as HTMLInputElement | null;
+                if (inputElement) {
+                  inputElement.click();
+                }
+              }
+            }}
+            className={`
+              ml-3 text-sm font-medium select-none
+              ${
+                disabled
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-gray-900 dark:text-gray-100 cursor-pointer"
+              }
+            `}
+          >
+            {label}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};

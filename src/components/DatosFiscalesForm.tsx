@@ -1,256 +1,467 @@
-import React, { useEffect, useState } from "react";
-import { Company, TaxInfo } from "../types";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { fetchCompaniesAgent } from "../hooks/useFetch";
+import { CompanyWithTaxInfo, TaxInfo } from "../types";
+import {
+  createNewDatosFiscales,
+  updateNewDatosFiscales,
+} from "../hooks/useDatabase";
 import { URL } from "../constants/apiConstant";
+import useAuth from "../hooks/useAuth";
 
-interface DatosFiscalesFormProp {
-  onSubmit: (data: Partial<TaxInfo>) => void;
-  onCancel: () => void;
-  initialData?: TaxInfo;
+interface FiscalDataModalProps {
+  company: CompanyWithTaxInfo;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (companyId: string, fiscalData: TaxInfo) => void;
 }
 
 const API_KEY =
   "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
-const AUTH = {
-  "x-api-key": API_KEY,
+const AUTH = { "x-api-key": API_KEY };
+
+// Catálogo resumido y tipado por persona (PF, PM o AMBOS)
+const REGIMENES: Record<
+  string,
+  { label: string; persona: "PF" | "PM" | "AMBOS" }
+> = {
+  // PM
+  "601": { label: "General de Ley Personas Morales", persona: "PM" },
+  "603": { label: "Personas Morales con Fines no Lucrativos", persona: "PM" },
+  "609": { label: "Consolidación", persona: "PM" },
+  "617": { label: "Sociedades Cooperativas de Producción", persona: "PM" },
+  "618": { label: "Sociedades Cooperativas de Consumo", persona: "PM" },
+  "619": { label: "Sociedades Cooperativas de Ahorro y Préstamo", persona: "PM" },
+  "620": {
+    label:
+      "Sociedades Coop. de Producción que optan por diferir sus ingresos",
+    persona: "PM",
+  },
+  "623": { label: "Opcional para Grupos de Sociedades", persona: "PM" },
+  "624": { label: "Coordinados", persona: "PM" },
+  "627": { label: "Régimen Simplificado de Confianza (RESICO) - Personas Morales", persona: "PM" },
+  "628": { label: "Hidrocarburos", persona: "PM" },
+  "629": {
+    label: "Regímenes Fiscales Preferentes y Empresas Multinacionales",
+    persona: "PM",
+  },
+  // PF
+  "604": { label: "Servicios Profesionales (Honorarios)", persona: "PF" },
+  "605": {
+    label: "Sueldos y Salarios e Ingresos Asimilados a Salarios",
+    persona: "PF",
+  },
+  "606": { label: "Arrendamiento", persona: "PF" },
+  "607": {
+    label: "Régimen de Enajenación o Adquisición de Bienes",
+    persona: "PF",
+  },
+  "608": { label: "Demás ingresos", persona: "PF" },
+  "610": {
+    label:
+      "Residentes en el Extranjero sin Establecimiento Permanente en México",
+    persona: "PF",
+  },
+  "611": {
+    label: "Ingresos por Dividendos (socios y accionistas)",
+    persona: "PF",
+  },
+  "612": {
+    label: "Actividades Empresariales y Profesionales",
+    persona: "PF",
+  },
+  "613": {
+    label: "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF)",
+    persona: "PF",
+  },
+  "614": { label: "Ingresos por intereses", persona: "PF" },
+  "615": {
+    label: "Ingresos por obtención de premios",
+    persona: "PF",
+  },
+  "616": { label: "Sin obligaciones fiscales", persona: "PF" },
+  "621": { label: "Incorporación Fiscal", persona: "PF" },
+  "625": {
+    label: "Actividades Empresariales a través de Plataformas Tecnológicas",
+    persona: "PF",
+  },
+  "626": {
+    label: "Régimen Simplificado de Confianza (RESICO) - Personas Físicas",
+    persona: "PF",
+  },
+  "630": {
+    label: "Enajenación de acciones en bolsa de valores",
+    persona: "PF",
+  },
+  // AMBOS
+  "622": {
+    label:
+      "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras (PF y PM)",
+    persona: "AMBOS",
+  },
+  // (Opcional, no vigente, PM)
+  "602": {
+    label: "Personas Morales con fines no lucrativos (no vigente)",
+    persona: "PM",
+  },
 };
 
-export function DatosFiscalesForm({
-  onSubmit,
-  onCancel,
-  initialData,
-}: DatosFiscalesFormProp) {
-  const [empresas, setEmpresas] = useState<Company[]>([]);
-  const [codigoPostal, setCodigoPostal] = useState(
-    initialData?.codigo_postal_fiscal || ""
-  );
-  const [datosCodigo, setDatosCodigo] = useState({
-    colonia: initialData?.colonia || "",
-    municipio: initialData?.municipio || "",
-    estado: initialData?.estado || "",
-  });
+function normalizePersona(input?: string): "PF" | "PM" {
+  const s = (input || "").toLowerCase();
+  if (s.includes("física") || s.includes("fisica") || s === "pf" || s === "f")
+    return "PF";
+  if (s.includes("moral") || s === "pm" || s === "m") return "PM";
+  // Default razonable si viene vacío o raro:
+  return "PM";
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
+export function FiscalDataModal({
+  company,
+  isOpen,
+  onClose,
+  onSave,
+}: FiscalDataModalProps) {
+  const { user } = useAuth();
+  const [colonias, setColonias] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(!company.taxInfo);
+  const [error, setError] = useState("");
 
-    const data: Partial<TaxInfo> = {
-      rfc: formData.get("rfc") as string,
-      calle: formData.get("calle") as string,
-      municipio: formData.get("municipio") as string,
-      estado: formData.get("estado") as string,
-      colonia: formData.get("colonia") as string,
-      codigo_postal_fiscal: formData.get("codigo_postal_fiscal") as string,
-      regimen_fiscal: formData.get("regimen_fiscal") as string,
-      id_empresa: formData.get("id_empresa") as string,
-    };
+  const persona = normalizePersona(company.tipo_persona);
 
-    onSubmit(data);
+  const initialTaxData: TaxInfo = {
+    id_datos_fiscales: company.id_datos_fiscales || "",
+    id_empresa: company.id_empresa,
+    rfc: company.rfc || "",
+    calle: company.calle || company.empresa_direccion || "",
+    colonia: company.colonia || company.empresa_colonia || "",
+    municipio: company.municipio || company.empresa_municipio || "",
+    estado: company.estado || company.empresa_estado || "",
+    codigo_postal_fiscal: company.codigo_postal_fiscal || company.empresa_cp || "",
+    regimen_fiscal: company.regimen_fiscal || "",
+    razon_social: company.razon_social_df || company.razon_social || "",
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0]; // Obtiene el primer archivo seleccionado
-    if (file) {
-      console.log("Archivo seleccionado:", file);
-      // Aquí podrías subir el archivo o hacer cualquier otra acción que necesites
+  const [formData, setFormData] = useState<TaxInfo>(initialTaxData);
+
+  // Opciones filtradas por tipo de persona
+  const regimenOptions = Object.entries(REGIMENES)
+    .filter(
+      ([, meta]) => meta.persona === persona || meta.persona === "AMBOS"
+    )
+    .map(([code, meta]) => ({ code, label: `${code} - ${meta.label}` }));
+
+  useEffect(() => {
+    if (isOpen) {
+      const updated: TaxInfo = {
+        id_datos_fiscales: company.id_datos_fiscales || "",
+        id_empresa: company.id_empresa,
+        rfc: company.rfc || "",
+        calle: company.calle || company.empresa_direccion || "",
+        colonia: company.colonia || company.empresa_colonia || "",
+        municipio: company.municipio || company.empresa_municipio || "",
+        estado: company.estado || company.empresa_estado || "",
+        codigo_postal_fiscal: company.codigo_postal_fiscal || company.empresa_cp || "",
+        regimen_fiscal: company.regimen_fiscal || "",
+        razon_social: company.razon_social_df || company.razon_social || "",
+      };
+
+      setFormData(updated);
+      setIsEditing(!company.taxInfo);
+      setError("");
+
+      if (
+        updated.codigo_postal_fiscal &&
+        updated.codigo_postal_fiscal.length > 4
+      ) {
+        fetchColonias(updated.codigo_postal_fiscal);
+      }
     }
-  };
+  }, [isOpen, company]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await fetchCompaniesAgent();
-      setEmpresas(data);
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (codigoPostal.length > 4) {
-      fetch(`${URL}/v1/sepoMex/buscar-codigo-postal?d_codigo=${codigoPostal}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...AUTH, // Asegúrate de que AUTH esté definido
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.data) {
-            setDatosCodigo({
-              colonia: data.data.d_asenta,
-              municipio: data.data.D_mnpio,
-              estado: data.data.d_estado,
-            });
+  const fetchColonias = (codigoPostal: string) => {
+    fetch(`${URL}/v1/sepoMex/buscar-codigo-postal?d_codigo=${codigoPostal}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", ...AUTH },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data.length > 0) {
+          setColonias(data.data.map((item: any) => item.d_asenta));
+          if (!formData.municipio || !formData.estado) {
+            setFormData((prev) => ({
+              ...prev,
+              municipio: data.data[0].D_mnpio,
+              estado: data.data[0].d_estado,
+            }));
           }
-        })
-        .catch((error) =>
-          console.error("Error obteniendo datos de código postal:", error)
-        );
+        } else {
+          setColonias([]);
+        }
+      })
+      .catch((err) =>
+        console.error("Error obteniendo datos de código postal:", err)
+      );
+  };
+
+  useEffect(() => {
+    if (
+      formData.codigo_postal_fiscal &&
+      formData.codigo_postal_fiscal.length > 4
+    ) {
+      fetchColonias(formData.codigo_postal_fiscal);
     }
-  }, [codigoPostal]);
+  }, [formData.codigo_postal_fiscal]);
+
+  if (!isOpen) return null;
+
+  const validateRFC = (rfc: string) =>
+    /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(rfc);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (!user) throw new Error("No hay usuario autenticado");
+      if (!validateRFC(formData.rfc)) {
+        setError("El formato del RFC no es válido");
+        return;
+      }
+      let responseCompany;
+      if (formData?.id_datos_fiscales) {
+        responseCompany = await updateNewDatosFiscales(formData);
+      } else {
+        responseCompany = await createNewDatosFiscales(formData);
+      }
+      if (!responseCompany?.success)
+        throw new Error("No se pudo registrar los datos fiscales");
+
+      onSave(company.id_empresa, formData);
+      setIsEditing(false);
+      setError("");
+    } catch (err) {
+      console.error("Error creando nuevos datos fiscales", err);
+      setError("Hubo un error al guardar los datos fiscales. Inténtalo de nuevo.");
+    }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {initialData
-            ? "Editar Datos Fiscales"
-            : "Registrar Nuevos Datos Fiscales"}
-        </h2>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <X size={24} />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">RFC</label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="rfc"
-            defaultValue={initialData?.rfc}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Calle
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="calle"
-            defaultValue={initialData?.calle}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Código Postal Fiscal
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="codigo_postal_fiscal"
-            value={codigoPostal}
-            onChange={(e) => setCodigoPostal(e.target.value)}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Colonia
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="colonia"
-            value={datosCodigo.colonia}
-            readOnly
-            required
-            className="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 shadow-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Municipio
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="municipio"
-            value={datosCodigo.municipio}
-            readOnly
-            required
-            className="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 shadow-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Estado
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="estado"
-            value={datosCodigo.estado}
-            readOnly
-            required
-            className="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 shadow-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Regimen Fiscal
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="text"
-            name="regimen_fiscal"
-            defaultValue={initialData?.regimen_fiscal}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Estado de Situación Fiscal
-          </label>
-          <input
-            pattern="^[^<>]*$"
-            type="file"
-            name="file_upload"
-            accept=".jpg,.png,.pdf" // Puedes restringir los tipos de archivo
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            onChange={(e) => handleFileChange(e)} // Llamada a la función para manejar el archivo seleccionado
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Empresa
-          </label>
-          <select
-            name="id_empresa"
-            defaultValue={initialData?.id_empresa}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-2xl">
+        <div className="flex justify-between items-center p-6 border-b">
+          <h2 className="text-xl font-semibold">
+            Datos Fiscales de {company.razon_social}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
           >
-            <option value="">Selecciona Empresa</option>
-            {empresas.map((empresa) => (
-              <option key={empresa.id_empresa} value={empresa.id_empresa}>
-                {empresa.razon_social}
-              </option>
-            ))}
-          </select>
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {isEditing ? (
+            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Razón social
+                </label>
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  value={formData.razon_social}
+                  onChange={(e) =>
+                    setFormData({ ...formData, razon_social: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  RFC
+                </label>
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  value={formData.rfc}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      rfc: e.target.value.toUpperCase(),
+                    })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código Postal
+                </label>
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  value={formData.codigo_postal_fiscal}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      codigo_postal_fiscal: e.target.value,
+                    })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Calle y número
+                </label>
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  value={formData.calle}
+                  onChange={(e) =>
+                    setFormData({ ...formData, calle: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Colonia
+                </label>
+                <select
+                  value={formData.colonia}
+                  onChange={(e) =>
+                    setFormData({ ...formData, colonia: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md bg-white"
+                  required
+                >
+                  <option value="">Selecciona una colonia</option>
+                  {colonias.map((colonia, i) => (
+                    <option key={i} value={colonia}>
+                      {colonia}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Municipio
+                </label>
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  value={formData.municipio}
+                  onChange={(e) =>
+                    setFormData({ ...formData, municipio: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado
+                </label>
+                <input
+                  pattern="^[^<>]*$"
+                  type="text"
+                  value={formData.estado}
+                  onChange={(e) =>
+                    setFormData({ ...formData, estado: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+
+              {/* Select de Régimen fiscal (filtrado por PF/PM) */}
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Régimen fiscal {persona === "PF" ? "(Persona Física)" : "(Persona Moral)"}
+                </label>
+                <select
+                  name="regimen_fiscal"
+                  value={formData.regimen_fiscal}
+                  onChange={(e) =>
+                    setFormData({ ...formData, regimen_fiscal: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-md bg-white"
+                  required
+                >
+                  <option value="">
+                    Selecciona un régimen fiscal {persona}
+                  </option>
+                  {regimenOptions.map((opt) => (
+                    <option key={opt.code} value={opt.code}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2 flex justify-end gap-4 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(initialTaxData);
+                    setIsEditing(false);
+                    setError("");
+                  }}
+                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="col-span-2 grid grid-cols-2 gap-4">
+                {Object.entries(formData).map(([key, value]) => {
+                  if (key === "id_empresa" || key === "id_datos_fiscales") return null;
+                  const title = key.replace(/_/g, " ").toUpperCase();
+                  const isReg = key === "regimen_fiscal";
+                  const regText = isReg
+                    ? `${value || "N/A"}${value && REGIMENES[String(value)]
+                      ? ` - ${REGIMENES[String(value)].label}`
+                      : ""
+                    }`
+                    : value || "N/A";
+                  return (
+                    <div key={key}>
+                      <p className="text-sm font-medium text-gray-700">{title}</p>
+                      <p className="mt-1">{regText}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Editar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="flex justify-end space-x-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-        >
-          {initialData ? "Actualizar Datos Fiscales" : "Crear Datos Fiscales"}
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }

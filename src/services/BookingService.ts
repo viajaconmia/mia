@@ -26,7 +26,12 @@ export class BookingService extends ApiService {
     const path = this.formatPath(this.ENDPOINTS.GET.RESERVAS);
     return this.get<Reserva[]>({
       path,
-      params: { user_id: this.user.getUser()?.info?.id_agente },
+      params: {
+        user_id: this.user.getUser()?.info?.id_agente,
+        ...(this.user.getUser()?.info?.rol == "reservante"
+          ? { usuario_creador: this.user.getUser()?.info?.id_viajero }
+          : {}),
+      },
     });
   }
 }
