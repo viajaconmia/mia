@@ -18,6 +18,7 @@ import { DataInvoice, DescargaFactura, Root } from "../../types/billing";
 import { URL, API_KEY, HEADERS_API } from "../../constants/apiConstant";
 import { useRoute } from "wouter";
 import { useApi } from "../../hooks/useApi";
+
 import {
   formatNumberWithCommas,
   obtenerPresignedUrl,
@@ -25,6 +26,7 @@ import {
 } from "../../lib/utils";
 import useAuth from "../../hooks/useAuth";
 import ROUTES from "../../constants/routes";
+import { useNotification } from "../../hooks/useNotification";
 
 interface Pago {
   id_movimiento: number;
@@ -143,78 +145,6 @@ const paymentMethodOptions = [
   { value: "PPD", label: "PPD - Pago en parcialidades o diferido" },
 ];
 
-// const tipoComprobanteOptions = [
-//   { value: "I", label: "I - Ingreso" },
-//   { value: "E", label: "E - Egreso" },
-//   { value: "T", label: "T - Traslado" },
-//   { value: "N", label: "N - Nómina" },
-//   { value: "P", label: "P - Pago" },
-// ];
-
-// const regimenFiscalOptions = [
-//   { value: "601", label: "601 - General de Ley Personas Morales" },
-//   { value: "603", label: "603 - Personas Morales con Fines no Lucrativos" },
-//   {
-//     value: "605",
-//     label: "605 - Sueldos y Salarios e Ingresos Asimilados a Salarios",
-//   },
-//   { value: "606", label: "606 - Arrendamiento" },
-//   {
-//     value: "607",
-//     label: "607 - Régimen de Enajenación o Adquisición de Bienes",
-//   },
-//   { value: "608", label: "608 - Demás ingresos" },
-//   {
-//     value: "610",
-//     label:
-//       "610 - Residentes en el Extranjero sin Establecimiento Permanente en México",
-//   },
-//   {
-//     value: "611",
-//     label: "611 - Ingresos por Dividendos (socios y accionistas)",
-//   },
-//   {
-//     value: "612",
-//     label:
-//       "612 - Personas Físicas con Actividades Empresariales y Profesionales",
-//   },
-//   { value: "614", label: "614 - Ingresos por intereses" },
-//   {
-//     value: "615",
-//     label: "615 - Régimen de los ingresos por obtención de premios",
-//   },
-//   { value: "616", label: "616 - Sin obligaciones fiscales" },
-//   {
-//     value: "620",
-//     label:
-//       "620 - Sociedades Cooperativas de Producción que optan por diferir sus ingresos",
-//   },
-//   { value: "621", label: "621 - Incorporación Fiscal" },
-//   {
-//     value: "622",
-//     label: "622 - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras",
-//   },
-//   { value: "623", label: "623 - Opcional para Grupos de Sociedades" },
-//   { value: "624", label: "624 - Coordinados" },
-//   {
-//     value: "625",
-//     label:
-//       "625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas",
-//   },
-//   { value: "626", label: "626 - Régimen Simplificado de Confianza" },
-// ];
-
-// const exportacionOptions = [
-//   { value: "01", label: "01 - No aplica" },
-//   { value: "02", label: "02 - Definitiva" },
-//   { value: "03", label: "03 - Temporal" },
-// ];
-
-// interface FiscalDataModalProps {
-//   isOpen: boolean;
-// }
-
-// Función para convertir base64 a archivo
 const base64ToFile = (base64String: string, fileName: string, mimeType: string): File => {
   try {
     // Remover el prefijo data: si existe
@@ -293,6 +223,54 @@ const asignarURLS_factura = async (id_factura: string, url_pdf: string, url_xml:
     throw error;
   }
 };
+//---------------------------------------------------------------------
+// --- Helpers mínimos (no cambian tu lógica) ---
+type PagoMinimal = {
+  tipo_pago?: string;    // "Wallet", etc.
+  metodo?: string;       // "tarjeta" | "transferencia" | "efectivo"...
+  tipo?: string;         // "credito" | "debito" | "servicios"
+  monto_por_facturar?: string | number;
+  saldo?: string | number;
+};
+
+const norm = (v?: string) =>
+  (v || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+
+// CFDI Forma de pago (01..99)
+function pickFormaPago(p: PagoMinimal): string {
+  const tipoPago = norm(p.tipo_pago);  // "wallet"
+  const metodo = norm(p.metodo);     // "tarjeta" | "transferencia"
+  const tipo = norm(p.tipo);       // "credito" | "debito" | "servicios"
+
+  if (tipoPago === "wallet" || tipoPago === "monedero" || tipoPago === "monedero electronico")
+    return "05"; // Monedero electrónico
+
+  if (metodo === "transferencia" || metodo === "transfer" || metodo === "spei")
+    return "03"; // Transferencia
+
+  if (metodo === "tarjeta") {
+    if (tipo === "credito") return "04"; // Tarjeta de crédito
+    if (tipo === "debito") return "28"; // Tarjeta de débito
+    if (tipo === "servicios") return "29"; // Tarjeta de servicios
+    return "04"; // default tarjeta
+  }
+
+  if (metodo === "efectivo") return "01";
+
+  return "99"; // Por definir
+}
+
+// CFDI Método de pago (PUE/PPD)
+// Heurística: si hay monto pendiente por facturar -> PPD; si no -> PUE
+function pickMetodoPago(p: PagoMinimal): "PUE" | "PUE" {
+  const m = Number(p?.monto_por_facturar ?? 0);
+  return m > 0 ? "PUE" : "PUE";
+}
+
 
 export const BillingPage2: React.FC<BillingPageProps> = ({
 
@@ -304,6 +282,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   pagoData,
 }) => {
   const { user } = useAuth()
+  console.log(user, "info usuarios")
+  const { showNotification } = useNotification();
   userId = user?.info?.id_agente || "";
   const [match, params] = useRoute<{ id?: string }>(ROUTES.FACTURACION.PAGOS);
   const id = params?.id ?? "";
@@ -312,8 +292,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   const [solicitud, setSolicitud] = useState(null);
   const [idCompany, setIdCompany] = useState<string | null>(null);
   const [selectedCfdiUse, setSelectedCfdiUse] = useState("G03");
-  const [selectedPaymentForm, setSelectedPaymentForm] = useState("03");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("PUE");
+
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [descarga, setDescarga] = useState<DescargaFactura | null>(null);
   const [descargaxml, setDescargaxml] = useState<DescargaFactura | null>(null);
@@ -323,12 +302,15 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   );
   const { descargarFactura, mandarCorreo, descargarFacturaXML } = useApi();
   const [minAmount, setMinAmount] = useState(0);
-  const [customAmount, setCustomAmount] = useState(saldoMonto);
   const [pago, setPago] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pagoData2, setPagoData2] = useState<Pago | null>(null);
 
+
+
+  const [selectedPaymentForm, setSelectedPaymentForm] = useState("03");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("PUE");
 
   const handleInfoPago = async () => {
     console.log("holawwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
@@ -359,15 +341,25 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
         // Extrae el objeto completo (primer elemento del arreglo)
         const pagoObj: Pago | undefined = result?.data?.[0];
+        console.log(userId, "😒😒😒😒😒😒😒😒😒")
+        if (pagoObj?.id_agente == userId) {
 
-        // Si existe, obtén el monto como número
-        const saldo = pagoObj?.monto_por_facturar
-          ? Number(pagoObj.monto_por_facturar)
-          : 0;
+          // Si existe, obtén el monto como número
+          const saldo = pagoObj?.monto_por_facturar
+            ? Number(pagoObj.monto_por_facturar)
+            : 0;
 
-        // Guarda ambos valores
-        setPago(saldo);
-        setPagoData2(pagoObj || null); // guarda el objeto completo
+          // Guarda ambos valores
+          setPago(saldo);
+          setPagoData2(pagoObj || null); // guarda el objeto completo          
+        }
+        else if (pagoObj?.monto_por_facturar == 0) {
+          showNotification("info", "Ya fue facturado este pago", 1)
+
+        }
+        else {
+          showNotification("error", "No puedes facturar este pago", 1)
+        }
       } catch (err) {
         console.error("Error al obtener pago:", err);
         setError(err.message);
@@ -397,8 +389,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     CfdiType: "",
     NameId: "",
     Observations: "",
-    //ExpeditionPlace: "11570",
-    ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
+    ExpeditionPlace: "11570",
+    //ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
 
     Serie: null,
     Folio: Number((Math.random() * 9999999).toFixed(0)),
@@ -436,6 +428,25 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   console.log("IDs de pagos:", rawIds);
   console.log("Es facturación por lotes?", isBatch);
 
+  useEffect(() => {
+    if (!pagoData2) return;
+
+    const forma = pickFormaPago(pagoData2 as any);
+    const metodo = pickMetodoPago(pagoData2 as any);
+
+    // Actualiza selects
+    setSelectedPaymentForm(forma);
+    setSelectedPaymentMethod(metodo);
+
+    // Opcional: sincroniza el objeto cfdi que ya usas al enviar
+    setCfdi(prev => ({
+      ...prev,
+      PaymentForm: forma,
+      PaymentMethod: metodo,
+    }));
+  }, [pagoData2]);
+
+
   const updateInvoiceAmounts = (totalAmount: number) => {
     // Convertir el totalAmount a número por si acaso
     const total = Number(totalAmount);
@@ -461,6 +472,19 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
       ],
     }));
   };
+  console.log("saldo", saldoMonto)
+  const [customAmount, setCustomAmount] = useState(saldoMonto);
+
+
+  const handleConfig = () => {
+    window.location.href = "/settings"; // Redirige a la página principal
+  }
+
+  useEffect(() => {
+    console.log("Nuevo saldo detectado:", saldoMonto);
+    setCustomAmount(saldoMonto);
+  }, [saldoMonto]);
+
 
   const handleUpdateCompany = (company: any) => {
     console.log("Company object:", company);
@@ -520,6 +544,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     }
   }, [isBatch, rawIds, saldos]);
 
+  console.log(customAmount, "ye torn")
+
+
   // Modificar el input para respetar el mínimo y máximo
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
@@ -536,15 +563,15 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
         "¿A que correo electronico deseas mandar la factura?"
       );
       await mandarCorreo(isInvoiceGenerated?.Id, correo || "");
-      alert("El correo fue mandado con exito");
+      showNotification("info", "El correo fue mandado con exito", 1);
     } else {
       alert("ocurrio un error");
     }
   };
-  console.log("seleccioonado", userId);
 
   const validateInvoiceData = () => {
     console.log("cfdi", cfdi.Receiver);
+    console.log("seleccioonado", selectedCfdiUse);
     console.log(selectedPaymentForm);
     if (
       !cfdi.Receiver.Rfc ||
@@ -559,11 +586,12 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   };
 
   const handleGenerateInvoice = async () => {
+
     if (customAmount > saldoMonto) {
-      alert(
+      showNotification("error",
         `El monto debe estar entre ${formatCurrency(
           minAmount
-        )} y ${formatCurrency(saldoMonto)}`
+        )} y ${formatCurrency(saldoMonto)}`, 1
       );
       return;
     }
@@ -574,7 +602,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     const now = new Date();
     now.setHours(now.getHours() - 6);
     const formattedDateTime = now.toISOString().split(".")[0]; // YYYY-MM-DDTHH:mm:ss
-    const formattedDate = formattedDateTime.slice(0, 10); // YYYY-MM-DD
 
     try {
       // ---------------------------
@@ -601,7 +628,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
         pagosAsociados.push({
           raw_id: rawIds[0],
-          monto: saldoMonto,
+          monto: customAmount,
         });
 
         restante -= montoAsignar;
@@ -638,7 +665,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
       // ---------------------------
       // 2) Construimos el payload base (timbrado)
       // ---------------------------
-      const subtotal = saldoMonto / 1.16;
+      const subtotal = customAmount / 1.16;
       const iva = Number(subtotal) * 0.16;
       console.log("rfrfe", pagosAsociados);
       console.log(cfdi, "LINEA 415");
@@ -666,7 +693,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   Base: subtotal,
                 },
               ],
-              Total: saldoMonto.toString(),
+              Total: customAmount.toString(),
             },
           ],
         },
@@ -685,7 +712,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
             id_movimiento: pagoData[0]?.id_movimiento,
             raw_id: rawIds,
             monto: pagoData[0]?.monto,
-            monto_factura: saldoMonto.toString(),
+            monto_factura: customAmount.toString(),
             currency: pagoData[0]?.currency || "MXN",
             metodo: pagoData[0]?.metodo || "wallet",
             referencia: pagoData[0]?.referencia,
@@ -718,10 +745,11 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
         );
 
         const { data } = await resp.json();
-        if (!resp.ok)
+        if (!resp.ok) {
+          showNotification("error", data?.message, 1)
           throw new Error(data?.message || "Error al generar (individual)");
-
-        alert("Factura generada con éxito");
+        }
+        showNotification("info", "Factura generada con éxito", 1);
         setIsInvoiceGenerated(data.facturama);
 
         // Descargas
@@ -847,7 +875,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
             } catch (assignError) {
               console.error("❌ Error al asignar URLs en BD:", assignError);
-              alert("Factura generada y archivos subidos, pero error al registrar URLs en BD");
+              showNotification("error", "Factura generada y archivos subidos, pero error al registrar URLs en BD", 1)
             }
           } else {
             console.warn("⚠️ No se pudieron subir ninguno de los archivos a S3");
@@ -906,7 +934,12 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </div>
                 </div>
               </div>
-
+              <button
+                onClick={handleConfig}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-gray-700 bg-green-200 hover:bg-green-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+              >
+                Crear nueva empresa
+              </button>
               <div className="p-4">
                 <div className="grid grid-cols-2 gap-4">
                   {/* Billing Details */}
@@ -1010,10 +1043,11 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                 </div>
 
                 {/* Payment Form Select */}
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <label className="block text-xs font-medium text-gray-700">
                     Forma de Pago
                   </label>
+
                   <select
                     value={selectedPaymentForm}
                     onChange={(e) => setSelectedPaymentForm(e.target.value)}
@@ -1025,10 +1059,10 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                       </option>
                     ))}
                   </select>
-                </div>
+                </div> */}
 
                 {/* Payment Method Select */}
-                <div className="space-y-1 mb-4">
+                {/* <div className="space-y-1 mb-4">
                   <label className="block text-xs font-medium text-gray-700">
                     Método de Pago
                   </label>
@@ -1043,7 +1077,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                       </option>
                     ))}
                   </select>
-                </div>
+                </div> */}
 
                 {/* Custom Amount Input */}
                 <div className="space-y-1 mb-4">
@@ -1056,10 +1090,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                     </span>
                     <input
                       type="number"
-                      value={saldoMonto}
+                      value={customAmount}
                       onChange={handleAmountChange}
                       className="block w-full pl-8 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      disabled={true}
                     />
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
@@ -1121,7 +1154,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
         onClose={() => setShowFiscalModal(false)}
         actualizarCompany={handleUpdateCompany}
         isOpen={showFiscalModal}
-        agentId={user?.info?.id_agente || ""} // Pasa el ID del usuario aquí
+        agentId={userId} // Pasa el ID del usuario aquí
       />
 
       {/* Validation Modal */}
@@ -1135,8 +1168,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
               </h2>
             </div>
             <p className="text-gray-700 mb-4">
-              Por favor, regresa a tu configuración y establece los datos
-              fiscales para poder realizar tu factura
+              Por favor, ingresa un rfc a tu persona fisica o crea una empresa
             </p>
             <div className="flex justify-end">
               <button
@@ -1192,7 +1224,7 @@ interface DataFiscalModalProps {
 }
 
 export const getEmpresasDatosFiscales = async (agent_id: string) => {
-  console.log(agent_id, "id_agente😘😘😘😘😘😘😘😘");
+  console.log(agent_id);
   try {
     const response = await fetch(
       `${URL}/v1/mia/agentes/empresas-con-datos-fiscales?id_agente=${encodeURIComponent(
@@ -1228,12 +1260,12 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
 
   agentId = user?.info?.id_agente || "";
 
+
   useEffect(() => {
     if (isOpen && agentId) {
       const fetchEmpresas = async () => {
         setLoading(true);
         setError(null);
-        console.log(agentId, "cambios🤣🤣🤣🤣")
         try {
           const data = await getEmpresasDatosFiscales(agentId);
 
@@ -1254,7 +1286,7 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
           }
 
           if (empresasValidas.length === 0) {
-            setError("No tienes empresas con RFC registrado");
+            setError("No tienes rfc registrado o tampoco cuentas con una empresa con RFC registrado");
             setShowNoRfcAlert(true);
           }
         } catch (err) {
@@ -1271,10 +1303,13 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
   }, [isOpen, agentId]);
 
   const handleClose = () => {
-    window.location.href = "/dashboard/payments"; // Redirige a la página principal
+    window.location.href = "/consultas/pagos"; // Redirige a la página principal
     onClose(); // Cierra el modal de selección de empresa
-    window.location.href = "/dashboard/payments"; // Redirige a la página principal
   };
+  const handleConfig = () => {
+    window.location.href = "/settings"; // Redirige a la página principal
+    onClose();
+  }
 
   if (!isOpen) return null;
 
@@ -1302,9 +1337,16 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
                     <p className="text-sm text-yellow-700">
                       {empresas.length === 0
                         ? "Debes registrar al menos una empresa con RFC antes de facturar."
-                        : "Algunas empresas no tienen RFC. Debes agregar el RFC a tus empresas para poder facturar."}
+                        : "Registra tu RFC en tu persona fisica o agrega un RFC a tus empresas para poder facturar."}
                     </p>
                     <div className="mt-2">
+                      <button
+                        onClick={handleConfig}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-gray-700 bg-green-200 hover:bg-green-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                      >
+                        Crear empresa
+                      </button>
+
                       <button
                         onClick={handleClose}
                         className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
