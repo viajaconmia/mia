@@ -397,8 +397,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     CfdiType: "",
     NameId: "",
     Observations: "",
-    ExpeditionPlace: "11570",
-    //ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
+    //ExpeditionPlace: "11570",
+    ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
 
     Serie: null,
     Folio: Number((Math.random() * 9999999).toFixed(0)),
@@ -541,10 +541,10 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
       alert("ocurrio un error");
     }
   };
+  console.log("seleccioonado", userId);
 
   const validateInvoiceData = () => {
     console.log("cfdi", cfdi.Receiver);
-    console.log("seleccioonado", selectedCfdiUse);
     console.log(selectedPaymentForm);
     if (
       !cfdi.Receiver.Rfc ||
@@ -1121,7 +1121,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
         onClose={() => setShowFiscalModal(false)}
         actualizarCompany={handleUpdateCompany}
         isOpen={showFiscalModal}
-        agentId={userId} // Pasa el ID del usuario aquí
+        agentId={user?.info?.id_agente || ""} // Pasa el ID del usuario aquí
       />
 
       {/* Validation Modal */}
@@ -1192,7 +1192,7 @@ interface DataFiscalModalProps {
 }
 
 export const getEmpresasDatosFiscales = async (agent_id: string) => {
-  console.log(agent_id);
+  console.log(agent_id, "id_agente😘😘😘😘😘😘😘😘");
   try {
     const response = await fetch(
       `${URL}/v1/mia/agentes/empresas-con-datos-fiscales?id_agente=${encodeURIComponent(
@@ -1226,13 +1226,14 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
   const [showNoRfcAlert, setShowNoRfcAlert] = useState(false);
   const { user } = useAuth()
 
-  agentId = user?.id || "";
+  agentId = user?.info?.id_agente || "";
 
   useEffect(() => {
     if (isOpen && agentId) {
       const fetchEmpresas = async () => {
         setLoading(true);
         setError(null);
+        console.log(agentId, "cambios🤣🤣🤣🤣")
         try {
           const data = await getEmpresasDatosFiscales(agentId);
 

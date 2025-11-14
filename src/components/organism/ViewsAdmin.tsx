@@ -403,32 +403,32 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
     { key: "metodo", header: "Forma de Pago", component: "payment_method" },
     // Tipo de tarjeta normalizado a CRÉDITO / DÉBITO
     { key: "tipo", header: "Tipo de Tarjeta", component: "card_type" },
-    // {
-    //   key: null,
-    //   header: "Acciones",
-    //   component: "custom",
-    //   componentProps: {
-    //     component: ({ item }: { item: Payment }) => {
-    //       // Si tiene monto pendiente diferente de 0, no muestra el botón
-    //       if (Number(item.monto_pendiente_relacionar) <= 0 || item.is_facturable == "0") {
-    //         return null;
-    //       }
+    {
+      key: null,
+      header: "Acciones",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Payment }) => {
+          // Si tiene monto pendiente diferente de 0, no muestra el botón
+          if (Number(item.monto_pendiente_relacionar) <= 0 || item.is_facturable == "0") {
+            return null;
+          }
 
-    //       return (
-    //         <div className="flex gap-2">
-    //           <Button
-    //             size="sm"
-    //             onClick={() =>
-    //               setLocation(ROUTES.FACTURACION.ID_PAGOS(item.raw_id))
-    //             }
-    //           >
-    //             FACTURAR
-    //           </Button>
-    //         </div>
-    //       );
-    //     },
-    //   },
-    // },
+          return (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() =>
+                  setLocation(ROUTES.FACTURACION.ID_PAGOS(item.raw_id))
+                }
+              >
+                FACTURAR
+              </Button>
+            </div>
+          );
+        },
+      },
+    },
   ];
 
   return (
@@ -516,8 +516,8 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                       .catch((error) =>
                         console.log(
                           error.response ||
-                            error.message ||
-                            "Error al obtener la factura"
+                          error.message ||
+                          "Error al obtener la factura"
                         )
                       );
                   } else if (item.url_pdf) {
@@ -540,23 +540,21 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                       .then(({ data }) =>
                         downloadXMLBase64(
                           data?.Content || "",
-                          `${item.id_factura.slice(0, 8)}-${
-                            item.created_at.split("T")[0]
+                          `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                           }.xml`
                         )
                       )
                       .catch((error) =>
                         console.log(
                           error.response ||
-                            error.message ||
-                            "Error al obtener la factura"
+                          error.message ||
+                          "Error al obtener la factura"
                         )
                       );
                   } else if (item.url_xml) {
                     downloadXMLUrl(
                       item.url_xml,
-                      `${item.id_factura.slice(0, 8)}-${
-                        item.created_at.split("T")[0]
+                      `${item.id_factura.slice(0, 8)}-${item.created_at.split("T")[0]
                       }.xml`
                     );
                   }
