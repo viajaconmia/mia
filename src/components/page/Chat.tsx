@@ -23,6 +23,7 @@ import { AuthModal } from "../AuthModal";
 import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
 import Task from "../organism/task";
+import { Logo } from "../atom/Logo";
 
 // ---------- ÁTOMOS / MOLÉCULAS UI ---------- //
 
@@ -73,11 +74,17 @@ const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
       <div className="w-full max-w-screen-md md:max-w-screen-2xl mx-auto space-y-4">
         {messages.length > 0 && <ChatMessagesController messages={messages} />}
         {isLoading && (
-          <Task
-            label="Esperando respuesta..."
-            status="loading"
-            loadingMessage="Estamos procesando tu solicitud."
-          />
+          <div className="flex gap-2 w-full">
+            <div className="w-14 h-14 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
+
+              <Logo className="w-10 h-10"></Logo>
+            </div>
+            <Task
+              label="Esperando respuesta..."
+              status="loading"
+              loadingMessage="Estamos procesando tu solicitud."
+            />
+          </div>
         )}
       </div>
     </div>
@@ -178,7 +185,7 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatContent[]>([]);
   const [thread, setThread] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);  // Control de carga
   const [bookingData, setBookingData] = useState<Reservation | null>(null);
   const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -210,9 +217,9 @@ const Chat: React.FC = () => {
       content: inputMessage,
     };
 
+    setIsLoading(true);  // Iniciar el estado de carga
     setMessages((prev) => [...prev, newMessage]);
     setInputMessage("");
-    setIsLoading(true);
 
     sendMessage(
       inputMessage,
@@ -251,7 +258,7 @@ const Chat: React.FC = () => {
             },
           ]);
         } finally {
-          setIsLoading(false);
+          setIsLoading(false);  // Finalizar el estado de carga
         }
       }
     );
@@ -264,7 +271,6 @@ const Chat: React.FC = () => {
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
       <div className="flex justify-end">
-        {/* Panel principal (chat + móvil) */}
         <div className="w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]">
           <div className="flex flex-col h-full border-r">
             <ChatHeader
@@ -276,10 +282,9 @@ const Chat: React.FC = () => {
               <>
                 <ChatMessagesArea
                   messages={messages}
-                  isLoading={isLoading}
+                  isLoading={isLoading}  // Pasamos el estado de carga
                   endRef={endRef}
                 />
-
                 <ChatInputArea
                   inputMessage={inputMessage}
                   onChange={(value) => setInputMessage(value)}
@@ -302,7 +307,6 @@ const Chat: React.FC = () => {
           </div>
         </div>
 
-        {/* Panel derecho en desktop */}
         <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
           <ReservationCartPanel
             activeTab={activeTab}

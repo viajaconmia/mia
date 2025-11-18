@@ -20,10 +20,10 @@ const CartContext = createContext<{
   saldos?: Record<Exclude<MetodosDePago, "tarjeta">, number> | null;
 }>({
   cart: [],
-  setCart: () => {},
+  setCart: () => { },
   totalCart: 0,
-  handleActualizarCarrito: () => {},
-  handleActualizarMetodosPago: () => {},
+  handleActualizarCarrito: () => { },
+  handleActualizarMetodosPago: () => { },
   saldos: inicialStateSaldos,
 });
 
@@ -73,8 +73,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       Number(
         (cart.length > 0
           ? cart
-              .filter((cart) => cart.selected)
-              .reduce((sum, item) => sum + item.total, 0)
+            .filter((cart) => cart.selected)
+            .reduce((sum, item) => sum + item.total, 0)
           : 0
         ).toFixed(2)
       )
