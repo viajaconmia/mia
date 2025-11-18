@@ -376,8 +376,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     CfdiType: "",
     NameId: "",
     Observations: "",
-    //ExpeditionPlace: "11570",
-    ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
+    ExpeditionPlace: "11570",
+    //ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
 
     Serie: null,
     Folio: Number((Math.random() * 9999999).toFixed(0)),
@@ -1030,7 +1030,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                 </div>
 
                 {/* Payment Form Select */}
-                {/* <div className="space-y-1">
+                <div className="space-y-1">
                   <label className="block text-xs font-medium text-gray-700">
                     Forma de Pago
                   </label>
@@ -1046,7 +1046,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                       </option>
                     ))}
                   </select>
-                </div> */}
+                </div>
 
                 {/* Payment Method Select */}
                 {/* <div className="space-y-1 mb-4">
