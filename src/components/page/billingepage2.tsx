@@ -247,7 +247,7 @@ function pickFormaPago(p: PagoMinimal): string {
   const tipo = norm(p.tipo);       // "credito" | "debito" | "servicios"
 
   if (tipoPago === "wallet" || tipoPago === "monedero" || tipoPago === "monedero electronico")
-    return "05"; // Monedero electrónico
+    return "03"; // Monedero electrónico
 
   if (metodo === "transferencia" || metodo === "transfer" || metodo === "spei")
     return "03"; // Transferencia
