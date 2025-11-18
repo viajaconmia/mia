@@ -1,4 +1,3 @@
-// components/task/Task.tsx
 import React from "react";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
@@ -71,19 +70,18 @@ export const TaskStatusText: React.FC<TaskStatusTextProps> = ({ status }) => {
  * 3) Ícono según estado
  * =========================== */
 export const TaskIcon: React.FC<TaskIconProps> = ({ status }) => {
-  if (status === "loading") {
-    return (
-      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" aria-hidden="true" />
-    );
-  }
-
-  if (status === "success") {
-    return (
-      <CheckCircle className="w-4 h-4 text-emerald-600" aria-hidden="true" />
-    );
-  }
-
-  return <XCircle className="w-4 h-4 text-red-600" aria-hidden="true" />;
+  return (
+    <div className="flex items-center gap-2">
+      {status === "loading" && (
+        <>
+          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" aria-hidden="true" />
+          <span className="text-blue-600 text-xs">MIA</span>
+        </>
+      )}
+      {status === "success" && <CheckCircle className="w-4 h-4 text-emerald-600" aria-hidden="true" />}
+      {status === "error" && <XCircle className="w-4 h-4 text-red-600" aria-hidden="true" />}
+    </div>
+  );
 };
 
 /* ===========================
@@ -125,7 +123,6 @@ export const TaskResponse: React.FC<TaskResponseProps> = ({
  * 5) Barra / animación
  * =========================== */
 export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({ status }) => {
-  // La barra solo tiene animación en loading
   const baseClasses =
     "h-1 w-full rounded-full overflow-hidden bg-gray-200 mt-2";
 
@@ -153,7 +150,6 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({ status }) => {
     );
   }
 
-  // error
   return (
     <div className={baseClasses}>
       <div className="h-full w-full bg-red-500 opacity-70" />
