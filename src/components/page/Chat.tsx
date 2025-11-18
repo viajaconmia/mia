@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ChatMessagesController } from "../ChatMessage";
 import { useUser } from "../../context/userContext";
-import Task from "../organism/task";
 import {
   Building2,
   ArrowRight,
@@ -23,8 +22,157 @@ import Button from "../atom/Button";
 import { AuthModal } from "../AuthModal";
 import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
+import Task from "../organism/task";
 
-const Chat = () => {
+// ---------- ÁTOMOS / MOLÉCULAS UI ---------- //
+
+type ChatHeaderProps = {
+  activeChat: boolean;
+  onToggleChat: () => void;
+};
+
+const ChatHeader: React.FC<ChatHeaderProps> = ({ activeChat, onToggleChat }) => {
+  return (
+    <div className="p-4 bg-white/20 backdrop-blur-sm flex flex-col gap-2">
+      <Button size="md" className="md:hidden" onClick={onToggleChat}>
+        {activeChat ? `Ver datos de la reserva` : `Volver al chat`}{" "}
+        {activeChat ? (
+          <ArrowRight className="w-5 h-5" />
+        ) : (
+          <ArrowLeft className="w-5 h-5" />
+        )}
+      </Button>
+      {activeChat && (
+        <NavigationLink
+          className="text-blue-600"
+          href={ROUTES.HOTELS.SEARCH}
+          variant="secondary"
+          size="md"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Crear Reserva Manualmente</span>
+        </NavigationLink>
+      )}
+    </div>
+  );
+};
+
+type ChatMessagesAreaProps = {
+  messages: ChatContent[];
+  isLoading: boolean;
+  endRef: React.RefObject<HTMLDivElement>;
+};
+
+const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
+  messages,
+  isLoading,
+  endRef,
+}) => {
+  return (
+    <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={endRef}>
+      <div className="w-full max-w-screen-md md:max-w-screen-2xl mx-auto space-y-4">
+        {messages.length > 0 && <ChatMessagesController messages={messages} />}
+        {isLoading && (
+          <Task
+            label="Esperando respuesta..."
+            status="loading"
+            loadingMessage="Estamos procesando tu solicitud."
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+type ChatInputAreaProps = {
+  inputMessage: string;
+  onChange: (value: string) => void;
+  onSend: () => void;
+  disabled: boolean;
+  setSize: ReturnType<typeof useResize>["setSize"];
+};
+
+const ChatInputArea: React.FC<ChatInputAreaProps> = ({
+  inputMessage,
+  onChange,
+  onSend,
+  disabled,
+  setSize,
+}) => {
+  return (
+    <div className="border-t border-white/10 backdrop-blur-lg p-2 py-4 md:p-6 bg-blue-700">
+      <div className="w-full mx-auto">
+        <div className="grid grid-cols-7 space-x-2">
+          <div className="flex-1 relative col-span-6">
+            <InputText
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  onSend();
+                }
+              }}
+              onChange={onChange}
+              value={inputMessage}
+              placeholder="Hola MIA, quiero ir a Monterrey..."
+            />
+          </div>
+          <div className="pt-1">
+            <Button
+              onClick={onSend}
+              icon={Send}
+              size={
+                setSize([
+                  { size: "base", obj: "rounded" },
+                  { size: "sm", obj: "md" }
+                ]) as unknown as "rounded" | "md"
+              }
+              className="md:w-full md:h-full"
+              disabled={disabled}
+            >
+              Enviar
+            </Button>
+          </div>
+        </div>
+        <p className="w-full text-center text-[10px] mt-2 text-gray-200/80">
+          MIA puede cometer errores. Considera verificar la información
+          importante.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+type ReservationCartPanelProps = {
+  activeTab: "reserva" | "carrito";
+  onTabChange: (tab: "reserva" | "carrito") => void;
+  bookingData: Reservation | null;
+};
+
+const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
+  activeTab,
+  onTabChange,
+  bookingData,
+}) => {
+  return (
+    <div className="bg-white h-full rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
+      <TabsList
+        activeTab={activeTab}
+        onChange={(tab) => onTabChange(tab as "reserva" | "carrito")}
+        tabs={[
+          { tab: "reserva", icon: Building2 },
+          { tab: "carrito", icon: ShoppingCart },
+        ]}
+      />
+      {activeTab === "reserva" && (
+        <ReservationPanel booking={bookingData || null} />
+      )}
+      {activeTab === "carrito" && <Cart />}
+    </div>
+  );
+};
+
+// ---------- COMPONENTE PRINCIPAL CHAT (MISMA LÓGICA) ---------- //
+
+const Chat: React.FC = () => {
   const [promptCount, setPromptCount] = useState(0);
   const [_, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatContent[]>([]);
@@ -78,21 +226,20 @@ const Chat = () => {
 
           setThread(data.thread ?? null);
           if (data.response && Array.isArray(data.response)) {
-            if (Array.isArray(data.response)) {
-              setMessages((prev) => [
-                ...prev,
-                ...(data.response as ChatContent[]),
-              ]);
-            } else {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  component_type: "error",
-                  content: "Lo siento, no puedo ayudarte con eso.",
-                },
-              ]);
-            }
+            setMessages((prev) => [
+              ...prev,
+              ...(data.response as ChatContent[]),
+            ]);
+          } else if (!Array.isArray(data.response)) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                component_type: "error",
+                content: "Lo siento, no puedo ayudarte con eso.",
+              },
+            ]);
           }
+
           setBookingData(data.reserva ? data.reserva[0] : null);
         } catch (error) {
           console.error(error);
@@ -100,7 +247,7 @@ const Chat = () => {
             ...prev,
             {
               component_type: "error",
-              content: "Lo siento, ocurrio un error al buscar la información.",
+              content: "Lo siento, ocurrió un error al buscar la información.",
             },
           ]);
         } finally {
@@ -115,135 +262,53 @@ const Chat = () => {
   return (
     <>
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      {/* Chat Panel - Left Side */}
+
       <div className="flex justify-end">
-        <div
-          className={`w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]`}
-        >
+        {/* Panel principal (chat + móvil) */}
+        <div className="w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]">
           <div className="flex flex-col h-full border-r">
-            {/* Manual Reservation Button */}
-            <div className="p-4 bg-white/20 backdrop-blur-sm flex flex-col gap-2">
-              <Button
-                size="md"
-                className="md:hidden"
-                onClick={() => {
-                  setActiveChat(!activeChat);
-                }}
-              >
-                {activeChat ? `Ver datos de la reserva` : `Volver al chat`}{" "}
-                {activeChat ? (
-                  <ArrowRight className="w-5 h-5" />
-                ) : (
-                  <ArrowLeft className="w-5 h-5" />
-                )}
-              </Button>
-              {activeChat && (
-                <NavigationLink
-                  className="text-blue-600"
-                  href={ROUTES.HOTELS.SEARCH}
-                  variant="secondary"
-                  size="md"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Crear Reserva Manualmente</span>
-                </NavigationLink>
-              )}
-            </div>
+            <ChatHeader
+              activeChat={activeChat}
+              onToggleChat={() => setActiveChat(!activeChat)}
+            />
+
             {activeChat ? (
               <>
-                {/* Chat Messages Area */}
-                <div
-                  className="flex-1 overflow-y-auto p-6 space-y-4 "
-                  ref={endRef}
-                >
-                  <div className="w-full max-w-screen-md md:max-w-screen-2xl mx-auto space-y-4">
-                    {messages.length > 0 && (
-                      <ChatMessagesController messages={messages} />
-                    )}
-                    {isLoading && <Loader />}
-                  </div>
-                </div>
+                <ChatMessagesArea
+                  messages={messages}
+                  isLoading={isLoading}
+                  endRef={endRef}
+                />
 
-                {/* Chat Input Area */}
-                <div className="border-t border-white/10 backdrop-blur-lg p-2 py-4 md:p-6  bg-blue-700">
-                  <div className="w-full mx-auto">
-                    <div className="grid grid-cols-7 space-x-2">
-                      <div className="flex-1 relative col-span-6">
-                        <InputText
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleSendMessage();
-                            }
-                          }}
-                          onChange={(value) => setInputMessage(value)}
-                          value={inputMessage}
-                          placeholder="Hola MIA, quiero ir a Monterrey..."
-                        />
-                      </div>
-                      <div className="pt-1">
-                        <Button
-                          onClick={handleSendMessage}
-                          icon={Send}
-                          size={
-                            setSize([
-                              { size: "base", obj: "rounded" },
-                              { size: "sm", obj: "md" },
-                            ]) as unknown as "rounded" | "md"
-                          }
-                          className="md:w-full md:h-full"
-                          disabled={promptLimitReached || !inputMessage.trim()}
-                        >
-                          Enviar
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="w-full text-center text-[10px] mt-2 text-gray-200/80">
-                      MIA puede cometer errores. Considera verificar la
-                      información importante.
-                    </p>
-                  </div>
-                </div>
+                <ChatInputArea
+                  inputMessage={inputMessage}
+                  onChange={(value) => setInputMessage(value)}
+                  onSend={handleSendMessage}
+                  disabled={promptLimitReached || !inputMessage.trim()}
+                  setSize={setSize}
+                />
               </>
             ) : (
               <div className="p-4 flex justify-center">
-                <div className="bg-white h-[70vh] rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
-                  <TabsList
+                <div className="w-full h-[70vh]">
+                  <ReservationCartPanel
                     activeTab={activeTab}
-                    onChange={(tab) => {
-                      setActiveTab(tab as "reserva" | "carrito");
-                    }}
-                    tabs={[
-                      { tab: "reserva", icon: Building2 },
-                      { tab: "carrito", icon: ShoppingCart },
-                    ]}
+                    onTabChange={setActiveTab}
+                    bookingData={bookingData}
                   />
-                  {activeTab == "reserva" && (
-                    <ReservationPanel booking={bookingData || null} />
-                  )}
-                  {activeTab == "carrito" && <Cart></Cart>}
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        <div className=" hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
-          <div className="bg-white rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
-            <TabsList
-              activeTab={activeTab}
-              onChange={(tab) => {
-                setActiveTab(tab as "reserva" | "carrito");
-              }}
-              tabs={[
-                { tab: "reserva", icon: Building2 },
-                { tab: "carrito", icon: ShoppingCart },
-              ]}
-            />
-            {activeTab == "reserva" && (
-              <ReservationPanel booking={bookingData || null} />
-            )}
-            {activeTab == "carrito" && <Cart></Cart>}
-          </div>
+        {/* Panel derecho en desktop */}
+        <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
+          <ReservationCartPanel
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            bookingData={bookingData}
+          />
         </div>
       </div>
     </>
