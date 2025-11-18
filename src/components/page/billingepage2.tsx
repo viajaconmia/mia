@@ -1042,43 +1042,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </select>
                 </div>
 
-                {/* Payment Form Select */}
-                {/* <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-700">
-                    Forma de Pago
-                  </label>
-
-                  <select
-                    value={selectedPaymentForm}
-                    onChange={(e) => setSelectedPaymentForm(e.target.value)}
-                    className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    {paymentFormOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div> */}
-
-                {/* Payment Method Select */}
-                {/* <div className="space-y-1 mb-4">
-                  <label className="block text-xs font-medium text-gray-700">
-                    Método de Pago
-                  </label>
-                  <select
-                    value={selectedPaymentMethod}
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                    className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    {paymentMethodOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div> */}
-
                 {/* Custom Amount Input */}
                 <div className="space-y-1 mb-4">
                   <label className="block text-xs font-medium text-gray-700">
@@ -1103,7 +1066,41 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                     )}
                   </div>
                 </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-700">
+                    Forma de Pago
+                  </label>
+                  <div className="block w-full text-sm rounded-md border-gray-300 shadow-sm bg-gray-100 p-2">
+                    {selectedPaymentForm ? (
+                      // Encuentra la opción correspondiente al valor seleccionado
+                      <span className="text-gray-900">
+                        {
+                          paymentFormOptions.find(option => option.value === selectedPaymentForm)?.label
+                        }
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">No disponible</span>
+                    )}
+                  </div>
+                </div>
+
+
+                {/* Payment Method */}
+                <div className="space-y-1 mb-4">
+                  <label className="block text-xs font-medium text-gray-700">
+                    Método de Pago
+                  </label>
+                  <div className="block w-full text-sm rounded-md border-gray-300 shadow-sm bg-gray-100 p-2">
+                    {selectedPaymentMethod ? (
+                      <span className="text-gray-900">{selectedPaymentMethod}</span>
+                    ) : (
+                      <span className="text-gray-500">No disponible</span>
+                    )}
+                  </div>
+                </div>
               </div>
+
 
               <div className="space-y-2">
                 {isInvoiceGenerated ? (
@@ -1145,6 +1142,11 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </button>
                 )}
               </div>
+
+              <legend className="text-sm font-medium text-gray-500 mb-2 mt-2">
+                Para realizar algún cambio en su factura, favor de comunicarse con soporte
+              </legend>
+
             </div>
           </div>
         </div>
