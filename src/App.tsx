@@ -18,14 +18,13 @@ import Loader from "./components/atom/Loader";
 import { Impersonado } from "./components/page/Impersonado";
 import Chat from "./components/page/Chat";
 import { BillingPage2 } from "./components/page/billingepage2";
-// import { facturas_pagos } from "./pages/facturas_pagos";
+import { ChatProvider } from "./context/ChatContext";  // Importa el ChatProvider
 
 const App = () => {
   return (
     <>
       <NavigationBar />
       <Switch>
-        <RouteSecure component={Chat} path={ROUTES.MIA.HOME} />
         <RouteSecure component={Impersonado} path={ROUTES.IMPERSONADO} />
         <RouteSecure component={Reserva} path={ROUTES.BOOKINGS.ID} />
         <RouteSecure component={FAQPage} path={ROUTES.FAQ} />
@@ -75,13 +74,20 @@ const App = () => {
           path={ROUTES.BOOKINGS.HOME}
         />
 
+        {/* Aquí se envuelve la ruta de chat con el ChatProvider */}
+        <RouteSecure path={ROUTES.MIA.HOME}>
+          <ChatProvider>
+            <Chat />
+          </ChatProvider>
+        </RouteSecure>
+
         <RouteSecure
           component={ResetPassword}
           path={ROUTES.AUTH.RESET_PASSWORD}
         />
         <Route path={"*"}>
           <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50">
-            <Loader></Loader>
+            <Loader />
             <h1 className="text-sky-950 font-semibold text-lg">
               ERROR 404: Página no encontrada
             </h1>
@@ -91,4 +97,5 @@ const App = () => {
     </>
   );
 };
+
 export default App;
