@@ -28,7 +28,10 @@ type ChatHeaderProps = {
   onToggleChat: () => void;
 };
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ activeChat, onToggleChat }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({
+  activeChat,
+  onToggleChat,
+}) => {
   return (
     <div className="p-4 bg-white/20 backdrop-blur-sm flex flex-col gap-2">
       <Button size="md" className="md:hidden" onClick={onToggleChat}>
@@ -124,7 +127,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               size={
                 setSize([
                   { size: "base", obj: "rounded" },
-                  { size: "sm", obj: "md" }
+                  { size: "sm", obj: "md" },
                 ]) as unknown as "rounded" | "md"
               }
               className="md:w-full md:h-full"
@@ -190,7 +193,6 @@ const Chat: React.FC = () => {
     taskQueue,
     bookingData,
     handleSend,
-    promptLimitReached,
   } = useChatLogic();
 
   const { setSize } = useResize();
@@ -228,7 +230,7 @@ const Chat: React.FC = () => {
                   inputMessage={inputMessage}
                   onChange={setInputMessage}
                   onSend={handleSend}
-                  disabled={promptLimitReached || !inputMessage.trim() || isLoading}
+                  disabled={!inputMessage.trim() || isLoading}
                   setSize={setSize}
                 />
               </>

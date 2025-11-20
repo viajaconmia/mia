@@ -18,7 +18,7 @@ import Loader from "./components/atom/Loader";
 import { Impersonado } from "./components/page/Impersonado";
 import Chat from "./components/page/Chat";
 import { BillingPage2 } from "./components/page/billingepage2";
-import { ChatProvider } from "./context/ChatContext";  // Importa el ChatProvider
+import { ChatProvider } from "./context/ChatContext"; // Importa el ChatProvider
 
 const App = () => {
   return (
