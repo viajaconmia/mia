@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { ChatMessagesController } from "../ChatMessage";
-import { useUser } from "../../context/userContext";
 import {
   Building2,
   ArrowRight,
@@ -10,10 +9,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
-import { Loader } from "../Loader";
-import { ChatContent, Reservation, UserMessage } from "../../types/chat";
-import { sendMessage } from "../../services/chatService";
-import { useLocation } from "wouter";
+import { ChatContent, Reservation } from "../../types/chat";
 import { NavigationLink } from "../atom/NavigationLink";
 import ROUTES from "../../constants/routes";
 import { TabsList } from "../molecule/TabsList";
@@ -24,7 +20,6 @@ import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
 import Task from "../organism/task";
 import { Logo } from "../atom/Logo";
-import { useChat } from "../../context/ChatContext";
 
 // ---------- ÁTOMOS / MOLÉCULAS UI ---------- //
 
@@ -176,150 +171,6 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
     </div>
   );
 };
-
-// ---------- COMPONENTE PRINCIPAL CHAT (MISMA LÓGICA) ---------- //
-
-// const Chat: React.FC = () => {
-//   const [promptCount, setPromptCount] = useState(0);
-//   const [_, setLocation] = useLocation();
-//   const [messages, setMessages] = useState<ChatContent[]>([]);
-//   const [thread, setThread] = useState<string | null>(null);
-//   const [inputMessage, setInputMessage] = useState("");
-//   const [isLoading, setIsLoading] = useState(false);  // Control de carga
-//   const [bookingData, setBookingData] = useState<Reservation | null>(null);
-//   const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
-//   const [isModalOpen, setIsModalOpen] = useState(false);
-//   const { authState } = useUser();
-//   const [activeChat, setActiveChat] = useState(true);
-//   const { setSize } = useResize();
-
-//   const endRef = useRef<HTMLDivElement | null>(null);
-
-//   useEffect(() => {
-//     if (endRef.current) {
-//       endRef.current.scrollTop = endRef.current.scrollHeight;
-//     }
-//   }, [messages]);
-
-//   const handleSendMessage = async () => {
-//     if (!inputMessage.trim()) return;
-
-//     if (!authState?.isAuthenticated && promptCount >= 2) {
-//       setLocation("/registration");
-//       return;
-//     }
-
-//     setPromptCount(promptCount + 1);
-//     console.log(promptCount);
-
-//     const newMessage: UserMessage = {
-//       component_type: "user",
-//       content: inputMessage,
-//     };
-
-//     setIsLoading(true);  // Iniciar el estado de carga
-//     setMessages((prev) => [...prev, newMessage]);
-//     setInputMessage("");
-
-//     sendMessage(
-//       inputMessage,
-//       thread || null,
-//       authState?.user?.id || null,
-//       (data) => {
-//         try {
-//           if (data.error) {
-//             throw new Error(JSON.stringify(data.error));
-//           }
-
-//           setThread(data.thread ?? null);
-//           if (data.response && Array.isArray(data.response)) {
-//             setMessages((prev) => [
-//               ...prev,
-//               ...(data.response as ChatContent[]),
-//             ]);
-//           } else if (!Array.isArray(data.response)) {
-//             setMessages((prev) => [
-//               ...prev,
-//               {
-//                 component_type: "error",
-//                 content: "Lo siento, no puedo ayudarte con eso.",
-//               },
-//             ]);
-//           }
-
-//           setBookingData(data.reserva ? data.reserva[0] : null);
-//         } catch (error) {
-//           console.error(error);
-//           setMessages((prev) => [
-//             ...prev,
-//             {
-//               component_type: "error",
-//               content: "Lo siento, ocurrió un error al buscar la información.",
-//             },
-//           ]);
-//         } finally {
-//           setIsLoading(false);  // Finalizar el estado de carga
-//         }
-//       }
-//     );
-//   };
-
-//   const promptLimitReached = !authState.isAuthenticated && promptCount >= 2;
-
-//   return (
-//     <>
-//       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-
-//       <div className="flex justify-end">
-//         <div className="w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]">
-//           <div className="flex flex-col h-full border-r">
-//             <ChatHeader
-//               activeChat={activeChat}
-//               onToggleChat={() => setActiveChat(!activeChat)}
-//             />
-
-//             {activeChat ? (
-//               <>
-//                 <ChatMessagesArea
-//                   messages={messages}
-//                   isLoading={isLoading}  // Pasamos el estado de carga
-//                   endRef={endRef}
-//                 />
-//                 <ChatInputArea
-//                   inputMessage={inputMessage}
-//                   onChange={(value) => setInputMessage(value)}
-//                   onSend={handleSendMessage}
-//                   disabled={promptLimitReached || !inputMessage.trim()}
-//                   setSize={setSize}
-//                 />
-//               </>
-//             ) : (
-//               <div className="p-4 flex justify-center">
-//                 <div className="w-full h-[70vh]">
-//                   <ReservationCartPanel
-//                     activeTab={activeTab}
-//                     onTabChange={setActiveTab}
-//                     bookingData={bookingData}
-//                   />
-//                 </div>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-
-//         <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
-//           <ReservationCartPanel
-//             activeTab={activeTab}
-//             onTabChange={setActiveTab}
-//             bookingData={bookingData}
-//           />
-//         </div>
-//       </div>
-//     </>
-//   );
-// };
-
-// export default Chat;
 
 // src/components/Chat/index.tsx
 import { useChatLogic } from "../../hooks/useChatLogic";
