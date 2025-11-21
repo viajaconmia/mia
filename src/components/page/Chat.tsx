@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatMessagesController } from "../ChatMessage";
 import {
   Building2,
@@ -9,19 +9,15 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
-import { ChatContent, Reservation } from "../../types/chat";
+import { Reservation } from "../../types/chat";
 import { NavigationLink } from "../atom/NavigationLink";
 import ROUTES from "../../constants/routes";
 import { TabsList } from "../molecule/TabsList";
 import { Cart } from "../Cart";
 import Button from "../atom/Button";
-import { AuthModal } from "../AuthModal";
 import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
 import Task from "../organism/task";
-import { Logo } from "../atom/Logo";
-
-// ---------- ÁTOMOS / MOLÉCULAS UI ---------- //
 
 type ChatHeaderProps = {
   activeChat: boolean;
@@ -58,15 +54,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 };
 
 type ChatMessagesAreaProps = {
-  messages: ChatContent[];
+  messages: MessageChat[];
   isLoading: boolean;
   endRef: React.RefObject<HTMLDivElement>;
+  tasks: ItemStack[];
 };
 
 const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
   messages,
   isLoading,
   endRef,
+  tasks = [],
 }) => {
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={endRef}>
@@ -74,14 +72,17 @@ const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
         {messages.length > 0 && <ChatMessagesController messages={messages} />}
         {isLoading && (
           <div className="flex gap-2 w-full">
-            <div className="w-14 h-14 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
-              <Logo className="w-10 h-10" />
+            <div className="w-12 h-12 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
+              <Loader className="w-8 h-8"></Loader>
             </div>
-            <Task
-              label="Esperando respuesta..."
-              status="loading"
-              loadingMessage="Estamos procesando tu solicitud."
-            />
+            {tasks.map((task, index) => (
+              <Task
+                key={index}
+                label={task.functionCall.tarea}
+                status={task.functionCall.status}
+                loadingMessage="Estamos procesando tu solicitud."
+              />
+            ))}
           </div>
         )}
       </div>
@@ -176,38 +177,41 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
 };
 
 // src/components/Chat/index.tsx
-import { useChatLogic } from "../../hooks/useChatLogic";
+import { useChat } from "../../hooks/useChat";
+import { ItemStack, MessageChat } from "../../context/ChatContext";
+import Loader from "../atom/Loader";
 
 const Chat: React.FC = () => {
-  const {
-    inputMessage,
-    setInputMessage,
-    activeTab,
-    setActiveTab,
-    isModalOpen,
-    setIsModalOpen,
-    activeChat,
-    setActiveChat,
-    messages,
-    isLoading,
-    taskQueue,
-    bookingData,
-    handleSend,
-  } = useChatLogic();
-
   const { setSize } = useResize();
   const endRef = useRef<HTMLDivElement>(null);
+  const [activeChat, setActiveChat] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
+  const {
+    sendMessage,
+    setInput,
+    input,
+    loading,
+    stack,
+    waitChatResponse,
+    messages,
+  } = useChat();
+
+  useEffect(() => {
+    // console.log("Stack updated:", stack);
+    if (stack.length === 0) return;
+    waitChatResponse();
+  }, [stack]);
 
   // Auto-scroll al final de los mensajes
   useEffect(() => {
     if (endRef.current) {
       endRef.current.scrollTop = endRef.current.scrollHeight;
     }
-  }, [messages, taskQueue, isLoading]);
+  }, [messages]);
 
   return (
     <>
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} /> */}
 
       <div className="flex justify-end">
         {/* Panel principal del chat */}
@@ -222,15 +226,15 @@ const Chat: React.FC = () => {
               <>
                 <ChatMessagesArea
                   messages={messages}
-                  taskQueue={taskQueue}
-                  isLoading={isLoading}
+                  tasks={stack}
+                  isLoading={loading}
                   endRef={endRef}
                 />
                 <ChatInputArea
-                  inputMessage={inputMessage}
-                  onChange={setInputMessage}
-                  onSend={handleSend}
-                  disabled={!inputMessage.trim() || isLoading}
+                  inputMessage={input}
+                  onChange={setInput}
+                  onSend={sendMessage}
+                  disabled={!input.trim() || loading}
                   setSize={setSize}
                 />
               </>
@@ -240,7 +244,7 @@ const Chat: React.FC = () => {
                   <ReservationCartPanel
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    bookingData={bookingData}
+                    bookingData={{}}
                   />
                 </div>
               </div>
@@ -253,7 +257,7 @@ const Chat: React.FC = () => {
           <ReservationCartPanel
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            bookingData={bookingData}
+            bookingData={{}}
           />
         </div>
       </div>

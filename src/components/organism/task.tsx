@@ -1,7 +1,7 @@
 import React from "react";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Clock } from "lucide-react";
 
-export type TaskStatus = "loading" | "success" | "error";
+export type TaskStatus = "loading" | "success" | "error" | "queue";
 
 interface TaskProps {
   label: string;
@@ -9,10 +9,6 @@ interface TaskProps {
   loadingMessage?: string;
   successMessage?: string;
   errorMessage?: string;
-}
-
-interface TaskLabelProps {
-  label: string;
 }
 
 interface TaskStatusTextProps {
@@ -35,8 +31,10 @@ interface TaskProgressBarProps {
 }
 
 /* =========================== 1) Label =========================== */
-export const TaskLabel: React.FC<TaskLabelProps> = ({ label }) => (
-  <span className="text-xs font-medium text-gray-700 text-ellipsis line-clamp-1">{label}</span>
+export const TaskLabel = ({ label }: { label: string }) => (
+  <span className="text-xs font-medium text-gray-700 text-ellipsis line-clamp-1">
+    {label}
+  </span>
 );
 
 /* =========================== 2) Texto de estado =========================== */
@@ -45,12 +43,14 @@ export const TaskStatusText: React.FC<TaskStatusTextProps> = ({ status }) => {
     loading: "Procesando tu solicitud...",
     success: "Completado",
     error: "Error",
+    queue: "En cola",
   };
 
   const colorMap: Record<TaskStatus, string> = {
     loading: "text-blue-600",
     success: "text-emerald-600",
     error: "text-red-600",
+    queue: "text-gray-600",
   };
 
   return (
@@ -84,8 +84,18 @@ export const TaskIcon: React.FC<TaskIconProps> = ({ status }) => {
           <span className="text-blue-600 text-xs">MIA</span>
         </>
       )}
-      {status === "success" && <CheckCircle className="w-4 h-4 text-emerald-600" aria-hidden="true" />}
-      {status === "error" && <XCircle className="w-4 h-4 text-red-600" aria-hidden="true" />}
+      {status === "success" && (
+        <CheckCircle className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+      )}
+      {status === "error" && (
+        <XCircle className="w-4 h-4 text-red-600" aria-hidden="true" />
+      )}
+      {status === "queue" && (
+        <Clock
+          className="w-4 h-4 text-gray-600 animate-spin"
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 };
@@ -101,26 +111,24 @@ export const TaskResponse: React.FC<TaskResponseProps> = ({
     loading: "Esta tarea se está ejecutando. Por favor espera un momento.",
     success: "La tarea se completó correctamente.",
     error: "Ocurrió un problema al ejecutar la tarea.",
+    queue: "La tarea está en cola y se ejecutará pronto.",
   };
 
   const message =
     status === "loading"
       ? loadingMessage ?? defaultMessages.loading
       : status === "success"
-        ? successMessage ?? defaultMessages.success
-        : errorMessage ?? defaultMessages.error;
+      ? successMessage ?? defaultMessages.success
+      : errorMessage ?? defaultMessages.error;
 
   const colorMap: Record<TaskStatus, string> = {
     loading: "text-gray-600",
     success: "text-emerald-700",
     error: "text-red-700",
+    queue: "text-gray-600",
   };
 
-  return (
-    <p className={`text-xs mt-1 ${colorMap[status]}`}>
-      {message}
-    </p>
-  );
+  return <p className={`text-xs mt-1 ${colorMap[status]}`}>{message}</p>;
 };
 
 /* =========================== 5) Barra / animación =========================== */
@@ -140,6 +148,14 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({ status }) => {
     return (
       <div className={baseClasses}>
         <div className="h-full w-full bg-emerald-500" />
+      </div>
+    );
+  }
+
+  if (status === "queue") {
+    return (
+      <div className={baseClasses}>
+        <div className="h-full w-full bg-gray-500 opacity-70" />
       </div>
     );
   }

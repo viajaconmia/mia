@@ -1,10 +1,9 @@
 // src/components/ChatMessage.tsx (o donde lo tengas)
-import React, { useState, useEffect } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChatContent } from "../types/chat";
-import { HotelCard } from "./HotelCard";
-import { FlightCard } from "./FlightCard";
+import { MessageChat } from "../context/ChatContext";
+import { useChat } from "../hooks/useChat";
 
 interface ChatMessageProps {
   content: string;
@@ -13,59 +12,56 @@ interface ChatMessageProps {
 }
 
 export const ChatMessagesController: React.FC<{
-  messages: ChatContent[];
+  messages: MessageChat[];
 }> = ({ messages }) => {
+  const { loading } = useChat();
   return (
     <>
-      {messages.map((item, index) => {
-        if (
-          item.component_type === "user" ||
-          item.component_type === "message"
-        ) {
-          return (
-            <ChatMessage
-              key={index}
-              content={item.content}
-              isUser={item.component_type === "user"}
-              isLoading={false}
-            />
-          );
-        }
-
-        if (item.component_type === "hotel") {
-          return (
-            <div key={index} className="overflow-x-auto p-4 pt-0">
-              <div className="flex flex-col md:flex-row gap-3">
-                {item.id_hoteles.map((hotelId) => (
-                  <div key={hotelId + `${index}`} className="md:min-w-[300px]">
-                    <HotelCard id_hotel={hotelId} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        if (item.component_type === "flight") {
-          return (
-            <div key={index} className="p-4 pt-0">
-              <FlightCard payload={item.payload} />
-            </div>
-          );
-        }
-
-        if (item.component_type === "error") {
-          return (
-            <div
-              key={index}
-              className="bg-red-600/80 text-white p-4 rounded-xl mx-2 my-2 shadow-md"
-            >
-              <p>{item.content}</p>
-            </div>
-          );
-        }
-
-        return null;
+      {messages.reverse().map((item, index) => {
+        // if (
+        //   item.component_type === "user" ||
+        //   item.component_type === "message"
+        // ) {
+        return (
+          <ChatMessage
+            key={index}
+            content={item.text || ""}
+            isUser={item.role === "user"}
+            isLoading={loading}
+          />
+        );
+        // }
+        // if (item.component_type === "hotel") {
+        //   return (
+        //     <div key={index} className="overflow-x-auto p-4 pt-0">
+        //       <div className="flex flex-col md:flex-row gap-3">
+        //         {item.id_hoteles.map((hotelId) => (
+        //           <div key={hotelId + `${index}`} className="md:min-w-[300px]">
+        //             <HotelCard id_hotel={hotelId} />
+        //           </div>
+        //         ))}
+        //       </div>
+        //     </div>
+        //   );
+        // }
+        // if (item.component_type === "flight") {
+        //   return (
+        //     <div key={index} className="p-4 pt-0">
+        //       <FlightCard payload={item.payload} />
+        //     </div>
+        //   );
+        // }
+        // if (item.component_type === "error") {
+        //   return (
+        //     <div
+        //       key={index}
+        //       className="bg-red-600/80 text-white p-4 rounded-xl mx-2 my-2 shadow-md"
+        //     >
+        //       <p>{item.content}</p>
+        //     </div>
+        //   );
+        // }
+        // return null;
       })}
     </>
   );
@@ -74,45 +70,32 @@ export const ChatMessagesController: React.FC<{
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   content,
   isUser,
-  isLoading,
 }) => {
-  const [displayContent, setDisplayContent] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-
-  useEffect(() => {
-    if (!isUser && !isLoading) {
-      setIsTyping(true);
-      setDisplayContent("");
-    } else {
-      setDisplayContent(content);
-    }
-  }, [content, isUser, isLoading]);
-
-  const messageContent = isUser ? content : displayContent;
-
   return (
     <div
-      className={`w-full mb-3 flex ${isUser ? "justify-end" : "justify-start"
-        }`}
+      className={`w-full mb-3 flex ${isUser ? "justify-end" : "justify-start"}`}
     >
       <div
         className={`max-w-[90%] md:max-w-[70%] px-4 py-3 rounded-2xl backdrop-blur-md border shadow-md transition-all duration-300
-        ${isUser
+        ${
+          isUser
             ? "bg-white text-blue-900 rounded-br-none border-blue-100 hover:shadow-lg"
             : "bg-gradient-to-r from-blue-800/90 to-blue-600/90 text-white rounded-bl-none border-white/10 hover:shadow-xl"
-          }`}
+        }`}
       >
         <div
-          className={`prose prose-sm max-w-none ${isUser ? "" : "prose-invert"
-            }`}
+          className={`prose prose-sm max-w-none ${
+            isUser ? "" : "prose-invert"
+          }`}
         >
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               p: ({ children }) => (
                 <p
-                  className={`mb-1 ${isUser ? "text-blue-700" : "text-blue-50"
-                    }`}
+                  className={`mb-1 ${
+                    isUser ? "text-blue-700" : "text-blue-50"
+                  }`}
                 >
                   {children}
                 </p>
@@ -122,8 +105,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`underline font-medium ${isUser ? "text-blue-600" : "text-blue-100"
-                    }`}
+                  className={`underline font-medium ${
+                    isUser ? "text-blue-600" : "text-blue-100"
+                  }`}
                 >
                   {children}
                 </a>
@@ -137,14 +121,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 />
               ),
               ul: ({ children }) => (
-                <ul className="list-disc pl-4 mb-2 space-y-1">
-                  {children}
-                </ul>
+                <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>
               ),
               ol: ({ children }) => (
-                <ol className="list-decimal pl-4 mb-2 space-y-1">
-                  {children}
-                </ol>
+                <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>
               ),
               li: ({ children }) => (
                 <li className="mb-1">
@@ -155,40 +135,45 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               ),
               h1: ({ children }) => (
                 <h1
-                  className={`text-xl font-bold mb-2 ${isUser ? "text-blue-700" : "text-white"
-                    }`}
+                  className={`text-xl font-bold mb-2 ${
+                    isUser ? "text-blue-700" : "text-white"
+                  }`}
                 >
                   {children}
                 </h1>
               ),
               h2: ({ children }) => (
                 <h2
-                  className={`text-lg font-semibold mb-2 ${isUser ? "text-blue-700" : "text-blue-50"
-                    }`}
+                  className={`text-lg font-semibold mb-2 ${
+                    isUser ? "text-blue-700" : "text-blue-50"
+                  }`}
                 >
                   {children}
                 </h2>
               ),
               h3: ({ children }) => (
                 <h3
-                  className={`text-base font-semibold mb-1 ${isUser ? "text-blue-700" : "text-blue-50"
-                    }`}
+                  className={`text-base font-semibold mb-1 ${
+                    isUser ? "text-blue-700" : "text-blue-50"
+                  }`}
                 >
                   {children}
                 </h3>
               ),
               code: ({ children }) => (
                 <code
-                  className={`px-1.5 py-0.5 rounded text-xs ${isUser ? "bg-blue-50 text-blue-800" : "bg-white/10"
-                    }`}
+                  className={`px-1.5 py-0.5 rounded text-xs ${
+                    isUser ? "bg-blue-50 text-blue-800" : "bg-white/10"
+                  }`}
                 >
                   {children}
                 </code>
               ),
               pre: ({ children }) => (
                 <pre
-                  className={`p-3 rounded-lg mb-2 overflow-x-auto text-xs ${isUser ? "bg-blue-50 text-blue-900" : "bg-blue-900/40"
-                    }`}
+                  className={`p-3 rounded-lg mb-2 overflow-x-auto text-xs ${
+                    isUser ? "bg-blue-50 text-blue-900" : "bg-blue-900/40"
+                  }`}
                 >
                   {children}
                 </pre>
@@ -217,17 +202,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               ),
             }}
           >
-            {messageContent}
+            {content}
           </ReactMarkdown>
         </div>
-
-        {isTyping && !isUser && (
-          <div className="flex space-x-1 mt-2">
-            <div className="w-2 h-2 bg-blue-100 rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-blue-100 rounded-full animate-bounce delay-100" />
-            <div className="w-2 h-2 bg-blue-100 rounded-full animate-bounce delay-200" />
-          </div>
-        )}
       </div>
     </div>
   );
