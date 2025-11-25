@@ -56,7 +56,7 @@ type FunctionCall = {
 export type MessageChat = {
   role: "user" | "assistant";
   text: string;
-  component: FlightOptions | undefined;
+  componente: FlightOptions | undefined;
 };
 
 export type ItemStack = {

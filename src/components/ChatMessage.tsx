@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MessageChat } from "../context/ChatContext";
 import { useChat } from "../hooks/useChat";
+import { FlightOptionsDisplay } from "./page/Chat";
 
 interface ChatMessageProps {
   content: string;
@@ -18,7 +19,8 @@ export const ChatMessagesController: React.FC<{
   return (
     <>
       {messages.reverse().map((item, index) => {
-        if (!item.component) {
+        console.log("desde chat", item);
+        if (!item.componente) {
           return (
             <ChatMessage
               key={index}
@@ -28,18 +30,14 @@ export const ChatMessagesController: React.FC<{
             />
           );
         }
-        if (item.component) {
+        if (item.componente) {
           const { component: data } = item;
-          const option = Array.isArray(data.options.option)
-            ? data.options.option
-            : [data.options.option];
+          // const option = Array.isArray(data.options.option)
+          //   ? data.options.option
+          //   : [data.options.option];
+          // option.map(opt=>opt.)
           return (
-            <div key={data.type}>
-              {option.map((vuelo) => (
-                <div key={vuelo.id} className="border p-3 "></div>
-              ))}
-              <h1></h1>
-            </div>
+            <FlightOptionsDisplay flightOptions={data}></FlightOptionsDisplay>
           );
         }
         // }

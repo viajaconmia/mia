@@ -7,6 +7,11 @@ import {
   Send,
   Plus,
   ArrowLeft,
+  Luggage,
+  Calendar,
+  Plane,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
 import { Reservation } from "../../types/chat";
@@ -178,7 +183,12 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
 
 // src/components/Chat/index.tsx
 import { useChat } from "../../hooks/useChat";
-import { ItemStack, MessageChat } from "../../context/ChatContext";
+import {
+  FlightOptions,
+  ItemStack,
+  MessageChat,
+  Segment,
+} from "../../context/ChatContext";
 import Loader from "../atom/Loader";
 
 const Chat: React.FC = () => {
@@ -262,6 +272,209 @@ const Chat: React.FC = () => {
         </div>
       </div>
     </>
+  );
+};
+interface FlightOptionsDisplayProps {
+  flightOptions: FlightOptions;
+}
+export const FlightOptionsDisplay = ({
+  flightOptions,
+}: FlightOptionsDisplayProps) => {
+  console.log("Viendo el flishtoption", flightOptions);
+  const options = Array.isArray(flightOptions.options.option)
+    ? flightOptions.options.option
+    : [flightOptions.options.option];
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const calculateDuration = (departure: string, arrival: string) => {
+    const diff = new Date(arrival).getTime() - new Date(departure).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const renderSegment = (
+    segment: Segment,
+    index: number,
+    totalSegments: number
+  ) => (
+    <div key={index} className="relative">
+      <div className="flex items-start gap-6">
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-bold text-slate-900">
+                  {formatTime(segment.departureTime)}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {formatDate(segment.departureTime)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <MapPin className="w-4 h-4" />
+                <span className="font-medium">
+                  {segment.origin.airportCode}
+                </span>
+                <span className="text-sm">· {segment.origin.city}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {segment.origin.airportName}
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center px-6">
+              <div className="flex items-center gap-2 text-slate-400 mb-2">
+                <div className="h-px w-12 bg-slate-300"></div>
+                <Plane className="w-5 h-5" />
+                <div className="h-px w-12 bg-slate-300"></div>
+              </div>
+              <span className="text-xs font-medium text-slate-500">
+                {calculateDuration(segment.departureTime, segment.arrivalTime)}
+              </span>
+              <span className="text-xs text-slate-400 mt-1">
+                {segment.airline} {segment.flightNumber}
+              </span>
+            </div>
+
+            <div className="flex-1 text-right">
+              <div className="flex items-baseline gap-2 mb-1 justify-end">
+                <span className="text-3xl font-bold text-slate-900">
+                  {formatTime(segment.arrivalTime)}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {formatDate(segment.arrivalTime)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 justify-end text-slate-600">
+                <span className="text-sm">{segment.destination.city} ·</span>
+                <span className="font-medium">
+                  {segment.destination.airportCode}
+                </span>
+                <MapPin className="w-4 h-4" />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {segment.destination.airportName}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {index < totalSegments - 1 && (
+        <div className="flex items-center gap-2 py-4 px-4 my-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <Clock className="w-4 h-4 text-amber-600" />
+          <span className="text-sm font-medium text-amber-800">
+            Layover in {segment.destination.city}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">
+            Available Flight Options
+          </h1>
+          <p className="text-slate-600">
+            Choose the best option for your journey
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {options.map((option) => {
+            const segments = Array.isArray(option.segments.segment)
+              ? option.segments.segment
+              : [option.segments.segment];
+
+            return (
+              <div
+                key={option.id}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-slate-200"
+              >
+                <div className="p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Plane className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-900 capitalize">
+                          {option.itineraryType.replace("_", " ")} Trip
+                        </h2>
+                        <p className="text-sm text-slate-500">
+                          {segments.length}{" "}
+                          {segments.length === 1 ? "segment" : "segments"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="flex items-baseline gap-1 justify-end">
+                        <span className="text-sm text-slate-500">
+                          {option.price.currency}
+                        </span>
+                        <span className="text-4xl font-bold text-slate-900">
+                          {option.price.total}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">Total price</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 mb-6">
+                    {segments.map((segment, index) =>
+                      renderSegment(segment, index, segments.length)
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-6 pt-6 border-t border-slate-200">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Luggage className="w-5 h-5" />
+                      <span className="text-sm font-medium">
+                        {option.baggage.hasCheckedBaggage === "true"
+                          ? `${option.baggage.pieces} checked bag${
+                              option.baggage.pieces !== "1" ? "s" : ""
+                            }`
+                          : "No checked baggage"}
+                      </span>
+                    </div>
+
+                    {option.seat.assignedSeatLocation &&
+                      option.seat.assignedSeatLocation !== "null" && (
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Calendar className="w-5 h-5" />
+                          <span className="text-sm font-medium">
+                            Seat: {option.seat.assignedSeatLocation}
+                          </span>
+                        </div>
+                      )}
+
+                    <div className="flex-1"></div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 };
 
