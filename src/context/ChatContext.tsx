@@ -1,5 +1,49 @@
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 
+export type FlightOptions = {
+  type: "flight_options";
+  options: {
+    option: FlightOption[] | FlightOption;
+  };
+};
+
+export type Segment = {
+  origin: AirportInfo;
+  destination: AirportInfo;
+  departureTime: string;
+  arrivalTime: string;
+  airline: string;
+  flightNumber: string;
+};
+
+export type FlightOption = {
+  id: string;
+  url: string;
+  itineraryType: string;
+  segments: {
+    segment: Segment[] | Segment;
+  };
+  seat: {
+    isDesiredSeat: string; // vienen como "false" | "true"
+    requestedSeatLocation: string; // "null" en tu data
+    assignedSeatLocation: string; // "null" en tu data
+  };
+  baggage: {
+    hasCheckedBaggage: string; // "true" | "false"
+    pieces: string; // viene como string
+  };
+  price: {
+    currency: string;
+    total: string;
+  };
+};
+
+export type AirportInfo = {
+  airportCode: string;
+  city: string;
+  airportName: string;
+};
+
 type FunctionCall = {
   status: "success" | "loading" | "error" | "queue";
   tarea: string;
@@ -12,6 +56,7 @@ type FunctionCall = {
 export type MessageChat = {
   role: "user" | "assistant";
   text: string;
+  component: FlightOptions | undefined;
 };
 
 export type ItemStack = {
@@ -82,8 +127,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatcher] = useReducer(chatReducer, initialChatState);
 
   useEffect(() => {
-    console.log(state);
-  }, [state]);
+    console.log("Pila:", state.stack);
+    console.log("mensajes:", state.messages);
+  }, [state.stack, state.messages]);
 
   return (
     <ChatContext.Provider value={{ dispatcher, state }}>

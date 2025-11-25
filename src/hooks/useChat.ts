@@ -4,6 +4,7 @@ import {
   MessageChat,
   useChatContext,
 } from "../context/ChatContext";
+import { parseToJson } from "../lib/utils";
 import { ChatService } from "../services/chatService";
 import { useNotification } from "./useNotification";
 
@@ -13,21 +14,7 @@ export const useChat = () => {
 
   //Esta lógica asegura que no se dupliquen items en el stack y que si ya existe, se actualice.
   const addToStack = (newItems: ItemStack[]) => {
-    const newStack = state.stack.map((item) => {
-      let exists = newItems.some(
-        (newItem) => newItem.functionCall.id === item.functionCall.id
-      );
-      return exists
-        ? newItems.find((n) => n.functionCall.id === item.functionCall.id)!
-        : item;
-    });
-    const newItemsToAdd = newItems.filter(
-      (newItem) =>
-        !state.stack.some(
-          (item) => item.functionCall.id === newItem.functionCall.id
-        )
-    );
-    newStack.push(...newItemsToAdd);
+    const newStack = [...newItems];
     dispatcher({ type: "SET_STACK", payload: newStack });
   };
 
@@ -71,13 +58,20 @@ export const useChat = () => {
   const updateHistory = (history: ItemHistory[]) => {
     const messages: MessageChat[] = history
       .filter((item) => (item as any).text !== undefined)
-      .map((item) => item as MessageChat);
+      .map(
+        (item) =>
+          ({
+            ...item,
+            componente: parseToJson((item as any).text),
+          } as unknown as MessageChat)
+      );
     updateMessages(messages);
     dispatcher({ type: "SET_HISTORY", payload: history });
   };
 
   //Debe enviar el history y el stack para poder actualizarlos según la respuesta del servidor, pero aqui cada que se actualice el historial se debe separar lo que es los mensajes del stack
   const waitChatResponse = async () => {
+    console.log("waitChatResponse - stack actual:", state.stack);
     try {
       const response = await ChatService.getInstance().esperarRespuesta({
         thread: state.thread,
@@ -114,6 +108,7 @@ export const useChat = () => {
 
   // Envía un mensaje al servicio de chat
   const sendMessage = async () => {
+    console.log("sendMessage - stack actual:", state.stack);
     const message = state.input;
     try {
       if (state.input.trim() === "") return;
@@ -124,7 +119,11 @@ export const useChat = () => {
 
       clearInput();
       updateMessages([
-        { role: "user", text: message },
+        {
+          role: "user",
+          text: message,
+          component: undefined,
+        },
         ...state.messages.reverse(),
       ]);
 
@@ -162,97 +161,3 @@ export const useChat = () => {
     messages: state.messages,
   };
 };
-
-// export const demoFlightMessage: ChatContent = {
-//   component_type: "flight",
-//   payload: {
-//     type: "flight_options",
-//     searchId: "search-demo-123",
-//     options: [
-//       {
-//         id: "opt-1",
-//         itineraryType: "round_trip",
-//         segments: [
-//           {
-//             origin: {
-//               airportCode: "MEX",
-//               city: "Ciudad de México",
-//               airportName: "AICM T2",
-//             },
-//             destination: {
-//               airportCode: "MTY",
-//               city: "Monterrey",
-//               airportName: "Aeropuerto Internacional de Monterrey",
-//             },
-//             departureTime: "2025-12-10T08:30:00-06:00",
-//             arrivalTime: "2025-12-10T10:05:00-06:00",
-//             airline: "Aeroméxico",
-//             flightNumber: "AM1234",
-//           },
-//           {
-//             origin: {
-//               airportCode: "MTY",
-//               city: "Monterrey",
-//               airportName: "Aeropuerto Internacional de Monterrey",
-//             },
-//             destination: {
-//               airportCode: "MEX",
-//               city: "Ciudad de México",
-//               airportName: "AICM T2",
-//             },
-//             departureTime: "2025-12-15T18:45:00-06:00",
-//             arrivalTime: "2025-12-15T20:20:00-06:00",
-//             airline: "Aeroméxico",
-//             flightNumber: "AM5678",
-//           },
-//         ],
-//         seat: {
-//           isDesiredSeat: true,
-//           requestedSeatLocation: "window",
-//           assignedSeatLocation: "window",
-//         },
-//         baggage: {
-//           hasCheckedBaggage: true,
-//           pieces: 1,
-//         },
-//         price: {
-//           currency: "MXN",
-//           total: 3250.99,
-//         },
-//       },
-//       {
-//         id: "opt-2",
-//         itineraryType: "one_way",
-//         segments: [
-//           {
-//             origin: {
-//               airportCode: "MEX",
-//               city: "Ciudad de México",
-//             },
-//             destination: {
-//               airportCode: "CUN",
-//               city: "Cancún",
-//             },
-//             departureTime: "2025-12-11T12:00:00-06:00",
-//             arrivalTime: "2025-12-11T15:10:00-05:00",
-//             airline: "Volaris",
-//             flightNumber: "Y4235",
-//           },
-//         ],
-//         seat: {
-//           isDesiredSeat: false,
-//           requestedSeatLocation: "aisle",
-//           assignedSeatLocation: "middle",
-//         },
-//         baggage: {
-//           hasCheckedBaggage: false,
-//           pieces: 0,
-//         },
-//         price: {
-//           currency: "MXN",
-//           total: 1899,
-//         },
-//       },
-//     ],
-//   },
-// };

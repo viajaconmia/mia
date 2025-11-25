@@ -134,3 +134,116 @@ export const hasErrorInput = [
   // ring color
   "ring-red-200 dark:ring-red-700/30",
 ];
+
+class Node {
+  padre: Node | null;
+  hijos: Node[];
+  key: string = "";
+  value: string = "";
+
+  constructor(padre: Node | null = null) {
+    this.hijos = [];
+    this.padre = padre;
+  }
+
+  static openTag(padre: Node | null = null) {
+    const hijo = new Node(padre);
+    if (padre) padre.addHijo(hijo);
+    return hijo;
+  }
+
+  addHijo(hijo: Node) {
+    this.hijos.push(hijo);
+  }
+
+  closeTag() {
+    return this.padre;
+  }
+
+  toObject(): any {
+    if (this.hijos.length === 0) {
+      return this.value;
+    }
+
+    const obj: any = {};
+
+    this.hijos.forEach((hijo) => {
+      const childKey = hijo.key;
+      const childValue = hijo.toObject();
+
+      if (obj.hasOwnProperty(childKey)) {
+        if (Array.isArray(obj[childKey])) {
+          obj[childKey].push(childValue);
+        } else {
+          obj[childKey] = [obj[childKey], childValue];
+        }
+      } else {
+        obj[childKey] = childValue;
+      }
+    });
+
+    return obj;
+  }
+}
+
+export function parseToJson(message: string) {
+  if (!message.split("").slice(0, 10).includes("<")) return undefined;
+
+  const estados = {
+    inicial: 0,
+    abriendo_tag: 1,
+    guardando_key: 2,
+    guardando_value: 3,
+    cerrando_objeto: 4,
+  };
+
+  let estado = estados.inicial;
+
+  const root = new Node(null);
+  let current: Node | null = root;
+
+  const caracteres = message.split("");
+
+  caracteres.forEach((c) => {
+    switch (estado) {
+      case estados.inicial:
+        if (c === "<") estado = estados.abriendo_tag;
+        break;
+
+      case estados.abriendo_tag:
+        if (c === "/") {
+          estado = estados.cerrando_objeto;
+        } else {
+          current = Node.openTag(current);
+          if (current) current.key += c;
+          estado = estados.guardando_key;
+        }
+        break;
+
+      case estados.guardando_key:
+        if (c === ">") {
+          estado = estados.guardando_value;
+        } else {
+          if (current) current.key += c;
+        }
+        break;
+
+      case estados.guardando_value:
+        if (c === "<") {
+          estado = estados.abriendo_tag;
+        } else {
+          if (current) current.value += c;
+        }
+        break;
+
+      case estados.cerrando_objeto:
+        if (c === ">") {
+          if (current) current = current.closeTag();
+          estado = estados.guardando_value;
+        }
+        break;
+    }
+  });
+
+  return root.toObject().root;
+}
