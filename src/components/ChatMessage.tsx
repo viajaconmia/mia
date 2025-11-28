@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { MessageChat } from "../context/ChatContext";
 import { useChat } from "../hooks/useChat";
 import { FlightOptionsDisplay } from "./page/Chat";
+import { CarRentalDisplay } from "./template/CardRentalCart";
 
 interface ChatMessageProps {
   content: string;
@@ -19,7 +20,6 @@ export const ChatMessagesController: React.FC<{
   return (
     <>
       {messages.reverse().map((item, index) => {
-        console.log("desde chat", item);
         if (!item.componente) {
           return (
             <ChatMessage
@@ -31,15 +31,37 @@ export const ChatMessagesController: React.FC<{
           );
         }
         if (item.componente) {
-          const { component: data } = item;
-          // const option = Array.isArray(data.options.option)
-          //   ? data.options.option
-          //   : [data.options.option];
-          // option.map(opt=>opt.)
-          return (
-            <FlightOptionsDisplay flightOptions={data}></FlightOptionsDisplay>
-          );
+          const { componente: data } = item;
+          if (data.type == "flight") {
+            return (
+              <FlightOptionsDisplay flightOptions={data}></FlightOptionsDisplay>
+            );
+          }
+          if (data.type == "car_rental") {
+            console.log("Este item es de renta de autos", data);
+            const rentas = Array.isArray(data.options.option)
+              ? data.options.option
+              : [data.options.option];
+            return (
+              <>
+                {rentas.map((renta) => (
+                  <CarRentalDisplay option={renta} />
+                ))}
+              </>
+            );
+          }
+
+          if (data.type == "hotel") {
+            return <h1>este es el de hotel</h1>;
+          }
         }
+        console.log("este item salio del condicional", item);
+        return (
+          <h1>
+            Ocurrio algo inesperado, sin embargo puedes seguir hablando con el
+            chat, el seguira la conversación normal
+          </h1>
+        );
         // }
         // if (item.component_type === "hotel") {
         //   return (

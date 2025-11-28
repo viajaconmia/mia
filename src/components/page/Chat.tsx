@@ -80,14 +80,16 @@ const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
             <div className="w-12 h-12 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
               <Loader className="w-8 h-8"></Loader>
             </div>
-            {tasks.map((task, index) => (
-              <Task
-                key={index}
-                label={task.functionCall.tarea}
-                status={task.functionCall.status}
-                loadingMessage="Estamos procesando tu solicitud."
-              />
-            ))}
+            <div className="flex flex-col gap-2 w-full">
+              {tasks.map((task, index) => (
+                <Task
+                  key={index}
+                  label={task.functionCall.tarea}
+                  status={task.functionCall.status}
+                  loadingMessage="Estamos procesando tu solicitud."
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -280,7 +282,7 @@ interface FlightOptionsDisplayProps {
 export const FlightOptionsDisplay = ({
   flightOptions,
 }: FlightOptionsDisplayProps) => {
-  console.log("Viendo el flishtoption", flightOptions);
+  flightOptions.options.option;
   const options = Array.isArray(flightOptions.options.option)
     ? flightOptions.options.option
     : [flightOptions.options.option];
@@ -386,17 +388,8 @@ export const FlightOptionsDisplay = ({
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
+    <div className="py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Available Flight Options
-          </h1>
-          <p className="text-slate-600">
-            Choose the best option for your journey
-          </p>
-        </div>
-
         <div className="space-y-6">
           {options.map((option) => {
             const segments = Array.isArray(option.segments.segment)
@@ -416,7 +409,7 @@ export const FlightOptionsDisplay = ({
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-slate-900 capitalize">
-                          {option.itineraryType.replace("_", " ")} Trip
+                          {option?.itineraryType?.replace("_", " ") || ""} Trip
                         </h2>
                         <p className="text-sm text-slate-500">
                           {segments.length}{" "}
@@ -428,10 +421,10 @@ export const FlightOptionsDisplay = ({
                     <div className="text-right">
                       <div className="flex items-baseline gap-1 justify-end">
                         <span className="text-sm text-slate-500">
-                          {option.price.currency}
+                          {option?.price?.currency || ""}
                         </span>
                         <span className="text-4xl font-bold text-slate-900">
-                          {option.price.total}
+                          {option?.price?.total || ""}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1">Total price</p>
@@ -448,20 +441,20 @@ export const FlightOptionsDisplay = ({
                     <div className="flex items-center gap-2 text-slate-600">
                       <Luggage className="w-5 h-5" />
                       <span className="text-sm font-medium">
-                        {option.baggage.hasCheckedBaggage === "true"
-                          ? `${option.baggage.pieces} checked bag${
-                              option.baggage.pieces !== "1" ? "s" : ""
+                        {option?.baggage?.hasCheckedBaggage === "true"
+                          ? `${option?.baggage?.pieces} checked bag${
+                              option?.baggage?.pieces !== "1" ? "s" : ""
                             }`
                           : "No checked baggage"}
                       </span>
                     </div>
 
-                    {option.seat.assignedSeatLocation &&
-                      option.seat.assignedSeatLocation !== "null" && (
+                    {option?.seat?.assignedSeatLocation &&
+                      option?.seat?.assignedSeatLocation !== "null" && (
                         <div className="flex items-center gap-2 text-slate-600">
                           <Calendar className="w-5 h-5" />
                           <span className="text-sm font-medium">
-                            Seat: {option.seat.assignedSeatLocation}
+                            Seat: {option?.seat?.assignedSeatLocation}
                           </span>
                         </div>
                       )}

@@ -1,7 +1,60 @@
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 
+interface CarDetails {
+  make?: string;
+  model?: string;
+  category?: string;
+  transmission?: string;
+  passengers?: string;
+}
+
+interface Location {
+  city?: string;
+  address?: string;
+  dateTime?: string;
+}
+
+interface RentalPeriod {
+  pickupLocation?: Location;
+  returnLocation?: Location;
+  days?: string;
+}
+
+interface Provider {
+  name?: string;
+  rating?: string;
+}
+
+interface Price {
+  currency?: string;
+  total?: string;
+  includedFeatures?: string;
+}
+
+export interface CarRentalOption {
+  id: string;
+  url?: string;
+  carDetails?: CarDetails;
+  rentalPeriod?: RentalPeriod;
+  provider?: Provider;
+  price?: Price;
+}
+
+interface CarRentalOptions {
+  type: "car_rental";
+  options: {
+    option: CarRentalOption | CarRentalOption[];
+  };
+}
+interface HotelOptions {
+  type: "hotel";
+  options: {
+    option: null;
+  };
+}
+
 export type FlightOptions = {
-  type: "flight_options";
+  type: "flight";
   options: {
     option: FlightOption[] | FlightOption;
   };
@@ -19,20 +72,20 @@ export type Segment = {
 export type FlightOption = {
   id: string;
   url: string;
-  itineraryType: string;
+  itineraryType?: string;
   segments: {
     segment: Segment[] | Segment;
   };
-  seat: {
+  seat?: {
     isDesiredSeat: string; // vienen como "false" | "true"
     requestedSeatLocation: string; // "null" en tu data
     assignedSeatLocation: string; // "null" en tu data
   };
-  baggage: {
+  baggage?: {
     hasCheckedBaggage: string; // "true" | "false"
     pieces: string; // viene como string
   };
-  price: {
+  price?: {
     currency: string;
     total: string;
   };
@@ -56,7 +109,7 @@ type FunctionCall = {
 export type MessageChat = {
   role: "user" | "assistant";
   text: string;
-  componente: FlightOptions | undefined;
+  componente: FlightOptions | undefined | CarRentalOptions | HotelOptions;
 };
 
 export type ItemStack = {
@@ -129,6 +182,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log("Pila:", state.stack);
     console.log("mensajes:", state.messages);
+    console.log("estado:", state);
   }, [state.stack, state.messages]);
 
   return (
