@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Car,
   Calendar,
@@ -8,9 +10,16 @@ import {
   Info,
 } from "lucide-react";
 import { CarRentalOption } from "../../context/ChatContext";
+import { useChat } from "../../hooks/useChat";
 
-export const CarRentalDisplay = ({ option }: { option: CarRentalOption }) => {
+interface CarRentalDisplayProps {
+  option: CarRentalOption;
+  onSelectCar: (option: CarRentalOption) => void; // 👈 nueva prop
+}
+
+export const CarRentalDisplay = ({ option, onSelectCar }: CarRentalDisplayProps) => {
   const { url, carDetails, rentalPeriod, provider, price } = option;
+  const { setCartSelected, state } = useChat()
 
   const formatDate = (dateTime?: string) => {
     if (!dateTime) return "Fecha no disponible";
@@ -24,7 +33,25 @@ export const CarRentalDisplay = ({ option }: { option: CarRentalOption }) => {
     });
   };
 
-  if (!url) return null;
+  // === handler para seleccionar esta opción y mandarla al ReservationPanel ===
+  const handleSubmit = () => {
+    // console.log("▶ handleSubmit en CarRentalDisplay");
+    // console.log("   option:", option);
+    // console.log("   typeof onSelectCar:", typeof onSelectCar);
+
+    // if (typeof onSelectCar === "function") {
+    //   console.log("   Llamando onSelectCar(option) desde CarRentalDisplay");
+    //   onSelectCar(option);
+    // } else {
+    //   console.warn("   onSelectCar ES UNDEFINED en CarRentalDisplay");
+    // }
+    setCartSelected(option);
+  };
+
+  if (!url) {
+    console.warn("CarRentalDisplay: opción sin url, no se renderiza", option);
+    return null;
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden max-w-2xl w-full">
@@ -157,6 +184,17 @@ export const CarRentalDisplay = ({ option }: { option: CarRentalOption }) => {
             </div>
           </div>
         )}
+
+        {/* botón para seleccionar esta opción */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+          >
+            Seleccionar esta opción
+          </button>
+        </div>
       </div>
     </div>
   );

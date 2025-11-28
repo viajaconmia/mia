@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
 import { ChatMessagesController } from "../ChatMessage";
 import {
   Building2,
@@ -23,6 +25,18 @@ import Button from "../atom/Button";
 import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
 import Task from "../organism/task";
+import { useChat } from "../../hooks/useChat";
+import {
+  FlightOptions,
+  ItemStack,
+  MessageChat,
+  Segment,
+} from "../../context/ChatContext";
+import Loader from "../atom/Loader";
+
+// =====================
+// Encabezado del chat
+// =====================
 
 type ChatHeaderProps = {
   activeChat: boolean;
@@ -58,6 +72,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   );
 };
 
+// =====================
+// Área de mensajes
+// =====================
+
 type ChatMessagesAreaProps = {
   messages: MessageChat[];
   isLoading: boolean;
@@ -78,7 +96,7 @@ const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
         {isLoading && (
           <div className="flex gap-2 w-full">
             <div className="w-12 h-12 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
-              <Loader className="w-8 h-8"></Loader>
+              <Loader className="w-8 h-8" />
             </div>
             <div className="flex flex-col gap-2 w-full">
               {tasks.map((task, index) => (
@@ -96,6 +114,10 @@ const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
     </div>
   );
 };
+
+// =====================
+// Input del chat
+// =====================
 
 type ChatInputAreaProps = {
   inputMessage: string;
@@ -154,6 +176,10 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   );
 };
 
+// =====================
+// Panel reserva / carrito
+// =====================
+
 type ReservationCartPanelProps = {
   activeTab: "reserva" | "carrito";
   onTabChange: (tab: "reserva" | "carrito") => void;
@@ -183,15 +209,9 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
   );
 };
 
-// src/components/Chat/index.tsx
-import { useChat } from "../../hooks/useChat";
-import {
-  FlightOptions,
-  ItemStack,
-  MessageChat,
-  Segment,
-} from "../../context/ChatContext";
-import Loader from "../atom/Loader";
+// =====================
+// Componente principal Chat
+// =====================
 
 const Chat: React.FC = () => {
   const { setSize } = useResize();
@@ -209,10 +229,9 @@ const Chat: React.FC = () => {
   } = useChat();
 
   useEffect(() => {
-    // console.log("Stack updated:", stack);
     if (stack.length === 0) return;
     waitChatResponse();
-  }, [stack]);
+  }, [stack, waitChatResponse]);
 
   // Auto-scroll al final de los mensajes
   useEffect(() => {
@@ -223,8 +242,6 @@ const Chat: React.FC = () => {
 
   return (
     <>
-      {/* <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} /> */}
-
       <div className="flex justify-end">
         {/* Panel principal del chat */}
         <div className="w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]">
@@ -256,7 +273,7 @@ const Chat: React.FC = () => {
                   <ReservationCartPanel
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    bookingData={{}}
+                    bookingData={{} as Reservation}
                   />
                 </div>
               </div>
@@ -269,20 +286,27 @@ const Chat: React.FC = () => {
           <ReservationCartPanel
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            bookingData={{}}
+            bookingData={{} as Reservation}
           />
         </div>
       </div>
     </>
   );
 };
+
+// =====================
+// FlightOptionsDisplay
+// =====================
+
 interface FlightOptionsDisplayProps {
   flightOptions: FlightOptions;
 }
+
 export const FlightOptionsDisplay = ({
   flightOptions,
 }: FlightOptionsDisplayProps) => {
-  flightOptions.options.option;
+  const { setCartSelected } = useChat(); // igual que en CarRentalDisplay
+
   const options = Array.isArray(flightOptions.options.option)
     ? flightOptions.options.option
     : [flightOptions.options.option];
@@ -298,7 +322,10 @@ export const FlightOptionsDisplay = ({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const calculateDuration = (departure: string, arrival: string) => {
@@ -340,9 +367,9 @@ export const FlightOptionsDisplay = ({
 
             <div className="flex flex-col items-center px-6">
               <div className="flex items-center gap-2 text-slate-400 mb-2">
-                <div className="h-px w-12 bg-slate-300"></div>
+                <div className="h-px w-12 bg-slate-300" />
                 <Plane className="w-5 h-5" />
-                <div className="h-px w-12 bg-slate-300"></div>
+                <div className="h-px w-12 bg-slate-300" />
               </div>
               <span className="text-xs font-medium text-slate-500">
                 {calculateDuration(segment.departureTime, segment.arrivalTime)}
@@ -362,7 +389,9 @@ export const FlightOptionsDisplay = ({
                 </span>
               </div>
               <div className="flex items-center gap-2 justify-end text-slate-600">
-                <span className="text-sm">{segment.destination.city} ·</span>
+                <span className="text-sm">
+                  {segment.destination.city} ·
+                </span>
                 <span className="font-medium">
                   {segment.destination.airportCode}
                 </span>
@@ -427,7 +456,9 @@ export const FlightOptionsDisplay = ({
                           {option?.price?.total || ""}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Total price</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Total price
+                      </p>
                     </div>
                   </div>
 
@@ -442,9 +473,8 @@ export const FlightOptionsDisplay = ({
                       <Luggage className="w-5 h-5" />
                       <span className="text-sm font-medium">
                         {option?.baggage?.hasCheckedBaggage === "true"
-                          ? `${option?.baggage?.pieces} checked bag${
-                              option?.baggage?.pieces !== "1" ? "s" : ""
-                            }`
+                          ? `${option?.baggage?.pieces} checked bag${option?.baggage?.pieces !== "1" ? "s" : ""
+                          }`
                           : "No checked baggage"}
                       </span>
                     </div>
@@ -459,7 +489,16 @@ export const FlightOptionsDisplay = ({
                         </div>
                       )}
 
-                    <div className="flex-1"></div>
+                    <div className="flex-1" />
+
+                    {/* Botón para seleccionar este vuelo */}
+                    <button
+                      type="button"
+                      onClick={() => setCartSelected(option)}
+                      className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      Seleccionar este vuelo
+                    </button>
                   </div>
                 </div>
               </div>

@@ -1,3 +1,6 @@
+"use client";
+
+
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 
 export type HotelResponse = {
@@ -167,6 +170,7 @@ interface ChatState {
   messages: MessageChat[];
   booking: { nombre: string } | null;
   input: string;
+  select: CarRentalOption | null;
 }
 
 type ChatAction =
@@ -176,6 +180,8 @@ type ChatAction =
   | { type: "SET_THREAD"; payload: string } // DONE
   | { type: "SET_MESSAGES"; payload: MessageChat[] } //DONE
   | { type: "SET_HISTORY"; payload: ItemHistory[] } //DONE
+  | { type: "SET_SELECT"; payload: null | CarRentalOption } //DONE
+
   | { type: "SET_BOOKING"; payload: { nombre: string } }; //DONE
 
 const initialChatState: ChatState = {
@@ -186,6 +192,7 @@ const initialChatState: ChatState = {
   booking: null,
   messages: [],
   input: "",
+  select: null,
 };
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
@@ -202,6 +209,8 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
       return { ...state, messages: action.payload };
     case "SET_HISTORY":
       return { ...state, history: action.payload };
+    case "SET_SELECT":
+      return { ...state, select: action.payload };
     case "SET_BOOKING":
       return { ...state, booking: action.payload };
     default:
@@ -224,6 +233,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("mensajes:", state.messages);
     console.log("estado:", state);
   }, [state.stack, state.messages]);
+  useEffect(() => {
+    console.log("SELECT:", state.select);
+  }, [state.select]);
 
   return (
     <ChatContext.Provider value={{ dispatcher, state }}>

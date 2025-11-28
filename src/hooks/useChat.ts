@@ -1,4 +1,5 @@
 import {
+  CarRentalOption,
   ItemHistory,
   ItemStack,
   MessageChat,
@@ -17,6 +18,10 @@ export const useChat = () => {
     const newStack = [...newItems];
     dispatcher({ type: "SET_STACK", payload: newStack });
   };
+
+  const setCartSelected = (option: CarRentalOption | null) => {
+    dispatcher({ type: "SET_SELECT", payload: option });
+  }
 
   // Limpia todo el stack
   const clearStack = () => {
@@ -159,5 +164,7 @@ export const useChat = () => {
     sendMessage,
     waitChatResponse,
     messages: state.messages,
+    setCartSelected,
+    state
   };
 };
