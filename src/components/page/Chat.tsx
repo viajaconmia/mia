@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatMessagesController } from "../ChatMessage";
 import {
   Building2,
@@ -18,8 +18,6 @@ import Button from "../atom/Button";
 import { AuthModal } from "../AuthModal";
 import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
-import Task from "../organism/task";
-import { Logo } from "../atom/Logo";
 
 // ---------- ÁTOMOS / MOLÉCULAS UI ---------- //
 
@@ -69,18 +67,7 @@ const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
     <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={endRef}>
       <div className="w-full max-w-screen-md md:max-w-screen-2xl mx-auto space-y-4">
         {messages.length > 0 && <ChatMessagesController messages={messages} />}
-        {isLoading && (
-          <div className="flex gap-2 w-full">
-            <div className="w-14 h-14 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
-              <Logo className="w-10 h-10" />
-            </div>
-            <Task
-              label="Esperando respuesta..."
-              status="loading"
-              loadingMessage="Estamos procesando tu solicitud."
-            />
-          </div>
-        )}
+        {isLoading && <Loader />}
       </div>
     </div>
   );
@@ -124,7 +111,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               size={
                 setSize([
                   { size: "base", obj: "rounded" },
-                  { size: "sm", obj: "md" }
+                  { size: "sm", obj: "md" },
                 ]) as unknown as "rounded" | "md"
               }
               className="md:w-full md:h-full"
@@ -172,43 +159,101 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
   );
 };
 
-// src/components/Chat/index.tsx
-import { useChatLogic } from "../../hooks/useChatLogic";
+// ---------- COMPONENTE PRINCIPAL CHAT (MISMA LÓGICA) ---------- //
 
 const Chat: React.FC = () => {
-  const {
-    inputMessage,
-    setInputMessage,
-    activeTab,
-    setActiveTab,
-    isModalOpen,
-    setIsModalOpen,
-    activeChat,
-    setActiveChat,
-    messages,
-    isLoading,
-    taskQueue,
-    bookingData,
-    handleSend,
-    promptLimitReached,
-  } = useChatLogic();
-
+  const [promptCount, setPromptCount] = useState(0);
+  const [_, setLocation] = useLocation();
+  const [messages, setMessages] = useState<ChatContent[]>([]);
+  const [thread, setThread] = useState<string | null>(null);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [bookingData, setBookingData] = useState<Reservation | null>(null);
+  const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { authState } = useUser();
+  const [activeChat, setActiveChat] = useState(true);
   const { setSize } = useResize();
-  const endRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll al final de los mensajes
+  const endRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (endRef.current) {
       endRef.current.scrollTop = endRef.current.scrollHeight;
     }
-  }, [messages, taskQueue, isLoading]);
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    if (!authState?.isAuthenticated && promptCount >= 2) {
+      setLocation("/registration");
+      return;
+    }
+
+    setPromptCount(promptCount + 1);
+    console.log(promptCount);
+
+    const newMessage: UserMessage = {
+      component_type: "user",
+      content: inputMessage,
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    setInputMessage("");
+    setIsLoading(true);
+
+    sendMessage(
+      inputMessage,
+      thread || null,
+      authState?.user?.id || null,
+      (data) => {
+        try {
+          if (data.error) {
+            throw new Error(JSON.stringify(data.error));
+          }
+
+          setThread(data.thread ?? null);
+          if (data.response && Array.isArray(data.response)) {
+            setMessages((prev) => [
+              ...prev,
+              ...(data.response as ChatContent[]),
+            ]);
+          } else if (!Array.isArray(data.response)) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                component_type: "error",
+                content: "Lo siento, no puedo ayudarte con eso.",
+              },
+            ]);
+          }
+
+          setBookingData(data.reserva ? data.reserva[0] : null);
+        } catch (error) {
+          console.error(error);
+          setMessages((prev) => [
+            ...prev,
+            {
+              component_type: "error",
+              content: "Lo siento, ocurrio un error al buscar la información.",
+            },
+          ]);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    );
+  };
+
+  const promptLimitReached = !authState.isAuthenticated && promptCount >= 2;
 
   return (
     <>
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
       <div className="flex justify-end">
-        {/* Panel principal del chat */}
+        {/* Panel principal (chat + móvil) */}
         <div className="w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]">
           <div className="flex flex-col h-full border-r">
             <ChatHeader
@@ -220,15 +265,15 @@ const Chat: React.FC = () => {
               <>
                 <ChatMessagesArea
                   messages={messages}
-                  taskQueue={taskQueue}
                   isLoading={isLoading}
                   endRef={endRef}
                 />
+
                 <ChatInputArea
                   inputMessage={inputMessage}
-                  onChange={setInputMessage}
-                  onSend={handleSend}
-                  disabled={promptLimitReached || !inputMessage.trim() || isLoading}
+                  onChange={(value) => setInputMessage(value)}
+                  onSend={handleSendMessage}
+                  disabled={promptLimitReached || !inputMessage.trim()}
                   setSize={setSize}
                 />
               </>
@@ -246,17 +291,24 @@ const Chat: React.FC = () => {
           </div>
         </div>
 
-        {/* Panel lateral de reservas/carrito */}
+        {/* Panel derecho en desktop */}
         <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
           <ReservationCartPanel
             activeTab={activeTab}
             onTabChange={setActiveTab}
             bookingData={bookingData}
           />
+          {/* Panel lateral de reservas/carrito */}
+          <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
+            <ReservationCartPanel
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              bookingData={bookingData}
+            />
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+      );
 };
 
-export default Chat;
+      export default Chat;
