@@ -122,7 +122,7 @@ export const useChat = () => {
         {
           role: "user",
           text: message,
-          component: undefined,
+          componente: undefined,
         },
         ...state.messages.reverse(),
       ]);

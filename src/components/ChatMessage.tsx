@@ -6,6 +6,8 @@ import { MessageChat } from "../context/ChatContext";
 import { useChat } from "../hooks/useChat";
 import { FlightOptionsDisplay } from "./page/Chat";
 import { CarRentalDisplay } from "./template/CardRentalCart";
+import { adaptHotelData } from "../services/AdapterHotel";
+import { HotelCard } from "./HotelCard";
 
 interface ChatMessageProps {
   content: string;
@@ -52,7 +54,28 @@ export const ChatMessagesController: React.FC<{
           }
 
           if (data.type == "hotel") {
-            return <h1>este es el de hotel</h1>;
+            console.log(data);
+            const datos = Array.isArray(data.options.option)
+              ? data.options.option
+              : [data.options.option];
+            const hoteles = adaptHotelData(datos);
+            console.log("estos");
+            console.log(datos);
+            console.log(hoteles);
+            return (
+              <div key={index} className="overflow-x-auto p-4 pt-0">
+                <div className="flex flex-col md:flex-row gap-3">
+                  {hoteles.map((opt, i) => (
+                    <div
+                      key={`${index}-hotel-${i}`}
+                      className="md:min-w-[300px]"
+                    >
+                      <HotelCard data_hotel={opt} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
           }
         }
         console.log("este item salio del condicional", item);

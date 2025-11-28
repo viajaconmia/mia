@@ -1,5 +1,45 @@
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 
+export type HotelResponse = {
+  type?: string;
+  options?: {
+    option?: HotelOption[];
+  };
+};
+
+export type HotelOption = {
+  id?: string;
+  url?: string;
+  hotelDetails?: {
+    name?: string;
+    location?: {
+      city?: string;
+      address?: string;
+      proximityToLandmark?: string;
+    };
+    media: { imagen: string | string[] };
+    starRating?: string;
+    guestRating?: string;
+    amenities?: string;
+  };
+  roomDetails?: {
+    roomType?: string;
+    maxGuests?: string;
+    beds?: string;
+    breakfastIncluded?: string; // viene como "true"/"false"
+  };
+  stayPeriod?: {
+    checkInDate?: string;
+    checkOutDate?: string;
+    nights?: string;
+  };
+  price?: {
+    currency?: string;
+    totalPerStay?: string;
+    taxAndFeesIncluded?: string;
+  };
+};
+
 interface CarDetails {
   make?: string;
   model?: string;
@@ -49,7 +89,7 @@ interface CarRentalOptions {
 interface HotelOptions {
   type: "hotel";
   options: {
-    option: null;
+    option: HotelOption | HotelOption[];
   };
 }
 
