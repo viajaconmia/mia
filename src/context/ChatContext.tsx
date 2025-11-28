@@ -1,141 +1,210 @@
-// src/context/ChatContext.tsx
-import React, { createContext, useState, useContext, useCallback } from "react";
-import { sendMessage } from "../services/chatService";
-import { ChatContent, Reservation } from "../types/chat";
+"use client";
+
+
+import React, { createContext, useContext, useEffect, useReducer } from "react";
+
+interface CarDetails {
+  make?: string;
+  model?: string;
+  category?: string;
+  transmission?: string;
+  passengers?: string;
+}
+
+interface Location {
+  city?: string;
+  address?: string;
+  dateTime?: string;
+}
+
+interface RentalPeriod {
+  pickupLocation?: Location;
+  returnLocation?: Location;
+  days?: string;
+}
+
+interface Provider {
+  name?: string;
+  rating?: string;
+}
+
+interface Price {
+  currency?: string;
+  total?: string;
+  includedFeatures?: string;
+}
+
+export interface CarRentalOption {
+  id: string;
+  url?: string;
+  carDetails?: CarDetails;
+  rentalPeriod?: RentalPeriod;
+  provider?: Provider;
+  price?: Price;
+}
+
+interface CarRentalOptions {
+  type: "car_rental";
+  options: {
+    option: CarRentalOption | CarRentalOption[];
+  };
+}
+interface HotelOptions {
+  type: "hotel";
+  options: {
+    option: null;
+  };
+}
+
+export type FlightOptions = {
+  type: "flight";
+  options: {
+    option: FlightOption[] | FlightOption;
+  };
+};
+
+export type Segment = {
+  origin: AirportInfo;
+  destination: AirportInfo;
+  departureTime: string;
+  arrivalTime: string;
+  airline: string;
+  flightNumber: string;
+};
+
+export type FlightOption = {
+  id: string;
+  url: string;
+  itineraryType?: string;
+  segments: {
+    segment: Segment[] | Segment;
+  };
+  seat?: {
+    isDesiredSeat: string; // vienen como "false" | "true"
+    requestedSeatLocation: string; // "null" en tu data
+    assignedSeatLocation: string; // "null" en tu data
+  };
+  baggage?: {
+    hasCheckedBaggage: string; // "true" | "false"
+    pieces: string; // viene como string
+  };
+  price?: {
+    currency: string;
+    total: string;
+  };
+};
+
+export type AirportInfo = {
+  airportCode: string;
+  city: string;
+  airportName: string;
+};
+
+type FunctionCall = {
+  status: "success" | "loading" | "error" | "queue";
+  tarea: string;
+  assistant: string;
+  args: any;
+  id: string;
+  resolucion?: string;
+};
+
+export type MessageChat = {
+  role: "user" | "assistant";
+  text: string;
+  componente: FlightOptions | undefined | CarRentalOptions | HotelOptions;
+};
+
+export type ItemStack = {
+  role: "assistant";
+  functionCall: FunctionCall;
+};
+
+export type ItemHistory = MessageChat | ItemStack;
 
 interface ChatState {
-  messages: ChatContent[];
-  taskQueue: string[];
+  stack: ItemStack[];
   isLoading: boolean;
-  promptCount: number;
   thread: string | null;
-  bookingData: Reservation | null;
+  history: ItemHistory[];
+  messages: MessageChat[];
+  booking: { nombre: string } | null;
+  input: string;
+  select: CarRentalOption | null;
 }
 
-interface ChatContextType {
-  chatState: ChatState;
-  handleSendMessage: (message: string, userId?: string | null) => Promise<void>;
-  clearMessages: () => void;
-  updateBookingData: (bookingData: Reservation | null) => void;
-  incrementPromptCount: () => void;
-}
+type ChatAction =
+  | { type: "SET_STACK"; payload: ItemStack[] } // DONE
+  | { type: "SET_LOADING"; payload: boolean } //DONE
+  | { type: "SET_INPUT"; payload: string } //DONE
+  | { type: "SET_THREAD"; payload: string } // DONE
+  | { type: "SET_MESSAGES"; payload: MessageChat[] } //DONE
+  | { type: "SET_HISTORY"; payload: ItemHistory[] } //DONE
+  | { type: "SET_SELECT"; payload: null | CarRentalOption } //DONE
+
+  | { type: "SET_BOOKING"; payload: { nombre: string } }; //DONE
 
 const initialChatState: ChatState = {
-  messages: [] as ChatContent[],
-  taskQueue: [] as string[],
   isLoading: false,
-  promptCount: 0,
+  history: [],
+  stack: [],
   thread: null,
-  bookingData: null,
+  booking: null,
+  messages: [],
+  input: "",
+  select: null,
+};
+
+const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
+  switch (action.type) {
+    case "SET_STACK":
+      return { ...state, stack: action.payload };
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+    case "SET_INPUT":
+      return { ...state, input: action.payload };
+    case "SET_THREAD":
+      return { ...state, thread: action.payload };
+    case "SET_MESSAGES":
+      return { ...state, messages: action.payload };
+    case "SET_HISTORY":
+      return { ...state, history: action.payload };
+    case "SET_SELECT":
+      return { ...state, select: action.payload };
+    case "SET_BOOKING":
+      return { ...state, booking: action.payload };
+    default:
+      return state;
+  }
+};
+
+type ChatContextType = {
+  state: ChatState;
+  dispatcher: React.Dispatch<ChatAction>;
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
-  const [chatState, setChatState] = useState<ChatState>(initialChatState);
+  const [state, dispatcher] = useReducer(chatReducer, initialChatState);
 
-  const handleSendMessage = useCallback(async (message: string, userId?: string | null) => {
-    if (!message.trim() || chatState.isLoading) return;
-
-    // Iniciar carga y agregar mensaje del usuario
-    setChatState(prev => ({
-      ...prev,
-      isLoading: true,
-      taskQueue: ["Procesando tu mensaje..."],
-      messages: [
-        ...prev.messages,
-        {
-          component_type: "user",
-          content: message,
-        },
-      ],
-    }));
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        sendMessage(message, chatState.thread, userId, (data) => {
-          try {
-            if (data.error) {
-              reject(new Error(JSON.stringify(data.error)));
-              return;
-            }
-
-            // Actualizar estado con la respuesta
-            setChatState(prev => ({
-              ...prev,
-              thread: data.thread || null,
-              messages: [
-                ...prev.messages,
-                ...(Array.isArray(data.response)
-                  ? data.response
-                  : [{
-                    component_type: "error",
-                    content: "Lo siento, no puedo ayudarte con eso."
-                  }]
-                )
-              ],
-              bookingData: data.reserva ? data.reserva[0] : prev.bookingData,
-              taskQueue: [], // Limpiar cola de tareas al terminar
-            }));
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        });
-      });
-    } catch (error) {
-      console.error(error);
-      setChatState(prev => ({
-        ...prev,
-        messages: [
-          ...prev.messages,
-          {
-            component_type: "error",
-            content: "Hubo un error al procesar el mensaje."
-          },
-        ],
-        taskQueue: [],
-      }));
-    } finally {
-      setChatState(prev => ({
-        ...prev,
-        isLoading: false,
-      }));
-    }
-  }, [chatState.thread, chatState.isLoading]);
-
-  const clearMessages = useCallback(() => {
-    setChatState(initialChatState);
-  }, []);
-
-  const updateBookingData = useCallback((bookingData: Reservation | null) => {
-    setChatState(prev => ({
-      ...prev,
-      bookingData,
-    }));
-  }, []);
-
-  const incrementPromptCount = useCallback(() => {
-    setChatState(prev => ({
-      ...prev,
-      promptCount: prev.promptCount + 1,
-    }));
-  }, []);
+  useEffect(() => {
+    console.log("Pila:", state.stack);
+    console.log("mensajes:", state.messages);
+    console.log("estado:", state);
+  }, [state.stack, state.messages]);
+  useEffect(() => {
+    console.log("SELECT:", state.select);
+  }, [state.select]);
 
   return (
-    <ChatContext.Provider value={{
-      chatState,
-      handleSendMessage,
-      clearMessages,
-      updateBookingData,
-      incrementPromptCount,
-    }}>
+    <ChatContext.Provider value={{ dispatcher, state }}>
       {children}
     </ChatContext.Provider>
   );
 };
 
-export const useChat = () => {
+export const useChatContext = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {
     throw new Error("useChat must be used within a ChatProvider");

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
 import { ChatMessagesController } from "../ChatMessage";
 import {
   Building2,
@@ -7,26 +9,44 @@ import {
   Send,
   Plus,
   ArrowLeft,
+  Luggage,
+  Calendar,
+  Plane,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
-import { ChatContent, Reservation } from "../../types/chat";
+import { Reservation } from "../../types/chat";
 import { NavigationLink } from "../atom/NavigationLink";
 import ROUTES from "../../constants/routes";
 import { TabsList } from "../molecule/TabsList";
 import { Cart } from "../Cart";
 import Button from "../atom/Button";
-import { AuthModal } from "../AuthModal";
 import { InputText } from "../atom/Input";
 import useResize from "../../hooks/useResize";
+import Task from "../organism/task";
+import { useChat } from "../../hooks/useChat";
+import {
+  FlightOptions,
+  ItemStack,
+  MessageChat,
+  Segment,
+} from "../../context/ChatContext";
+import Loader from "../atom/Loader";
 
-// ---------- ÁTOMOS / MOLÉCULAS UI ---------- //
+// =====================
+// Encabezado del chat
+// =====================
 
 type ChatHeaderProps = {
   activeChat: boolean;
   onToggleChat: () => void;
 };
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ activeChat, onToggleChat }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({
+  activeChat,
+  onToggleChat,
+}) => {
   return (
     <div className="p-4 bg-white/20 backdrop-blur-sm flex flex-col gap-2">
       <Button size="md" className="md:hidden" onClick={onToggleChat}>
@@ -52,26 +72,52 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ activeChat, onToggleChat }) => 
   );
 };
 
+// =====================
+// Área de mensajes
+// =====================
+
 type ChatMessagesAreaProps = {
-  messages: ChatContent[];
+  messages: MessageChat[];
   isLoading: boolean;
   endRef: React.RefObject<HTMLDivElement>;
+  tasks: ItemStack[];
 };
 
 const ChatMessagesArea: React.FC<ChatMessagesAreaProps> = ({
   messages,
   isLoading,
   endRef,
+  tasks = [],
 }) => {
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={endRef}>
       <div className="w-full max-w-screen-md md:max-w-screen-2xl mx-auto space-y-4">
         {messages.length > 0 && <ChatMessagesController messages={messages} />}
-        {isLoading && <Loader />}
+        {isLoading && (
+          <div className="flex gap-2 w-full">
+            <div className="w-12 h-12 flex-shrink-0 bg-white/80 rounded-full flex items-center justify-center">
+              <Loader className="w-8 h-8" />
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              {tasks.map((task, index) => (
+                <Task
+                  key={index}
+                  label={task.functionCall.tarea}
+                  status={task.functionCall.status}
+                  loadingMessage="Estamos procesando tu solicitud."
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+// =====================
+// Input del chat
+// =====================
 
 type ChatInputAreaProps = {
   inputMessage: string;
@@ -130,6 +176,10 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   );
 };
 
+// =====================
+// Panel reserva / carrito
+// =====================
+
 type ReservationCartPanelProps = {
   activeTab: "reserva" | "carrito";
   onTabChange: (tab: "reserva" | "carrito") => void;
@@ -159,101 +209,41 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
   );
 };
 
-// ---------- COMPONENTE PRINCIPAL CHAT (MISMA LÓGICA) ---------- //
+// =====================
+// Componente principal Chat
+// =====================
 
 const Chat: React.FC = () => {
-  const [promptCount, setPromptCount] = useState(0);
-  const [_, setLocation] = useLocation();
-  const [messages, setMessages] = useState<ChatContent[]>([]);
-  const [thread, setThread] = useState<string | null>(null);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [bookingData, setBookingData] = useState<Reservation | null>(null);
-  const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const { authState } = useUser();
-  const [activeChat, setActiveChat] = useState(true);
   const { setSize } = useResize();
+  const endRef = useRef<HTMLDivElement>(null);
+  const [activeChat, setActiveChat] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<"reserva" | "carrito">("reserva");
+  const {
+    sendMessage,
+    setInput,
+    input,
+    loading,
+    stack,
+    waitChatResponse,
+    messages,
+  } = useChat();
 
-  const endRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (stack.length === 0) return;
+    waitChatResponse();
+  }, [stack, waitChatResponse]);
 
+  // Auto-scroll al final de los mensajes
   useEffect(() => {
     if (endRef.current) {
       endRef.current.scrollTop = endRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    if (!authState?.isAuthenticated && promptCount >= 2) {
-      setLocation("/registration");
-      return;
-    }
-
-    setPromptCount(promptCount + 1);
-    console.log(promptCount);
-
-    const newMessage: UserMessage = {
-      component_type: "user",
-      content: inputMessage,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setInputMessage("");
-    setIsLoading(true);
-
-    sendMessage(
-      inputMessage,
-      thread || null,
-      authState?.user?.id || null,
-      (data) => {
-        try {
-          if (data.error) {
-            throw new Error(JSON.stringify(data.error));
-          }
-
-          setThread(data.thread ?? null);
-          if (data.response && Array.isArray(data.response)) {
-            setMessages((prev) => [
-              ...prev,
-              ...(data.response as ChatContent[]),
-            ]);
-          } else if (!Array.isArray(data.response)) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                component_type: "error",
-                content: "Lo siento, no puedo ayudarte con eso.",
-              },
-            ]);
-          }
-
-          setBookingData(data.reserva ? data.reserva[0] : null);
-        } catch (error) {
-          console.error(error);
-          setMessages((prev) => [
-            ...prev,
-            {
-              component_type: "error",
-              content: "Lo siento, ocurrio un error al buscar la información.",
-            },
-          ]);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    );
-  };
-
-  const promptLimitReached = !authState.isAuthenticated && promptCount >= 2;
-
   return (
     <>
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-
       <div className="flex justify-end">
-        {/* Panel principal (chat + móvil) */}
+        {/* Panel principal del chat */}
         <div className="w-full md:w-2/3 transition-all duration-500 fixed left-0 h-[calc(100dvh-3rem)]">
           <div className="flex flex-col h-full border-r">
             <ChatHeader
@@ -265,15 +255,15 @@ const Chat: React.FC = () => {
               <>
                 <ChatMessagesArea
                   messages={messages}
-                  isLoading={isLoading}
+                  tasks={stack}
+                  isLoading={loading}
                   endRef={endRef}
                 />
-
                 <ChatInputArea
-                  inputMessage={inputMessage}
-                  onChange={(value) => setInputMessage(value)}
-                  onSend={handleSendMessage}
-                  disabled={promptLimitReached || !inputMessage.trim()}
+                  inputMessage={input}
+                  onChange={setInput}
+                  onSend={sendMessage}
+                  disabled={!input.trim() || loading}
                   setSize={setSize}
                 />
               </>
@@ -283,7 +273,7 @@ const Chat: React.FC = () => {
                   <ReservationCartPanel
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    bookingData={bookingData}
+                    bookingData={{} as Reservation}
                   />
                 </div>
               </div>
@@ -291,24 +281,233 @@ const Chat: React.FC = () => {
           </div>
         </div>
 
-        {/* Panel derecho en desktop */}
+        {/* Panel lateral de reservas/carrito */}
         <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
           <ReservationCartPanel
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            bookingData={bookingData}
+            bookingData={{} as Reservation}
           />
-          {/* Panel lateral de reservas/carrito */}
-          <div className="hidden md:flex md:w-1/3 h-[calc(100dvh-4rem)] p-6 justify-center">
-            <ReservationCartPanel
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              bookingData={bookingData}
-            />
-          </div>
         </div>
-      </>
-      );
+      </div>
+    </>
+  );
 };
 
-      export default Chat;
+// =====================
+// FlightOptionsDisplay
+// =====================
+
+interface FlightOptionsDisplayProps {
+  flightOptions: FlightOptions;
+}
+
+export const FlightOptionsDisplay = ({
+  flightOptions,
+}: FlightOptionsDisplayProps) => {
+  const { setCartSelected } = useChat(); // igual que en CarRentalDisplay
+
+  const options = Array.isArray(flightOptions.options.option)
+    ? flightOptions.options.option
+    : [flightOptions.options.option];
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const calculateDuration = (departure: string, arrival: string) => {
+    const diff = new Date(arrival).getTime() - new Date(departure).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const renderSegment = (
+    segment: Segment,
+    index: number,
+    totalSegments: number
+  ) => (
+    <div key={index} className="relative">
+      <div className="flex items-start gap-6">
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-bold text-slate-900">
+                  {formatTime(segment.departureTime)}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {formatDate(segment.departureTime)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <MapPin className="w-4 h-4" />
+                <span className="font-medium">
+                  {segment.origin.airportCode}
+                </span>
+                <span className="text-sm">· {segment.origin.city}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {segment.origin.airportName}
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center px-6">
+              <div className="flex items-center gap-2 text-slate-400 mb-2">
+                <div className="h-px w-12 bg-slate-300" />
+                <Plane className="w-5 h-5" />
+                <div className="h-px w-12 bg-slate-300" />
+              </div>
+              <span className="text-xs font-medium text-slate-500">
+                {calculateDuration(segment.departureTime, segment.arrivalTime)}
+              </span>
+              <span className="text-xs text-slate-400 mt-1">
+                {segment.airline} {segment.flightNumber}
+              </span>
+            </div>
+
+            <div className="flex-1 text-right">
+              <div className="flex items-baseline gap-2 mb-1 justify-end">
+                <span className="text-3xl font-bold text-slate-900">
+                  {formatTime(segment.arrivalTime)}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {formatDate(segment.arrivalTime)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 justify-end text-slate-600">
+                <span className="text-sm">
+                  {segment.destination.city} ·
+                </span>
+                <span className="font-medium">
+                  {segment.destination.airportCode}
+                </span>
+                <MapPin className="w-4 h-4" />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {segment.destination.airportName}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {index < totalSegments - 1 && (
+        <div className="flex items-center gap-2 py-4 px-4 my-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <Clock className="w-4 h-4 text-amber-600" />
+          <span className="text-sm font-medium text-amber-800">
+            Layover in {segment.destination.city}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="space-y-6">
+          {options.map((option) => {
+            const segments = Array.isArray(option.segments.segment)
+              ? option.segments.segment
+              : [option.segments.segment];
+
+            return (
+              <div
+                key={option.id}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-slate-200"
+              >
+                <div className="p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Plane className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-900 capitalize">
+                          {option?.itineraryType?.replace("_", " ") || ""} Trip
+                        </h2>
+                        <p className="text-sm text-slate-500">
+                          {segments.length}{" "}
+                          {segments.length === 1 ? "segment" : "segments"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="flex items-baseline gap-1 justify-end">
+                        <span className="text-sm text-slate-500">
+                          {option?.price?.currency || ""}
+                        </span>
+                        <span className="text-4xl font-bold text-slate-900">
+                          {option?.price?.total || ""}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Total price
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 mb-6">
+                    {segments.map((segment, index) =>
+                      renderSegment(segment, index, segments.length)
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-6 pt-6 border-t border-slate-200">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Luggage className="w-5 h-5" />
+                      <span className="text-sm font-medium">
+                        {option?.baggage?.hasCheckedBaggage === "true"
+                          ? `${option?.baggage?.pieces} checked bag${option?.baggage?.pieces !== "1" ? "s" : ""
+                          }`
+                          : "No checked baggage"}
+                      </span>
+                    </div>
+
+                    {option?.seat?.assignedSeatLocation &&
+                      option?.seat?.assignedSeatLocation !== "null" && (
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Calendar className="w-5 h-5" />
+                          <span className="text-sm font-medium">
+                            Seat: {option?.seat?.assignedSeatLocation}
+                          </span>
+                        </div>
+                      )}
+
+                    <div className="flex-1" />
+
+                    {/* Botón para seleccionar este vuelo */}
+                    <button
+                      type="button"
+                      onClick={() => setCartSelected(option)}
+                      className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      Seleccionar este vuelo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Chat;

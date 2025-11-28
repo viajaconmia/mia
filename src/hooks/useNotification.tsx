@@ -1,5 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { useLocalStorage } from "./useLocalStorage";
+import {
+  createContext,
+  useContext,
+  // useEffect,
+  useState,
+} from "react";
+// import { useLocalStorage } from "./useLocalStorage";
 
 type NotificationType = "success" | "error" | "info";
 
@@ -33,9 +38,9 @@ export const NotificationProvider = ({
     message: "",
     show: false,
   });
-  const { setear, value } = useLocalStorage<{ fecha: string }>(
-    "time_to_repeat_anuncio"
-  );
+  // const { setear, value } = useLocalStorage<{ fecha: string }>(
+  // "time_to_repeat_anuncio"
+  // );
 
   const showNotification = (
     type: NotificationType,
@@ -51,28 +56,28 @@ export const NotificationProvider = ({
     setNotification((prev) => ({ ...prev, show: false }));
   };
 
-  useEffect(() => {
-    if (value?.fecha) {
-      const fecha = new Date(value?.fecha);
-      fecha.setMinutes(fecha.getMinutes() + 120);
-      const current = new Date();
-      if (fecha.getTime() - current.getTime() <= 0) {
-        setear({ fecha: String(new Date().toISOString()) });
-        showNotification(
-          "info",
-          "¡Ya puedes ver tu nueva pagina de consultas!",
-          30
-        );
-      }
-    } else {
-      setear({ fecha: String(new Date().toISOString()) });
-      showNotification(
-        "info",
-        "¡Ya puedes ver tu nueva pagina de consultas!",
-        15
-      );
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (value?.fecha) {
+  //     const fecha = new Date(value?.fecha);
+  //     fecha.setMinutes(fecha.getMinutes() + 120);
+  //     const current = new Date();
+  //     if (fecha.getTime() - current.getTime() <= 0) {
+  //       setear({ fecha: String(new Date().toISOString()) });
+  //       showNotification(
+  //         "info",
+  //         "¡Ya puedes ver tu nueva pagina de consultas!",
+  //         30
+  //       );
+  //     }
+  //   } else {
+  //     setear({ fecha: String(new Date().toISOString()) });
+  //     showNotification(
+  //       "info",
+  //       "¡Ya puedes ver tu nueva pagina de consultas!",
+  //       15
+  //     );
+  //   }
+  // }, []);
 
   return (
     <NotificationContext.Provider

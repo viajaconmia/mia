@@ -1,3 +1,4 @@
+import { ItemHistory, ItemStack } from "../context/ChatContext";
 import { FetchChatResponse, FetchFormatResponse } from "../types/chat";
 
 async function sendMessage(
@@ -44,3 +45,87 @@ async function sendMessage(
 export { sendMessage };
 
 const API_URL = "https://chatmia.wl.r.appspot.com/chat";
+
+import { ApiResponse, ApiService } from "./ApiService";
+import { UserSingleton } from "./UserSingleton";
+
+export class ChatService extends ApiService {
+  private user: UserSingleton = UserSingleton.getInstance();
+  private static instance: ChatService;
+  private ENDPOINTS = {
+    POST: {
+      enviar_mensage: "/message",
+    },
+  };
+
+  constructor() {
+    super("");
+  }
+
+  static getInstance() {
+    if (!this.instance) {
+      this.instance = new ChatService();
+    }
+    return this.instance;
+  }
+
+  public enviarMensaje = async ({
+    message,
+    thread,
+    history,
+    stack,
+  }: {
+    message?: string;
+    thread: string | null;
+    history: ItemHistory[];
+    stack: ItemStack[];
+  }): Promise<
+    ApiResponse<{
+      stack: ItemStack[];
+      history: ItemHistory[];
+      thread: string | null;
+    }>
+  > =>
+    this.post<{
+      stack: ItemStack[];
+      history: ItemHistory[];
+      thread: string | null;
+    }>({
+      path: this.formatPath(this.ENDPOINTS.POST.enviar_mensage),
+      body: {
+        message,
+        thread,
+        user: this.user.getUser()?.info?.id_agente,
+        history,
+        stack,
+      },
+    });
+  public esperarRespuesta = async ({
+    thread,
+    history,
+    stack,
+  }: {
+    thread: string | null;
+    history: ItemHistory[];
+    stack: ItemStack[];
+  }): Promise<
+    ApiResponse<{
+      stack: ItemStack[];
+      history: ItemHistory[];
+      thread: string | null;
+    }>
+  > =>
+    this.post<{
+      stack: ItemStack[];
+      history: ItemHistory[];
+      thread: string | null;
+    }>({
+      path: this.formatPath(this.ENDPOINTS.POST.enviar_mensage),
+      body: {
+        thread,
+        user: this.user.getUser()?.info?.id_agente,
+        history,
+        stack,
+      },
+    });
+}

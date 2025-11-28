@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import type { BookingData } from "../types";
 import {
@@ -8,6 +10,7 @@ import {
   ArrowRight,
   Clock,
   ShoppingCartIcon,
+  Car,
 } from "lucide-react";
 import { useSolicitud } from "../hooks/useSolicitud";
 import { Reservation } from "../types/chat";
@@ -19,6 +22,10 @@ import { CartService } from "../services/CartService";
 import { useNotification } from "../hooks/useNotification";
 import { useCart } from "../context/cartContext";
 import { Logo } from "./atom/Logo";
+import { CarRentalOption } from "../context/ChatContext";
+import { TravelLayout } from "./select";
+import { useChat } from "../hooks/useChat";
+
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -48,10 +55,10 @@ function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   return false;
 }
 
-const { crearSolicitudChat } = useSolicitud();
 
 interface ReservationPanelProps {
   booking?: Reservation | null;
+  selectedCar?: CarRentalOption | null; // 👈 nueva prop
 }
 
 const formatDate = (dateStr: string | null) => {
@@ -76,11 +83,11 @@ const formatDate = (dateStr: string | null) => {
 //     <Elements stripe={stripePromise}>
 //       <CheckoutForm />
 //     </Elements>
-//   )
 // }
 
 export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   booking,
+  selectedCar,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [idSolicitud, setIdSolicitud] = useState<string | null>(null);
@@ -88,8 +95,34 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isBookingSaved, setIsBookingSaved] = useState(false);
   const [dataHotel, setDataHotel] = useState<Hotel | null>(null);
+
+  const [carData, setCarData] = useState<CarRentalOption | null>(null);
+  //   )
+  const [mainDriver, setMainDriver] = useState<string>("");
+  const [mainDriverAge, setMainDriverAge] = useState<number | "">("");
+  const [additionalDrivers, setAdditionalDrivers] = useState<string>("");
+  const { state } = useChat()
+
   const { user } = useAuth();
   const { handleActualizarCarrito } = useCart();
+
+  const { crearSolicitudChat } = useSolicitud();
+  // 👉 LOG 1: lo que viene del padre
+  useEffect(() => {
+    console.log("selectedCar (prop) en ReservationPanel:", selectedCar);
+  }, [selectedCar]);
+
+  // 👉 LOG 2: estado interno del auto
+  useEffect(() => {
+    console.log("carData (state) en ReservationPanel:", carData);
+  }, [carData]);
+
+  useEffect(() => {
+    console.log("selectedCar prop en ReservationPanel:", selectedCar);
+    if (selectedCar) {
+      setCarData(selectedCar);
+    }
+  }, [selectedCar]);
 
   const notificationContext = useNotification();
   const showNotification = notificationContext?.showNotification;
@@ -159,8 +192,8 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
             (currentBooking.room == "single"
               ? 1
               : currentBooking.room == "double"
-              ? 2
-              : 0)
+                ? 2
+                : 0)
         );
         if (!room) {
           room = dataHotel.tipos_cuartos[0];
@@ -202,6 +235,13 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       saveBookingToDatabase();
     }
   }, [bookingData?.confirmationCode]);
+
+  useEffect(() => {
+    console.log("selectedCar prop en ReservationPanel:", selectedCar);
+    if (selectedCar) {
+      setCarData(selectedCar);
+    }
+  }, [selectedCar]);
 
   const saveBookingToDatabase = async () => {
     if (!bookingData || isSaving || isBookingSaved) return;
@@ -251,15 +291,17 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
     }
   };
 
-  if (!bookingData) {
+  if (!bookingData && !selectedCar) {
     return null;
   }
 
+  // 👇 OJO: bookingData puede ser null, usamos "?."
   const hasAnyData =
-    bookingData.hotel?.name ||
-    bookingData.dates?.checkIn ||
-    bookingData.room?.type ||
-    bookingData.confirmationCode;
+    bookingData?.hotel?.name ||
+    bookingData?.dates?.checkIn ||
+    bookingData?.room?.type ||
+    bookingData?.confirmationCode ||
+    state.select;
 
   if (!hasAnyData) {
     return (
@@ -275,6 +317,10 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       </div>
     );
   }
+
+  // 👇 También aquí, proteger bookingData
+  const checkInDate = formatDate(bookingData?.dates?.checkIn || null);
+  const checkOutDate = formatDate(bookingData?.dates?.checkOut || null);
 
   const handleAddToCart = async (total: string, type: "hotel") => {
     try {
@@ -298,8 +344,23 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
     }
   };
 
-  const checkInDate = formatDate(bookingData.dates?.checkIn);
-  const checkOutDate = formatDate(bookingData.dates?.checkOut);
+  const handleAddCarToCart = () => {
+    if (!carData) return;
+
+    console.log("Auto listo para mandar al carrito (ReservationPanel):", {
+      carData,
+      mainDriver,
+      mainDriverAge,
+      additionalDrivers,
+    });
+  };
+
+
+  const isCarFormValid =
+    !!carData &&
+    mainDriver.trim().length > 0 &&
+    mainDriverAge !== "" &&
+    Number(mainDriverAge) > 0;
 
   return (
     <div className="h-full p-6 space-y-10 overflow-y-auto">
@@ -311,7 +372,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
           disabled={loading}
           onClick={() =>
             handleAddToCart(
-              (bookingData.room?.totalPrice || 0).toFixed(2),
+              (bookingData?.room?.totalPrice || 0).toFixed(2),
               "hotel"
             ).then(() => handleActualizarCarrito())
           }
@@ -321,7 +382,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       )}
 
       <div id="reservation-content" className="space-y-8">
-        {bookingData.hotel?.name && (
+        {bookingData?.hotel?.name && (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Building2 className="w-5 h-5 text-[#10244c]" />
@@ -523,6 +584,113 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+        )}
+        {/* === NUEVA SECCIÓN: AUTO DE RENTA === */}
+        {state.select && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Car className="w-5 h-5 text-[#10244c]" />
+              <h3 className="text-lg font-semibold text-[#10244c]">
+                Renta de Auto
+              </h3>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 space-y-6">
+              {/* resumen del auto */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <p className="text-sm text-[#10244c]/80">Vehículo</p>
+                  <p className="text-lg font-semibold text-[#10244c]">
+                    {state.select.carDetails?.make || "Vehículo"}{" "}
+                    {state.select.carDetails?.model || ""}
+                  </p>
+                  {state.select.carDetails?.category && (
+                    <p className="text-sm text-[#10244c]/70">
+                      {state.select.carDetails.category}
+                    </p>
+                  )}
+                  {state.select.carDetails?.passengers && (
+                    <p className="text-sm text-[#10244c]/70 mt-1">
+                      {state.select.carDetails.passengers} pasajeros
+                    </p>
+                  )}
+                </div>
+
+                {state.select.price?.total && (
+                  <div className="text-right">
+                    <p className="text-sm text-[#10244c]/80">Precio Total</p>
+                    <p className="text-xl font-semibold text-[#10244c]">
+                      {state.select.price.total}{" "}
+                      {state.select.price.currency || ""}
+                    </p>
+                    {state.select.rentalPeriod?.days && (
+                      <p className="text-xs text-[#10244c]/70 mt-1">
+                        {state.select.rentalPeriod.days} días de renta
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* campos llenables */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[#10244c]">
+                    Conductor principal
+                  </label>
+                  <input
+                    type="text"
+                    value={mainDriver}
+                    onChange={(e) => setMainDriver(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
+                    placeholder="Nombre completo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[#10244c]">
+                    Edad del conductor principal
+                  </label>
+                  <input
+                    type="number"
+                    min={18}
+                    value={mainDriverAge}
+                    onChange={(e) =>
+                      setMainDriverAge(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
+                    placeholder="Edad"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="block text-sm font-medium text-[#10244c]">
+                    Conductores adicionales
+                  </label>
+                  <textarea
+                    value={additionalDrivers}
+                    onChange={(e) => setAdditionalDrivers(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
+                    placeholder="Nombres de conductores adicionales (opcional)"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  variant="secondary"
+                  size="full"
+                  disabled={!isCarFormValid}
+                  onClick={handleAddCarToCart}
+                >
+                  Guardar datos del auto (console.log por ahora)
+                </Button>
+              </div>
             </div>
           </div>
         )}

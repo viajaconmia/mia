@@ -1,13 +1,15 @@
 import React from "react";
 
-const Loader: React.FC = () => {
+const Loader: React.FC<{ className?: string }> = ({
+  className = "w-[50px] h-[50px]",
+}) => {
   return (
     <div className="flex justify-center items-center py-4">
       <svg
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 493 539"
-        className="w-[50px] h-[50px] text-sky-950 animate-wobble-bounce"
+        className={`text-sky-950 animate-wobble-bounce ${className}`}
       >
         <path
           fill="currentColor"
