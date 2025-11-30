@@ -305,7 +305,7 @@ interface FlightOptionsDisplayProps {
 export const FlightOptionsDisplay = ({
   flightOptions,
 }: FlightOptionsDisplayProps) => {
-  const { setCartSelected } = useChat(); // igual que en CarRentalDisplay
+  const { setFlySelected } = useChat(); // igual que en CarRentalDisplay
 
   const options = Array.isArray(flightOptions.options.option)
     ? flightOptions.options.option
@@ -473,8 +473,9 @@ export const FlightOptionsDisplay = ({
                       <Luggage className="w-5 h-5" />
                       <span className="text-sm font-medium">
                         {option?.baggage?.hasCheckedBaggage === "true"
-                          ? `${option?.baggage?.pieces} checked bag${option?.baggage?.pieces !== "1" ? "s" : ""
-                          }`
+                          ? `${option?.baggage?.pieces} checked bag${
+                              option?.baggage?.pieces !== "1" ? "s" : ""
+                            }`
                           : "No checked baggage"}
                       </span>
                     </div>
@@ -494,7 +495,7 @@ export const FlightOptionsDisplay = ({
                     {/* Botón para seleccionar este vuelo */}
                     <button
                       type="button"
-                      onClick={() => setCartSelected(option)}
+                      onClick={() => setFlySelected(option)}
                       className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
                     >
                       Seleccionar este vuelo

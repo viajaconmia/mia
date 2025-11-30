@@ -1,6 +1,5 @@
 "use client";
 
-
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 
 export type HotelResponse = {
@@ -29,7 +28,7 @@ export type HotelOption = {
     roomType?: string;
     maxGuests?: string;
     beds?: string;
-    breakfastIncluded?: string; // viene como "true"/"false"
+    breakfastIncluded?: string; // "true"/"false"
   };
   stayPeriod?: {
     checkInDate?: string;
@@ -89,6 +88,7 @@ interface CarRentalOptions {
     option: CarRentalOption | CarRentalOption[];
   };
 }
+
 interface HotelOptions {
   type: "hotel";
   options: {
@@ -120,13 +120,13 @@ export type FlightOption = {
     segment: Segment[] | Segment;
   };
   seat?: {
-    isDesiredSeat: string; // vienen como "false" | "true"
-    requestedSeatLocation: string; // "null" en tu data
-    assignedSeatLocation: string; // "null" en tu data
+    isDesiredSeat: string;
+    requestedSeatLocation: string;  // "null"
+    assignedSeatLocation: string;   // "null"
   };
   baggage?: {
     hasCheckedBaggage: string; // "true" | "false"
-    pieces: string; // viene como string
+    pieces: string;
   };
   price?: {
     currency: string;
@@ -152,7 +152,7 @@ type FunctionCall = {
 export type MessageChat = {
   role: "user" | "assistant";
   text: string;
-  componente: FlightOptions | undefined | CarRentalOptions | HotelOptions;
+  componente: FlightOptions | CarRentalOptions | HotelOptions | undefined;
 };
 
 export type ItemStack = {
@@ -170,19 +170,22 @@ interface ChatState {
   messages: MessageChat[];
   booking: { nombre: string } | null;
   input: string;
-  select: CarRentalOption | null;
+  // 👇 ahora puede guardar coche O vuelo
+  select: CarRentalOption | FlightOption | null;
 }
 
 type ChatAction =
-  | { type: "SET_STACK"; payload: ItemStack[] } // DONE
-  | { type: "SET_LOADING"; payload: boolean } //DONE
-  | { type: "SET_INPUT"; payload: string } //DONE
-  | { type: "SET_THREAD"; payload: string } // DONE
-  | { type: "SET_MESSAGES"; payload: MessageChat[] } //DONE
-  | { type: "SET_HISTORY"; payload: ItemHistory[] } //DONE
-  | { type: "SET_SELECT"; payload: null | CarRentalOption } //DONE
-
-  | { type: "SET_BOOKING"; payload: { nombre: string } }; //DONE
+  | { type: "SET_STACK"; payload: ItemStack[] }
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_INPUT"; payload: string }
+  | { type: "SET_THREAD"; payload: string }
+  | { type: "SET_MESSAGES"; payload: MessageChat[] }
+  | { type: "SET_HISTORY"; payload: ItemHistory[] }
+  | {
+      type: "SET_SELECT";
+      payload: CarRentalOption | FlightOption | null;
+    }
+  | { type: "SET_BOOKING"; payload: { nombre: string } };
 
 const initialChatState: ChatState = {
   isLoading: false,
@@ -233,6 +236,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("mensajes:", state.messages);
     console.log("estado:", state);
   }, [state.stack, state.messages]);
+
   useEffect(() => {
     console.log("SELECT:", state.select);
   }, [state.select]);
@@ -247,7 +251,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 export const useChatContext = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {
-    throw new Error("useChat must be used within a ChatProvider");
+    throw new Error("useChatContext must be used within a ChatProvider");
   }
   return context;
 };

@@ -4,6 +4,7 @@ import {
   ItemStack,
   MessageChat,
   useChatContext,
+  FlightOption, // 👈 antes tenías FlightOptions
 } from "../context/ChatContext";
 import { parseToJson } from "../lib/utils";
 import { ChatService } from "../services/chatService";
@@ -21,7 +22,11 @@ export const useChat = () => {
 
   const setCartSelected = (option: CarRentalOption | null) => {
     dispatcher({ type: "SET_SELECT", payload: option });
-  }
+  };
+
+  const setFlySelected = (option: FlightOption | null) => {
+    dispatcher({ type: "SET_SELECT", payload: option });
+  };
 
   // Limpia todo el stack
   const clearStack = () => {
@@ -51,13 +56,10 @@ export const useChat = () => {
 
   //Agrega mensajes al estado
   const updateMessages = (messages: MessageChat[]) => {
+    // Ojo: .reverse() muta el array original; si quieres evitar bugs,
+    // podrías hacer [...messages].reverse()
     dispatcher({ type: "SET_MESSAGES", payload: messages.reverse() });
   };
-
-  // Limpia los mensajes
-  // const clearMessages = () => {
-  //   dispatcher({ type: "SET_MESSAGES", payload: [] });
-  // };
 
   //Debemos formatear y separar los mensajes de la stack y asi para poder pintarlos correctamente
   const updateHistory = (history: ItemHistory[]) => {
@@ -74,7 +76,7 @@ export const useChat = () => {
     dispatcher({ type: "SET_HISTORY", payload: history });
   };
 
-  //Debe enviar el history y el stack para poder actualizarlos según la respuesta del servidor, pero aqui cada que se actualice el historial se debe separar lo que es los mensajes del stack
+  //Debe enviar el history y el stack para poder actualizarlos según la respuesta del servidor
   const waitChatResponse = async () => {
     console.log("waitChatResponse - stack actual:", state.stack);
     try {
@@ -165,6 +167,7 @@ export const useChat = () => {
     waitChatResponse,
     messages: state.messages,
     setCartSelected,
-    state
+    setFlySelected,
+    state,
   };
 };
