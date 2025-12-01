@@ -75,7 +75,7 @@ export const ManualReservationPage = () => {
 
     const fetchViajero = async () => {
       const data = await fetchViajerosCompanies();
-      console.log(data,"VIAJEROS")
+      console.log(data, "VIAJEROS")
       setEmployees(data);
     };
     fetchViajero();
@@ -122,7 +122,8 @@ export const ManualReservationPage = () => {
       };
     });
   };
-console.log(reservationData,"reservationData")
+  console.log(reservationData, "reservationData")
+
   const handleAddCart = async () => {
     setLoading(true);
     const solicitud = {
@@ -144,7 +145,7 @@ console.log(reservationData,"reservationData")
     try {
       const { data } = await crearSolicitud(solicitud, user?.info?.id_agente);
       const { id_solicitud } = data;
-      console.log("nvjifnjvfbvhjfbvjifbv.",data)
+      console.log("nvjifnjvfbvhjfbvjifbv.", data)
       id_solicitud_current = id_solicitud;
     } catch (error) {
       console.log(error);
@@ -342,9 +343,9 @@ console.log(reservationData,"reservationData")
                       onChange={(e) => {
                         if (
                           e.target.value <
-                            new Date(currentDate())
-                              .toISOString()
-                              .split("T")[0] &&
+                          new Date(currentDate())
+                            .toISOString()
+                            .split("T")[0] &&
                           Number(e.target.value.split("-")[0]) > 999
                         ) {
                           setError(
@@ -374,9 +375,9 @@ console.log(reservationData,"reservationData")
                       onChange={(e) => {
                         if (
                           e.target.value <
-                            new Date(currentDate())
-                              .toISOString()
-                              .split("T")[0] &&
+                          new Date(currentDate())
+                            .toISOString()
+                            .split("T")[0] &&
                           Number(e.target.value.split("-")[0]) > 999
                         ) {
                           setError(
@@ -548,18 +549,18 @@ console.log(reservationData,"reservationData")
                           const newGuests = [
                             ...reservationData.additionalGuests,
                           ];
-                          {console.log(reservationData,"eeeeeeeeeeeeeeeeeeeeeeeeeeeeee")}
+                          { console.log(reservationData, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeee") }
                           newGuests[index] = e.target.value;
                           setReservationData((prev) => ({
                             ...prev,
                             additionalGuests: newGuests,
                           }));
-                        {console.log(reservationData,"errrrrrrrrrrrrrrrrrrrrrrrrrrrrr")}
-                                                {console.log("toriorororo0..",employees)}
+                          { console.log(reservationData, "errrrrrrrrrrrrrrrrrrrrrrrrrrrrr") }
+                          { console.log("toriorororo0..", employees) }
                         }}
                         className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
-                        
+
                         <option value="">Selecciona un huésped</option>
                         {employees
                           .filter(

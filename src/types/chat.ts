@@ -127,3 +127,4 @@ export type FlightMessagePayload = {
   searchId?: string;
   options: FlightOption[];
 };
+

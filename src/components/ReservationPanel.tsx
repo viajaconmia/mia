@@ -28,6 +28,10 @@ import {
   FlightOption,
 } from "../context/ChatContext";
 import { useChat } from "../hooks/useChat";
+import { URL } from "../constants/apiConstant";
+
+const API_KEY =
+  "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -78,15 +82,37 @@ const formatDate = (dateStr: string | null) => {
 
 // 👇 viajeros de ejemplo (por ahora sin back)
 interface Viajero {
-  id: string;
-  nombre: string;
-  edad?: number;
+  id_viajero: string;
+  nombre_completo: string;
+  fecha_nacimiento?: string;
+
 }
 
-const EXAMPLE_TRAVELERS: Viajero[] = [
-  { id: "1", nombre: "Juan Pérez", edad: 32 },
-  { id: "2", nombre: "María López", edad: 28 },
-];
+
+const fetchViajerosFromAgent = async (
+  id: string,
+  callback: (data: Viajero[]) => void
+) => {
+  try {
+    const response = await fetch(`${URL}/v1/mia/viajeros/id?id=${id}`, {
+      headers: {
+        "x-api-key": API_KEY || "",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+      cache: "no-store",
+    }).then((res) => res.json());
+    if (response.error) {
+      console.error(response);
+      throw new Error("Error al buscar los viajeros");
+    }
+    callback(response as Viajero[]);
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
 
 // ==== TYPE GUARDS para distinguir Auto vs Vuelo ====
 
@@ -112,15 +138,18 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   // estados para auto / vuelo (viajero principal y adicionales)
   const [mainDriver, setMainDriver] = useState<string>("");
   const [mainDriverAge, setMainDriverAge] = useState<number | "">("");
-  const [additionalDrivers, setAdditionalDrivers] = useState<string[]>([]);
+  const [additionalDriver, setAdditionalDriver] = useState<string>("");
+  const [additionalDriverAge, setAdditionalDriverAge] = useState<number | string>("");
+  const [viajeros, setViajeros] = useState<Viajero[]>([]);
 
   const { state } = useChat();
   const { user } = useAuth();
   const { handleActualizarCarrito } = useCart();
   const { crearSolicitudChat } = useSolicitud();
-
+  console.log("informacion user", user)
   const notificationContext = useNotification();
   const showNotification = notificationContext?.showNotification;
+  const [showAdditionalDrivers, setShowAdditionalDrivers] = useState(false);
 
   // Selección global desde el contexto (puede ser auto o vuelo)
   const selectedFromContext = state.select;
@@ -129,8 +158,8 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const selectedCar = isCarRentalOption(selectedFromContext)
     ? selectedFromContext
     : isCarRentalOption(selectedCarProp)
-    ? selectedCarProp
-    : null;
+      ? selectedCarProp
+      : null;
 
   const selectedFlight = isFlightOption(selectedFromContext)
     ? selectedFromContext
@@ -140,6 +169,17 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   useEffect(() => {
     console.log("selectedCar (efectivo) en ReservationPanel:", selectedCar);
   }, [selectedCar]);
+
+  useEffect(() => {
+    if (user?.info?.id_agente) {
+      fetchViajerosFromAgent(user.info.id_agente, (data) => {
+        console.log("Viajero(s) recibido(s):", data);
+        setViajeros(data);
+        // Aquí puedes manejar la data recibida, por ejemplo, actualizar un estado.
+      });
+    }
+    console.log("selectedCar (efectivo) en ReservationPanel:", user?.info?.id_agente);
+  }, [user?.info?.id_agente]);
 
   useEffect(() => {
     console.log("selectedFlight (efectivo) en ReservationPanel:", selectedFlight);
@@ -212,8 +252,8 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
             (currentBooking.room == "single"
               ? 1
               : currentBooking.room == "double"
-              ? 2
-              : 0)
+                ? 2
+                : 0)
         );
         if (!room) {
           room = dataHotel.tipos_cuartos[0];
@@ -257,6 +297,20 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       saveBookingToDatabase();
     }
   }, [bookingData?.confirmationCode]);
+
+  const calcularEdad = (fechaNacimiento: string): number => {
+    const hoy = new Date();
+    const fechaNacimientoDate = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - fechaNacimientoDate.getFullYear();
+    const mes = hoy.getMonth();
+    const dia = hoy.getDate();
+
+    // Ajustar si no ha cumplido años este año
+    if (mes < fechaNacimientoDate.getMonth() || (mes === fechaNacimientoDate.getMonth() && dia < fechaNacimientoDate.getDate())) {
+      edad--;
+    }
+    return edad;
+  };
 
   const saveBookingToDatabase = async () => {
     if (!bookingData || isSaving || isBookingSaved) return;
@@ -337,22 +391,118 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   const checkInDate = formatDate(bookingData?.dates?.checkIn || null);
   const checkOutDate = formatDate(bookingData?.dates?.checkOut || null);
 
-  const handleAddToCart = async (total: string, type: "hotel") => {
+  const handleAddToCart = async (total: string, type: "hotel" | "auto" | "vuelo") => {
     try {
       setLoading(true);
-      if (!idSolicitud) throw new Error("Solicitud no creada");
 
-      const { message } = await CartService.getInstance().createCartItem({
-        id_solicitud: idSolicitud,
-        total,
-        type,
-        selected: true,
-      });
-      showNotification?.("success", message || "Agregado al carrito");
+      let payload: any;
+
+      // Crear el payload basado en el tipo (hotel, auto, vuelo)
+      if (type === "hotel") {
+        // Payload para hotel
+        payload = {
+          id_solicitud: idSolicitud,
+          total,
+          type: "hotel",
+          selected: true,
+          hotel: {
+            nombre: bookingData?.hotel?.name || "",
+            ubicacion: bookingData?.hotel?.location || "",
+            precio: bookingData?.room?.totalPrice || 0,
+            fechas: {
+              checkIn: bookingData?.dates.checkIn || "",
+              checkOut: bookingData?.dates.checkOut || "",
+            },
+          },
+        };
+      } else if (type === "auto" && selectedCar) {
+        // Payload para auto
+        payload = {
+          id_solicitud: idSolicitud,
+          total,
+          type: "auto",
+          selected: true,
+          auto: {
+            proveedor: selectedCar.provider?.name || "",
+            url_detalle: selectedCar.url || "",
+            vehiculo: {
+              marca: selectedCar.carDetails?.make || "",
+              modelo: selectedCar.carDetails?.model || "",
+              categoria: selectedCar.carDetails?.category || "",
+              pasajeros: selectedCar.carDetails?.passengers || null,
+            },
+            renta: {
+              fecha_inicio: selectedCar.rentalPeriod?.pickupLocation?.dateTime || "",
+              fecha_fin: selectedCar.rentalPeriod?.returnLocation?.dateTime || "",
+              dias: selectedCar.rentalPeriod?.days || null,
+            },
+            precio: {
+              total: selectedCar.price?.total || null,
+              moneda: selectedCar.price?.currency || null,
+            },
+          },
+          viajero_principal: {
+            nombre: mainDriver,
+            edad: mainDriverAge,
+          },
+          viajeros_adicionales: {
+            nombre: additionalDriver,
+            edad: additionalDriverAge,
+          },
+        };
+      } else if (type === "vuelo" && selectedFlight) {
+        // Payload para vuelo
+        const segmentsArray = Array.isArray(selectedFlight.segments.segment)
+          ? selectedFlight.segments.segment
+          : [selectedFlight.segments.segment];
+
+        const firstSeg = segmentsArray[0];
+        const lastSeg = segmentsArray[segmentsArray.length - 1];
+
+        payload = {
+          id_solicitud: idSolicitud,
+          total,
+          type: "vuelo",
+          selected: true,
+          vuelo: {
+            url_detalle: selectedFlight.url,
+            origen: {
+              aeropuerto: firstSeg.origin.airportName,
+              ciudad: firstSeg.origin.city,
+              salida: firstSeg.departureTime,
+            },
+            destino: {
+              aeropuerto: lastSeg.destination.airportName,
+              ciudad: lastSeg.destination.city,
+              llegada: lastSeg.arrivalTime,
+            },
+            aerolinea: firstSeg.airline,
+            numero_vuelo: firstSeg.flightNumber,
+            precio: {
+              total: selectedFlight.price?.total || null,
+              moneda: selectedFlight.price?.currency || null,
+            },
+            equipaje: {
+              incluye: selectedFlight.baggage?.hasCheckedBaggage === "true",
+              piezas: selectedFlight.baggage?.pieces || null,
+            },
+          },
+          pasajero_principal: {
+            nombre: mainDriver,
+            edad: mainDriverAge === "" ? null : Number(mainDriverAge),
+          },
+        };
+      }
+
+      // Si el payload está correctamente creado, lo enviamos al carrito
+      if (payload) {
+        const { message } = await CartService.getInstance().createCartItem(payload);
+        showNotification?.("success", message || "Agregado al carrito");
+        handleActualizarCarrito(); // Actualiza el carrito después de agregar el item
+      }
+
     } catch (error: any) {
-      console.error(
-        error.response || error.message || "Error al agregar al carrito"
-      );
+      console.error(error.response || error.message || "Error al agregar al carrito");
       showNotification?.("error", error.message);
     } finally {
       setLoading(false);
@@ -389,9 +539,12 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       },
       viajero_principal: {
         nombre: mainDriver,
-        edad: mainDriverAge === "" ? null : Number(mainDriverAge),
+        edad: mainDriverAge,
       },
-      viajeros_adicionales: additionalDrivers,
+      viajeros_adicionales: {
+        nombre: additionalDriver,
+        edad: additionalDriverAge
+      }
     };
 
     console.log("Payload para auto listo para enviar:", payload);
@@ -439,16 +592,14 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       pasajero_principal: {
         nombre: mainDriver,
         edad: mainDriverAge === "" ? null : Number(mainDriverAge),
-      },    };
+      },
+    };
 
     console.log("Payload para vuelo listo para enviar:", payload);
   };
 
   const isTravelerFormValid =
-    mainDriver.trim().length > 0 &&
-    mainDriverAge !== "" &&
-    Number(mainDriverAge) > 0;
-
+    mainDriver.trim().length > 0
   return (
     <div className="h-full p-6 space-y-10 overflow-y-auto">
       {idSolicitud && (
@@ -508,9 +659,8 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                       >
                         <img
                           src={imageUrl}
-                          alt={`${bookingData.hotel.name} - Vista ${
-                            index + 1
-                          }`}
+                          alt={`${bookingData.hotel.name} - Vista ${index + 1
+                            }`}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                         />
                       </div>
@@ -742,9 +892,9 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
                   >
                     <option value="">Selecciona un viajero</option>
-                    {EXAMPLE_TRAVELERS.map((v) => (
-                      <option key={v.id} value={v.nombre}>
-                        {v.nombre}
+                    {viajeros.map((v) => (
+                      <option key={v.id_viajero} value={v.nombre_completo}>
+                        {v.nombre_completo}
                       </option>
                     ))}
                   </select>
@@ -758,54 +908,121 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                   <input
                     type="number"
                     min={18}
-                    value={mainDriverAge}
+                    value={
+                      // Si el viajero tiene fecha de nacimiento, mostrar la edad calculada
+                      viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento
+                        ? calcularEdad(
+                          viajeros.find((v) => v.nombre_completo === mainDriver)!.fecha_nacimiento!
+                        )
+                        : mainDriverAge // Si no hay fecha de nacimiento, se usa la edad manual
+                    }
                     onChange={(e) =>
                       setMainDriverAge(
                         e.target.value === "" ? "" : Number(e.target.value)
                       )
                     }
+                    disabled={!!viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento} // Deshabilitar si hay fecha de nacimiento
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
                     placeholder="Edad"
                   />
+                  {/* Si el viajero tiene fecha de nacimiento, mostramos la edad calculada */}
+                  {mainDriver &&
+                    viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        Edad calculada:{" "}
+                        {calcularEdad(
+                          viajeros.find((v) => v.nombre_completo === mainDriver)!.fecha_nacimiento!
+                        )}
+                      </p>
+                    )}
                 </div>
 
                 {/* Conductores adicionales */}
                 <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm font-medium text-[#10244c]">
-                    Conductores adicionales / Viajeros adicionales
-                  </label>
-                  <select
-                    multiple
-                    value={additionalDrivers}
-                    onChange={(e) => {
-                      const values = Array.from(
-                        e.target.selectedOptions
-                      ).map((opt) => opt.value);
-                      setAdditionalDrivers(values);
-                    }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c] min-h-[60px]"
-                  >
-                    {EXAMPLE_TRAVELERS.map((v) => (
-                      <option key={v.id} value={v.nombre}>
-                        {v.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-[#10244c]/60">
-                    Mantén presionada la tecla Ctrl (o Cmd en Mac) para
-                    seleccionar varios.
-                  </p>
+                  {/* Pregunta si desea agregar un conductor adicional */}
+
+                  {/* Solo muestra el select si showAdditionalDrivers es true */}
+                  {showAdditionalDrivers && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#10244c] mt-4">
+                        Conductor adicional / Viajero adicional
+                      </label>
+                      <select
+                        value={additionalDriver}
+                        onChange={(e) => setAdditionalDriver(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
+                      >
+                        <option value="">Selecciona un conductor adicional</option>
+                        {viajeros
+                          .filter((v) => v.nombre_completo !== mainDriver) // Filtra el conductor principal
+                          .map((v) => (
+                            <option key={v.id_viajero} value={v.nombre_completo}>
+                              {v.nombre_completo}{" "}
+                              {v.fecha_nacimiento && (
+                                <span className="text-xs text-gray-500 ml-2">
+                                  (Edad: {calcularEdad(v.fecha_nacimiento)})
+                                </span>
+                              )}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="space-y-2 mt-4">
+                        <label className="block text-sm font-medium text-[#10244c]">Edad del conductor adicional</label>
+                        <input
+                          type="number"
+                          min={18}
+                          value={
+                            // Si el conductor adicional tiene fecha de nacimiento, mostrar la edad calculada
+                            viajeros.find((v) => v.nombre_completo === additionalDriver)?.fecha_nacimiento
+                              ? calcularEdad(viajeros.find((v) => v.nombre_completo === additionalDriver)!.fecha_nacimiento!)
+                              : additionalDriverAge // Si no hay fecha de nacimiento, se usa la edad manual
+                          }
+                          onChange={(e) =>
+                            setAdditionalDriverAge(e.target.value === "" ? "" : Number(e.target.value))
+                          }
+                          disabled={!!viajeros.find((v) => v.nombre_completo === additionalDriver)?.fecha_nacimiento} // Deshabilitar si hay fecha de nacimiento
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
+                          placeholder="Edad"
+                        />
+                        {additionalDriver &&
+                          viajeros.find((v) => v.nombre_completo === additionalDriver)?.fecha_nacimiento && (
+                            <p className="text-sm text-gray-500 mt-2">
+                              Edad calculada:{" "}
+                              {calcularEdad(viajeros.find((v) => v.nombre_completo === additionalDriver)!.fecha_nacimiento!)}
+                            </p>
+                          )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botón para mostrar conductor adicional */}
+                  {!showAdditionalDrivers && (
+                    <button
+                      onClick={() => setShowAdditionalDrivers(true)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-[#10244c] text-white focus:outline-none focus:ring-2 focus:ring-[#10244c]"
+                    >
+                      ¿Deseas agregar un conductor adicional?
+                    </button>
+                  )}
+
                 </div>
               </div>
 
               <div className="pt-2">
-                <Button
+                {/* <Button
                   variant="secondary"
                   size="full"
                   disabled={!isTravelerFormValid}
                   onClick={handleAddCarToCart}
                 >
                   Guardar datos del auto (console.log payload)
+                </Button> */}
+                <Button
+                  variant="primary"
+                  size="full"
+                  onClick={() => handleAddToCart("precio del auto", "auto")}
+                >
+                  Agregar auto al carrito
                 </Button>
               </div>
             </div>
@@ -814,7 +1031,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
         {/* === VUELO === */}
         {selectedFlight && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center space-x-2">
               <Plane className="w-5 h-5 text-[#10244c]" />
               <h3 className="text-lg font-semibold text-[#10244c]">
@@ -822,8 +1039,8 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
               </h3>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-6 space-y-6">
-              {/* resumen del vuelo */}
+            <div className="bg-gray-50 rounded-lg p-6 space-y-6 shadow-md">
+              {/* Resumen del vuelo */}
               {(() => {
                 const segmentsArray = Array.isArray(
                   selectedFlight.segments.segment
@@ -849,44 +1066,29 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                 return (
                   <>
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-[#10244c]/80">
-                          Itinerario
-                        </p>
+                      <div className="flex flex-col">
+                        <p className="text-sm text-[#10244c]/80">Itinerario</p>
                         <p className="text-lg font-semibold text-[#10244c]">
-                          {firstSeg.origin.city} ({firstSeg.origin.airportCode}){" "}
-                          → {lastSeg.destination.city} (
-                          {lastSeg.destination.airportCode})
+                          {firstSeg.origin.city} ({firstSeg.origin.airportCode}) → {lastSeg.destination.city} ({lastSeg.destination.airportCode})
                         </p>
                         <p className="text-sm text-[#10244c]/70 mt-1">
-                          {formatShortDate(firstSeg.departureTime)}{" "}
-                          {formatTime(firstSeg.departureTime)} ·{" "}
-                          {selectedFlight.itineraryType
-                            ?.replace("_", " ")
-                            .toUpperCase() || "TRIP"}
+                          {formatShortDate(firstSeg.departureTime)} {formatTime(firstSeg.departureTime)} ·{" "}
+                          {selectedFlight.itineraryType?.replace("_", " ").toUpperCase() || "TRIP"}
                         </p>
                         <p className="text-xs text-[#10244c]/60 mt-1">
-                          {segmentsArray.length}{" "}
-                          {segmentsArray.length === 1
-                            ? "segmento"
-                            : "segmentos"}{" "}
-                          · {firstSeg.airline} {firstSeg.flightNumber}
+                          {segmentsArray.length} {segmentsArray.length === 1 ? "segmento" : "segmentos"} · {firstSeg.airline} {firstSeg.flightNumber}
                         </p>
                       </div>
 
                       {selectedFlight.price?.total && (
                         <div className="text-right">
-                          <p className="text-sm text-[#10244c]/80">
-                            Precio Total
-                          </p>
+                          <p className="text-sm text-[#10244c]/80">Precio Total</p>
                           <p className="text-xl font-semibold text-[#10244c]">
-                            {selectedFlight.price.total}{" "}
-                            {selectedFlight.price.currency}
+                            {selectedFlight.price.total} {selectedFlight.price.currency}
                           </p>
                           {selectedFlight.baggage && (
                             <p className="text-xs text-[#10244c]/70 mt-1">
-                              {selectedFlight.baggage.hasCheckedBaggage ===
-                              "true"
+                              {selectedFlight.baggage.hasCheckedBaggage === "true"
                                 ? `Incluye ${selectedFlight.baggage.pieces} maleta(s) documentada(s)`
                                 : "Sin equipaje documentado"}
                             </p>
@@ -894,26 +1096,53 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Mostrar si es ida o redondo */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[#10244c]">
+                        {selectedFlight.itineraryType === "round_trip"
+                          ? "Vuelo redondo"
+                          : "Vuelo solo ida"}
+                      </span>
+                    </div>
+
+                    {/* Mostrar todos los segmentos */}
+                    <div className="space-y-4">
+                      {segmentsArray.map((segment, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm text-[#10244c]/80">
+                              {index === 0 ? "Vuelo de ida" : "Vuelo de regreso"}
+                            </p>
+                          </div>
+                          <div className="text-sm text-[#10244c]/70">
+                            <p>
+                              {segment.origin.city} ({segment.origin.airportCode}) → {segment.destination.city} ({segment.destination.airportCode})
+                            </p>
+                            <p>{formatShortDate(segment.departureTime)} - {formatTime(segment.departureTime)}</p>
+                            <p>{segment.airline} {segment.flightNumber}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </>
                 );
               })()}
 
-              {/* campos viajero para vuelo */}
+              {/* Campos del viajero */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Pasajero principal */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#10244c]">
-                    Pasajero principal
-                  </label>
+                  <label className="block text-sm font-medium text-[#10244c]">Pasajero principal</label>
                   <select
                     value={mainDriver}
                     onChange={(e) => setMainDriver(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
                   >
                     <option value="">Selecciona un viajero</option>
-                    {EXAMPLE_TRAVELERS.map((v) => (
-                      <option key={v.id} value={v.nombre}>
-                        {v.nombre}
+                    {viajeros.map((v) => (
+                      <option key={v.id_viajero} value={v.nombre_completo}>
+                        {v.nombre_completo}
                       </option>
                     ))}
                   </select>
@@ -921,38 +1150,52 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
 
                 {/* Edad del pasajero principal */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#10244c]">
-                    Edad del pasajero principal
-                  </label>
+                  <label className="block text-sm font-medium text-[#10244c]">Edad del pasajero principal</label>
                   <input
                     type="number"
-                    min={0}
-                    value={mainDriverAge}
+                    min={18}
+                    value={
+                      // Si el viajero tiene fecha de nacimiento, mostrar la edad calculada
+                      viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento
+                        ? calcularEdad(
+                          viajeros.find((v) => v.nombre_completo === mainDriver)!.fecha_nacimiento!
+                        )
+                        : mainDriverAge // Si no hay fecha de nacimiento, se usa la edad manual
+                    }
                     onChange={(e) =>
                       setMainDriverAge(
                         e.target.value === "" ? "" : Number(e.target.value)
                       )
                     }
+                    disabled={!!viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento} // Deshabilitar si hay fecha de nacimiento
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
                     placeholder="Edad"
                   />
                 </div>
-
               </div>
 
               <div className="pt-2">
-                <Button
+                {/* <Button
                   variant="secondary"
                   size="full"
                   disabled={!isTravelerFormValid}
                   onClick={handleAddFlightToCart}
                 >
                   Guardar datos del vuelo (console.log payload)
+                </Button> */}
+                <Button
+                  variant="primary"
+                  size="full"
+                  onClick={() => handleAddToCart("precio del vuelo", "vuelo")}
+                >
+                  Agregar vuelo al carrito
                 </Button>
               </div>
             </div>
           </div>
         )}
+
+
       </div>
       <div></div>
     </div>
