@@ -416,80 +416,115 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
           },
         };
       } else if (type === "auto" && selectedCar) {
-        // Payload para auto
+        console.log("datos del elegido", selectedCar);
+
+        // Payload para auto con la nueva estructura
         payload = {
-          id_solicitud: idSolicitud,
-          total,
-          type: "auto",
-          selected: true,
-          auto: {
-            proveedor: selectedCar.provider?.name || "",
-            url_detalle: selectedCar.url || "",
-            vehiculo: {
-              marca: selectedCar.carDetails?.make || "",
-              modelo: selectedCar.carDetails?.model || "",
-              categoria: selectedCar.carDetails?.category || "",
-              pasajeros: selectedCar.carDetails?.passengers || null,
+          Gemini_response: {
+            type: "car_rental",
+            Config: {
+              auto: {
+                carDetails: {
+                  make: selectedCar.carDetails?.make || "",
+                  model: selectedCar.carDetails?.model || "",
+                  category: selectedCar.carDetails?.category || "",
+                  transmission: selectedCar.carDetails?.transmission || "automatic", // Puedes ajustar el valor por defecto
+                  passengers: selectedCar.carDetails?.passengers || "5", // Asumimos 5 pasajeros si no está especificado
+                },
+                rentalPeriod: {
+                  pickupLocation: {
+                    city: selectedCar.rentalPeriod?.pickupLocation?.city || "",
+                    address: selectedCar.rentalPeriod?.pickupLocation?.address || "",
+                    dateTime: selectedCar.rentalPeriod?.pickupLocation?.dateTime || "",
+                  },
+                  returnLocation: {
+                    city: selectedCar.rentalPeriod?.returnLocation?.city || "",
+                    address: selectedCar.rentalPeriod?.returnLocation?.address || "",
+                    dateTime: selectedCar.rentalPeriod?.returnLocation?.dateTime || "",
+                  },
+                  days: selectedCar.rentalPeriod?.days || "0", // Asumimos 0 días si no está especificado
+                },
+                price: {
+                  currency: selectedCar.price?.currency || "MXN", // Asumimos "MXN" si no está especificado
+                  total: selectedCar.price?.total || "0", // Puedes ajustar el valor por defecto
+                  includedFeatures: selectedCar.price?.includedFeatures || "Precio por día, seguro básico y kilometraje incluido",
+                },
+              },
             },
-            renta: {
-              fecha_inicio: selectedCar.rentalPeriod?.pickupLocation?.dateTime || "",
-              fecha_fin: selectedCar.rentalPeriod?.returnLocation?.dateTime || "",
-              dias: selectedCar.rentalPeriod?.days || null,
-            },
-            precio: {
-              total: selectedCar.price?.total || null,
-              moneda: selectedCar.price?.currency || null,
+            proveedor: {
+              nombre: selectedCar.provider?.name || "Proveedor No Especificado",
+              tipo_proveedor: 3, // Asumimos que el tipo de proveedor es 3, ajusta si es necesario
             },
           },
-          viajero_principal: {
+          // Agregar los detalles de los conductores
+          conductor_principal: {
             nombre: mainDriver,
             edad: mainDriverAge,
           },
-          viajeros_adicionales: {
+          conductor_adicional: {
             nombre: additionalDriver,
             edad: additionalDriverAge,
           },
         };
+
+        console.log("Payload para auto listo para enviar:", payload);
       } else if (type === "vuelo" && selectedFlight) {
-        // Payload para vuelo
+        // Payload para vuelo según la nueva estructura
         const segmentsArray = Array.isArray(selectedFlight.segments.segment)
           ? selectedFlight.segments.segment
           : [selectedFlight.segments.segment];
 
-        const firstSeg = segmentsArray[0];
-        const lastSeg = segmentsArray[segmentsArray.length - 1];
-
+        // Nueva estructura de payload para vuelo
         payload = {
-          id_solicitud: idSolicitud,
-          total,
-          type: "vuelo",
-          selected: true,
-          vuelo: {
-            url_detalle: selectedFlight.url,
-            origen: {
-              aeropuerto: firstSeg.origin.airportName,
-              ciudad: firstSeg.origin.city,
-              salida: firstSeg.departureTime,
+          Gemini_response: {
+            type: "Flight",
+            Config: {
+              vuelo: {
+                id: selectedFlight.seat.option.id,
+                url: selectedFlight.url || "",
+                itineraryType: selectedFlight.itineraryType || "one_way", // Asumimos "one_way" si no está especificado
+                segments: {
+                  segment: segmentsArray.map((segment: any) => ({
+                    origin: {
+                      airportCode: segment.origin.airportCode,
+                      city: segment.origin.city,
+                      airportName: segment.origin.airportName,
+                    },
+                    destination: {
+                      airportCode: segment.destination.airportCode,
+                      city: segment.destination.city,
+                      airportName: segment.destination.airportName,
+                    },
+                    departureTime: segment.departureTime,
+                    arrivalTime: segment.arrivalTime,
+                    airline: segment.airline,
+                    flightNumber: segment.flightNumber,
+                  })),
+                },
+                seat: {
+                  isDesiredSeat: false,
+                  requestedSeatLocation: "NO_ESPECIFICADO",
+                  assignedSeatLocation: "middle", // Puedes ajustar este valor según la selección
+                },
+                baggage: {
+                  hasCheckedBaggage: selectedFlight.baggage?.hasCheckedBaggage || "false", // Asumimos "false" si no está especificado
+                  pieces: selectedFlight.baggage?.pieces || "0", // Asumimos 0 piezas si no está especificado
+                },
+                price: {
+                  currency: selectedFlight.price?.currency || "MXN", // Asumimos "MXN" si no está especificado
+                  total: selectedFlight.price?.total || 0,
+                },
+              },
             },
-            destino: {
-              aeropuerto: lastSeg.destination.airportName,
-              ciudad: lastSeg.destination.city,
-              llegada: lastSeg.arrivalTime,
+            proveedor: {
+              nombre: selectedFlight.segments.segment[0].airline || "Aerolinea No Especificada",
+              tipo_proveedor: 2, // Puedes ajustar este valor según el proveedor
+              Complementos: {},
             },
-            aerolinea: firstSeg.airline,
-            numero_vuelo: firstSeg.flightNumber,
-            precio: {
-              total: selectedFlight.price?.total || null,
-              moneda: selectedFlight.price?.currency || null,
-            },
-            equipaje: {
-              incluye: selectedFlight.baggage?.hasCheckedBaggage === "true",
-              piezas: selectedFlight.baggage?.pieces || null,
-            },
-          },
-          pasajero_principal: {
-            nombre: mainDriver,
-            edad: mainDriverAge === "" ? null : Number(mainDriverAge),
+            viajero: {
+              nombre: mainDriver,
+              edad: mainDriverAge
+            }
           },
         };
       }
@@ -508,6 +543,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
       setLoading(false);
     }
   };
+
 
   // payload de ejemplo para auto
   const handleAddCarToCart = () => {

@@ -113,6 +113,7 @@ export type Segment = {
 };
 
 export type FlightOption = {
+  option: any;
   id: string;
   url: string;
   itineraryType?: string;
@@ -182,9 +183,9 @@ type ChatAction =
   | { type: "SET_MESSAGES"; payload: MessageChat[] }
   | { type: "SET_HISTORY"; payload: ItemHistory[] }
   | {
-      type: "SET_SELECT";
-      payload: CarRentalOption | FlightOption | null;
-    }
+    type: "SET_SELECT";
+    payload: CarRentalOption | FlightOption | null;
+  }
   | { type: "SET_BOOKING"; payload: { nombre: string } };
 
 const initialChatState: ChatState = {
