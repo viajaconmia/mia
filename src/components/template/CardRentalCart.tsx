@@ -14,14 +14,13 @@ import { useChat } from "../../hooks/useChat";
 
 interface CarRentalDisplayProps {
   option: CarRentalOption;
-  onSelectCar: (option: CarRentalOption) => void; // 👈 nueva prop
 }
 
-export const CarRentalDisplay = ({ option, onSelectCar }: CarRentalDisplayProps) => {
+export const CarRentalDisplay = ({ option }: CarRentalDisplayProps) => {
   const { url, carDetails, rentalPeriod, provider, price } = option;
-  const { setCartSelected, state } = useChat()
+  const { setSelected } = useChat();
 
-  const formatDate = (dateTime?: string) => {
+  const largeDate = (dateTime?: string) => {
     if (!dateTime) return "Fecha no disponible";
     const date = new Date(dateTime);
     return date.toLocaleDateString("es-MX", {
@@ -33,19 +32,8 @@ export const CarRentalDisplay = ({ option, onSelectCar }: CarRentalDisplayProps)
     });
   };
 
-  // === handler para seleccionar esta opción y mandarla al ReservationPanel ===
   const handleSubmit = () => {
-    // console.log("▶ handleSubmit en CarRentalDisplay");
-    // console.log("   option:", option);
-    // console.log("   typeof onSelectCar:", typeof onSelectCar);
-
-    // if (typeof onSelectCar === "function") {
-    //   console.log("   Llamando onSelectCar(option) desde CarRentalDisplay");
-    //   onSelectCar(option);
-    // } else {
-    //   console.warn("   onSelectCar ES UNDEFINED en CarRentalDisplay");
-    // }
-    setCartSelected(option);
+    setSelected({ type: "carro", item: option });
   };
 
   if (!url) {
@@ -118,7 +106,7 @@ export const CarRentalDisplay = ({ option, onSelectCar }: CarRentalDisplayProps)
                   </p>
                   {rentalPeriod.pickupLocation.dateTime && (
                     <p className="text-xs text-slate-500 mt-1">
-                      {formatDate(rentalPeriod.pickupLocation.dateTime)}
+                      {largeDate(rentalPeriod.pickupLocation.dateTime)}
                     </p>
                   )}
                 </div>
@@ -141,7 +129,7 @@ export const CarRentalDisplay = ({ option, onSelectCar }: CarRentalDisplayProps)
                   </p>
                   {rentalPeriod.returnLocation.dateTime && (
                     <p className="text-xs text-slate-500 mt-1">
-                      {formatDate(rentalPeriod.returnLocation.dateTime)}
+                      {largeDate(rentalPeriod.returnLocation.dateTime)}
                     </p>
                   )}
                 </div>

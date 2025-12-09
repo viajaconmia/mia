@@ -8,6 +8,7 @@ export class SolicitudService extends ApiService {
   private ENDPOINTS = {
     POST: {
       PAGAR_SOLICITUDES_POR_WALLET: "/createFromCart",
+      CREAR: "/",
     },
   };
   private constructor() {
@@ -33,4 +34,7 @@ export class SolicitudService extends ApiService {
       path: this.formatPath(this.ENDPOINTS.POST.PAGAR_SOLICITUDES_POR_WALLET),
       body: { id_agente: this.user.getUser()?.info?.id_agente, items, total },
     });
+
+  public crearSolicitud = async (body) =>
+    this.post({ path: this.formatPath(this.ENDPOINTS.POST.CREAR), body });
 }

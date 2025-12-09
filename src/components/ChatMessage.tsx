@@ -52,6 +52,27 @@ export const ChatMessagesController: React.FC<{
               </>
             );
           }
+          if (data.type == "db_hotel") {
+            const hoteles = Array.isArray(data.seleccionados.id)
+              ? data.seleccionados.id
+              : [data.seleccionados.id];
+            return (
+              <>
+                <div key={index} className="overflow-x-auto p-4 pt-0">
+                  <div className="flex flex-col md:flex-row gap-3">
+                    {hoteles.map((hotelId) => (
+                      <div
+                        key={hotelId + `${index}`}
+                        className="md:min-w-[300px]"
+                      >
+                        <HotelCard id_hotel={hotelId} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          }
 
           if (data.type == "hotel") {
             console.log(data);

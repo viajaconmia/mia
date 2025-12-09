@@ -4,10 +4,13 @@ import {
   ItemStack,
   MessageChat,
   useChatContext,
-  FlightOption, // 👈 antes tenías FlightOptions
+  FlightOption,
+  DataReservation, // 👈 antes tenías FlightOptions
 } from "../context/ChatContext";
 import { parseToJson } from "../lib/utils";
+import { Hotel } from "../services/AdapterHotel";
 import { ChatService } from "../services/chatService";
+
 import { useNotification } from "./useNotification";
 
 export const useChat = () => {
@@ -20,12 +23,35 @@ export const useChat = () => {
     dispatcher({ type: "SET_STACK", payload: newStack });
   };
 
-  const setCartSelected = (option: CarRentalOption | null) => {
+  const updatePrecioByFechas = (payload: {
+    check_in?: string;
+    check_out?: string;
+    room?: string;
+  }) => {
+    dispatcher({ type: "SET_PRECIO_BY_FECHAS", payload });
+  };
+
+  const setSelected = (
+    option:
+      | {
+          type: "carro";
+          item: CarRentalOption;
+        }
+      | {
+          type: "vuelo";
+          item: FlightOption;
+        }
+      | {
+          type: "hotel";
+          item: Hotel;
+        }
+      | null
+  ) => {
     dispatcher({ type: "SET_SELECT", payload: option });
   };
 
-  const setFlySelected = (option: FlightOption | null) => {
-    dispatcher({ type: "SET_SELECT", payload: option });
+  const updateSelect = (value: DataReservation) => {
+    dispatcher({ type: "UPDATE_SELECT", payload: value });
   };
 
   // Limpia todo el stack
@@ -166,8 +192,9 @@ export const useChat = () => {
     sendMessage,
     waitChatResponse,
     messages: state.messages,
-    setCartSelected,
-    setFlySelected,
     state,
+    setSelected,
+    updateSelect,
+    updatePrecioByFechas,
   };
 };

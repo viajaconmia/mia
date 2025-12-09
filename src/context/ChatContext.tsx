@@ -1,12 +1,20 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useReducer } from "react";
+import { Hotel } from "../services/AdapterHotel";
+import { Viajero } from "../services/ViajerosService";
+import { calcularNoches } from "../lib/calculates";
 
 export type HotelResponse = {
   type?: string;
   options?: {
     option?: HotelOption[];
   };
+};
+
+export type HotelDB = {
+  type: "db_hotel";
+  seleccionados: { id: string | string[] };
 };
 
 export type HotelOption = {
@@ -121,8 +129,8 @@ export type FlightOption = {
   };
   seat?: {
     isDesiredSeat: string;
-    requestedSeatLocation: string;  // "null"
-    assignedSeatLocation: string;   // "null"
+    requestedSeatLocation: string; // "null"
+    assignedSeatLocation: string; // "null"
   };
   baggage?: {
     hasCheckedBaggage: string; // "true" | "false"
@@ -152,7 +160,12 @@ type FunctionCall = {
 export type MessageChat = {
   role: "user" | "assistant";
   text: string;
-  componente: FlightOptions | CarRentalOptions | HotelOptions | undefined;
+  componente:
+    | FlightOptions
+    | CarRentalOptions
+    | HotelOptions
+    | undefined
+    | HotelDB;
 };
 
 export type ItemStack = {
@@ -161,6 +174,38 @@ export type ItemStack = {
 };
 
 export type ItemHistory = MessageChat | ItemStack;
+
+export type DataReservation =
+  | {
+      type: "carro";
+      item: CarRentalOption;
+      extra?: {
+        principal?: Viajero;
+        conductoresExtras?: (Viajero | null)[];
+        edad?: number;
+      };
+    }
+  | {
+      type: "vuelo";
+      item: FlightOption;
+      extra?: {
+        viajero?: Viajero;
+      };
+    }
+  | {
+      type: "hotel";
+      item: Hotel;
+      extra?: {
+        viajero?: Viajero;
+        acompanantes?: Viajero[];
+        check_in?: string;
+        check_out?: string;
+        precio?: string;
+        currency?: string;
+        room?: string;
+      };
+    }
+  | null;
 
 interface ChatState {
   stack: ItemStack[];
@@ -171,7 +216,7 @@ interface ChatState {
   booking: { nombre: string } | null;
   input: string;
   // 👇 ahora puede guardar coche O vuelo
-  select: CarRentalOption | FlightOption | null;
+  select: DataReservation;
 }
 
 type ChatAction =
@@ -183,9 +228,17 @@ type ChatAction =
   | { type: "SET_HISTORY"; payload: ItemHistory[] }
   | {
       type: "SET_SELECT";
-      payload: CarRentalOption | FlightOption | null;
+      payload: DataReservation;
     }
-  | { type: "SET_BOOKING"; payload: { nombre: string } };
+  | {
+      type: "UPDATE_SELECT";
+      payload: DataReservation;
+    }
+  | { type: "SET_BOOKING"; payload: { nombre: string } }
+  | {
+      type: "SET_PRECIO_BY_FECHAS";
+      payload: { check_in?: string; check_out?: string; room?: string };
+    };
 
 const initialChatState: ChatState = {
   isLoading: false,
@@ -214,8 +267,36 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
       return { ...state, history: action.payload };
     case "SET_SELECT":
       return { ...state, select: action.payload };
+    case "SET_PRECIO_BY_FECHAS":
+      if (state.select == null) return state;
+      if (state.select.type != "hotel") return state;
+      let check_in = action.payload.check_in ?? state.select.extra?.check_in;
+      let check_out = action.payload.check_out ?? state.select.extra?.check_out;
+      let room = action.payload.room ?? state.select.extra?.room;
+      let [cuarto] = state.select.item.tipos_cuartos.filter(
+        (r) => r.cuarto.toUpperCase() == room?.toUpperCase()
+      );
+      let precio = state.select.extra?.precio;
+      if (check_in && room && check_out) {
+        precio = (
+          Number(cuarto.precio) *
+          calcularNoches(
+            new Date(check_in).toISOString(),
+            new Date(check_out).toISOString()
+          )
+        ).toFixed(2);
+      }
+      return {
+        ...state,
+        select: {
+          ...state.select,
+          extra: { ...state.select.extra, check_in, check_out, room, precio },
+        },
+      };
     case "SET_BOOKING":
       return { ...state, booking: action.payload };
+    case "UPDATE_SELECT":
+      return { ...state, select: action.payload };
     default:
       return state;
   }
@@ -230,16 +311,6 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatcher] = useReducer(chatReducer, initialChatState);
-
-  useEffect(() => {
-    console.log("Pila:", state.stack);
-    console.log("mensajes:", state.messages);
-    console.log("estado:", state);
-  }, [state.stack, state.messages]);
-
-  useEffect(() => {
-    console.log("SELECT:", state.select);
-  }, [state.select]);
 
   return (
     <ChatContext.Provider value={{ dispatcher, state }}>

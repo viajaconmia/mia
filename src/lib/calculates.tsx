@@ -11,3 +11,24 @@ export function calcularNoches(checkIn: string, checkOut: string) {
 
   return noches;
 }
+
+export const calcularEdad = (
+  fechaNacimiento: string | undefined
+): number | undefined => {
+  if (!fechaNacimiento) return undefined;
+  const hoy = new Date();
+  const fechaNacimientoDate = new Date(fechaNacimiento);
+  let edad = hoy.getFullYear() - fechaNacimientoDate.getFullYear();
+  const mes = hoy.getMonth();
+  const dia = hoy.getDate();
+
+  // Ajustar si no ha cumplido años este año
+  if (
+    mes < fechaNacimientoDate.getMonth() ||
+    (mes === fechaNacimientoDate.getMonth() &&
+      dia < fechaNacimientoDate.getDate())
+  ) {
+    edad--;
+  }
+  return edad;
+};

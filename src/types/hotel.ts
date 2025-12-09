@@ -9,6 +9,7 @@ export interface Hotel {
   id_hotel: string;
   hotel: string;
   direccion: string;
+  currency: string;
   estado: string;
   ciudad: string;
   codigo_postal: string;

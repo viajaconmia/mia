@@ -16,7 +16,6 @@ import {
   MapPin,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
-import { Reservation } from "../../types/chat";
 import { NavigationLink } from "../atom/NavigationLink";
 import ROUTES from "../../constants/routes";
 import { TabsList } from "../molecule/TabsList";
@@ -183,13 +182,11 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
 type ReservationCartPanelProps = {
   activeTab: "reserva" | "carrito";
   onTabChange: (tab: "reserva" | "carrito") => void;
-  bookingData: Reservation | null;
 };
 
 const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
   activeTab,
   onTabChange,
-  bookingData,
 }) => {
   return (
     <div className="bg-white h-full rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
@@ -201,9 +198,7 @@ const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
           { tab: "carrito", icon: ShoppingCart },
         ]}
       />
-      {activeTab === "reserva" && (
-        <ReservationPanel booking={bookingData || null} />
-      )}
+      {activeTab === "reserva" && <ReservationPanel />}
       {activeTab === "carrito" && <Cart />}
     </div>
   );
@@ -273,7 +268,6 @@ const Chat: React.FC = () => {
                   <ReservationCartPanel
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    bookingData={{} as Reservation}
                   />
                 </div>
               </div>
@@ -286,17 +280,12 @@ const Chat: React.FC = () => {
           <ReservationCartPanel
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            bookingData={{} as Reservation}
           />
         </div>
       </div>
     </>
   );
 };
-
-// =====================
-// FlightOptionsDisplay
-// =====================
 
 interface FlightOptionsDisplayProps {
   flightOptions: FlightOptions;
@@ -305,7 +294,7 @@ interface FlightOptionsDisplayProps {
 export const FlightOptionsDisplay = ({
   flightOptions,
 }: FlightOptionsDisplayProps) => {
-  const { setFlySelected } = useChat(); // igual que en CarRentalDisplay
+  const { setSelected } = useChat(); // igual que en CarRentalDisplay
 
   const options = Array.isArray(flightOptions.options.option)
     ? flightOptions.options.option
@@ -320,7 +309,7 @@ export const FlightOptionsDisplay = ({
     });
   };
 
-  const formatDate = (dateString: string) => {
+  const shortDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -350,7 +339,7 @@ export const FlightOptionsDisplay = ({
                   {formatTime(segment.departureTime)}
                 </span>
                 <span className="text-sm text-slate-500">
-                  {formatDate(segment.departureTime)}
+                  {shortDate(segment.departureTime)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-slate-600">
@@ -385,13 +374,11 @@ export const FlightOptionsDisplay = ({
                   {formatTime(segment.arrivalTime)}
                 </span>
                 <span className="text-sm text-slate-500">
-                  {formatDate(segment.arrivalTime)}
+                  {shortDate(segment.arrivalTime)}
                 </span>
               </div>
               <div className="flex items-center gap-2 justify-end text-slate-600">
-                <span className="text-sm">
-                  {segment.destination.city} ·
-                </span>
+                <span className="text-sm">{segment.destination.city} ·</span>
                 <span className="font-medium">
                   {segment.destination.airportCode}
                 </span>
@@ -456,9 +443,7 @@ export const FlightOptionsDisplay = ({
                           {option?.price?.total || ""}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Total price
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1">Total price</p>
                     </div>
                   </div>
 
@@ -495,7 +480,9 @@ export const FlightOptionsDisplay = ({
                     {/* Botón para seleccionar este vuelo */}
                     <button
                       type="button"
-                      onClick={() => setFlySelected(option)}
+                      onClick={() =>
+                        setSelected({ type: "vuelo", item: option })
+                      }
                       className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
                     >
                       Seleccionar este vuelo

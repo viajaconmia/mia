@@ -11,6 +11,7 @@ export class CartService extends ApiService {
     },
     POST: {
       crear_item: "/",
+      procesar_cotizacion: "/cotizacion",
     },
     DELETE: {
       eliminar_item: "/",
@@ -54,6 +55,15 @@ export class CartService extends ApiService {
         ...body,
         id_agente: this.user.getUser()?.info?.id_agente,
         usuario_generador: this.user.getUser()?.info?.id_viajero,
+      },
+    });
+
+  public procesarCotizacion = async () =>
+    this.post({
+      path: this.formatPath(this.ENDPOINTS.POST.procesar_cotizacion),
+      body: {
+        usuario_generador: this.user.getUser()?.info?.id_viajero,
+        id_agente: this.user.getUser()?.info?.id_agente,
       },
     });
 

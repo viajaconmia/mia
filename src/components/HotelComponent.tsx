@@ -7,8 +7,6 @@ import {
   Bed,
   Users,
   CreditCard,
-  PawPrint,
-  Briefcase,
 } from "lucide-react";
 import { NavigationLink } from "./atom/NavigationLink";
 import ROUTES from "../constants/routes";
@@ -128,7 +126,7 @@ type HotelCardProps = {
 };
 
 // --- Componente Principal de la Tarjeta del Hotel ---
-const HotelCard: FC<HotelCardProps> = ({ hotel, onReserve }) => {
+const HotelCard: FC<HotelCardProps> = ({ hotel }) => {
   // Lógica para el desayuno, para usarla fácilmente abajo
   const isBreakfastIncluded = Boolean(hotel.desayuno_sencilla);
 

@@ -16,6 +16,10 @@ import {
   ArrowBigLeft,
   Plus,
   Wifi,
+  ArrowRight,
+  CarFront,
+  Cog,
+  ShieldCheck,
 } from "lucide-react";
 import Button from "./atom/Button";
 import { useCart } from "../context/cartContext";
@@ -49,6 +53,7 @@ import { MetodosDePago } from "../types/newIndex";
 import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { SolicitudService } from "../services/SolicitudService";
+import { fixEncoding, getHora } from "../utils/formatters";
 
 const CartItemComponent: React.FC<{
   item: CartItem;
@@ -61,6 +66,10 @@ const CartItemComponent: React.FC<{
         return (
           <>
             <p className="font-medium">{item.details.hotel}</p>
+            <span className="text-xs uppercase flex gap-2">
+              <Users className="w-4 h-4"></Users>
+              {item.details.viajero_principal}
+            </span>
             <div className="flex flex-col gap-y-2 text-sm text-gray-600">
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
@@ -79,68 +88,20 @@ const CartItemComponent: React.FC<{
                 </span>
               </div>
             </div>
-            <p className="text-sm text-gray-700 mt-2">
-              <span className="font-medium">Viajero principal:</span>{" "}
-              {item.details.viajero_principal}
-            </p>
           </>
         );
 
       case "car_rental":
         return (
           <>
-            <p className="font-medium">{item.details.company}</p>
-            <div className="flex flex-col gap-y-2 text-sm text-gray-600">
-              <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                <MapPin className="w-4 h-4" />
-                <span>Recogida: {item.details.pickup_location}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                <MapPin className="w-4 h-4" />
-                <span>Entrega: {item.details.dropoff_location}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>
-                  {formatDate(item.details.pickup_date)}
-                  {" - "}
-                  {formatDate(item.details.dropoff_date)}
-                </span>
-              </div>
-            </div>
-            <p className="text-sm text-gray-700 mt-2">
-              <span className="font-medium">Conductor:</span>{" "}
-              {item.details.driver_name}
-            </p>
+            <CarRentalComponent item={item} />
           </>
         );
 
       case "flight":
         return (
           <>
-            <p className="font-medium">{item.details.airline}</p>
-            <div className="flex flex-col gap-y-2 text-sm text-gray-600">
-              <div className="flex items-center space-x-1">
-                <MapPin className="h-4 w-4" />
-                <span>
-                  {item.details.origin} → {item.details.destination}
-                </span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>Salida: {formatDate(item.details.departure_date)}</span>
-              </div>
-              {item.details.return_date && (
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Regreso: {formatDate(item.details.return_date)}</span>
-                </div>
-              )}
-            </div>
-            <p className="text-sm text-gray-700 mt-2">
-              <span className="font-medium">Pasajeros:</span>{" "}
-              {item.details.passengers.length}
-            </p>
+            <FlightComponent item={item}></FlightComponent>
           </>
         );
       default:
@@ -239,8 +200,6 @@ export const Cart = () => {
         );
       });
   };
-
-  console.log(cart);
 
   if (cart.length == 0) {
     return (
@@ -344,6 +303,7 @@ const DetailsPago = ({
   onProcedPayment: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
 }) => {
   const { showNotification } = useNotification();
+  const { handleActualizarCarrito, handleActualizarMetodosPago } = useCart();
 
   const handleProcedPayment = () => {
     try {
@@ -357,9 +317,22 @@ const DetailsPago = ({
     }
   };
   return (
-    <Button onClick={handleProcedPayment} size="full">
-      Proceder al Pago
-    </Button>
+    <>
+      <Button
+        onClick={async () => {
+          const { data } = await CartService.getInstance().procesarCotizacion();
+          handleActualizarCarrito();
+          handleActualizarMetodosPago();
+          console.log(data);
+        }}
+        size="full"
+      >
+        Procesar Cotización
+      </Button>
+      <Button onClick={handleProcedPayment} size="full">
+        Proceder al Pago
+      </Button>
+    </>
   );
 };
 
@@ -918,3 +891,227 @@ const ManejoPrecios = ({
     </div>
   </>
 );
+
+const FlightComponent = ({ item }: { item: any }) => {
+  // 1. Acceso seguro a la data profunda
+  const flightData = item?.details?.data?.item?.item;
+  const rawSegment = flightData?.segments?.segment;
+
+  // 2. NORMALIZACIÓN: Truco para XML -> JSON
+  // Si rawSegment es un array, lo usamos. Si es un objeto, lo metemos en un array. Si es null, array vacío.
+  const segments = Array.isArray(rawSegment)
+    ? rawSegment
+    : rawSegment
+    ? [rawSegment]
+    : [];
+
+  // Si no hay segmentos, no renderizamos nada o mostramos error
+  if (segments.length === 0) return null;
+
+  // 3. Datos Calculados
+  const firstSegment = segments[0];
+  const lastSegment = segments[segments.length - 1];
+  const airlineName = item?.details?.proveedor || firstSegment?.airline;
+  const isRoundTrip =
+    flightData?.itineraryType !== "one_way" || item?.details?.return_date;
+
+  return (
+    <div className="flex flex-col gap-y-3 p-2">
+      {/* --- CABECERA: Aerolínea y Tipo --- */}
+      <div className="flex justify-between items-center">
+        <span className="font-bold text-gray-900 flex items-center gap-2 text-lg">
+          <Plane className="h-4 w-4 text-blue-600" />
+          {airlineName}
+        </span>
+        {segments.length > 1 && (
+          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
+            {segments.length - 1}{" "}
+            {segments.length - 1 === 1 ? "Escala" : "Escalas"}
+          </span>
+        )}
+      </div>
+      <span className="text-xs uppercase flex gap-2">
+        <Users className="w-4 h-4"></Users>
+        {item.details.viajero_principal}
+      </span>
+
+      {/* --- ITINERARIO DETALLADO (Segmentos / Escalas) --- */}
+      <div className="flex flex-col gap-2 border-l-2 border-gray-200 pl-3 ml-1">
+        {segments.map((seg, index) => (
+          <div key={index} className="relative pb-2 last:pb-0">
+            {/* Bolita decorativa de la línea de tiempo */}
+            <div className="absolute -left-[19px] top-1 h-3 w-3 rounded-full border-2 border-white bg-gray-400"></div>
+
+            <div className="text-sm">
+              {/* Vuelo y Ruta Específica del tramo */}
+              <div className="flex items-center gap-1 font-medium text-gray-800">
+                <span>{seg.origin.airportCode}</span>
+                <ArrowRight className="h-3 w-3 text-gray-400" />
+                <span>{seg.destination.airportCode}</span>
+              </div>
+
+              {/* Horarios del tramo */}
+              <div className="text-xs text-gray-500 mt-0.5 flex flex-col sm:flex-row sm:gap-3">
+                <span>Salida: {formatDate(seg.departureTime)}</span>
+                <span>Llegada: {formatDate(seg.arrivalTime)}</span>
+              </div>
+
+              <p className="text-[10px] text-gray-400 mt-1">
+                Vuelo: {seg.airline} {seg.flightNumber}
+              </p>
+            </div>
+
+            {/* Si no es el último, mostramos un aviso de escala (opcional) */}
+            {index < segments.length - 1 && (
+              <div className="my-2 text-xs text-orange-600 font-medium italic">
+                Cambio de avión / Escala
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* --- RESUMEN FINAL Y REGRESO --- */}
+      <div className="mt-1 pt-2 border-t border-gray-100 text-sm text-gray-600">
+        {/* Resumen Origen -> Destino Final */}
+        <div className="flex items-center gap-2 mb-1">
+          <MapPin className="h-4 w-4 shrink-0" />
+          <span className="font-medium">
+            {fixEncoding(firstSegment.origin.city)} →{" "}
+            {fixEncoding(lastSegment.destination.city)}
+          </span>
+        </div>
+
+        {/* Información de Regreso (Si existe) */}
+        {isRoundTrip && item?.details?.return_date && (
+          <div className="flex items-center gap-2 text-blue-600 mt-2 bg-blue-50 p-2 rounded-md">
+            <Calendar className="h-4 w-4 shrink-0" />
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold text-xs">Vuelo de Regreso</span>
+              <span className="text-xs">
+                Fecha: {formatDate(item.details.return_date)}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CarRentalComponent = ({ item }: { item: any }) => {
+  // const { item } = item.details.data.item;
+  const { item: data } = item.details.data;
+  // Validamos si hay información mínima para mostrar
+  // if (!details.company && !details.pickup_location) return null;
+
+  return (
+    <div className="flex flex-col gap-y-3 p-2">
+      {/* 1. Cabecera: Compañía de Renta */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="p-1.5 rounded-md flex gap-2 items-center">
+          <div>
+            <CarFront className="h-4 w-4 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mt-1">
+            {data.item.carDetails.make} {data.item.carDetails.model}{" "}
+            <span className="text-sm font-normal text-gray-500">o similar</span>
+          </h3>
+        </div>
+        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+          {data.item.provider?.name}
+        </span>
+      </div>
+      <span className="text-xs uppercase flex gap-2">
+        <Users className="w-4 h-4"></Users>
+        {data.extra.principal.nombre_completo}
+      </span>
+      <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
+        {/* Categoría */}
+        <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
+          <CarFront className="h-3 w-3" />
+          <span>{fixEncoding(data.item.carDetails.category)}</span>
+        </div>
+
+        {/* Pasajeros */}
+        <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
+          <Users className="h-3 w-3" />
+          <span>{data.item.carDetails.passengers}</span>
+        </div>
+
+        {/* Transmisión (Traducimos automatic -> Automático si es necesario) */}
+        <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md capitalize">
+          <Cog className="h-3 w-3" />
+          <span>
+            {data.item.carDetails.transmission === "automatic"
+              ? "Automático"
+              : data.item.carDetails.transmission}
+          </span>
+        </div>
+      </div>
+
+      {/* 2. Bloque de Ubicaciones (Línea visual) */}
+      <div className="relative flex flex-col gap-4 border-l-2 border-gray-200 pl-4 ml-2 my-1">
+        {/* Recogida */}
+        <div className="relative">
+          {/* Bolita decorativa */}
+          <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-green-500"></div>
+
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">
+              Recogida
+            </span>
+            <span className="font-medium text-gray-800 text-sm">
+              {fixEncoding(data.item.rentalPeriod.pickupLocation.address)}
+            </span>
+            {data.item.rentalPeriod.pickupLocation.dateTime && (
+              <div className="flex items-center gap-1 text-xs text-blue-600 mt-0.5 font-medium">
+                <Calendar className="h-3 w-3" />
+                {formatDate(
+                  data.item.rentalPeriod.pickupLocation.dateTime
+                )} - {getHora(data.item.rentalPeriod.pickupLocation.dateTime)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Entrega */}
+        <div className="relative">
+          {/* Bolita decorativa */}
+          <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-red-400"></div>
+
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">
+              Entrega
+            </span>
+            <span className="font-medium text-gray-800 text-sm">
+              {fixEncoding(data.item.rentalPeriod.returnLocation.address)}
+            </span>
+            {data.item.rentalPeriod.returnLocation.dateTime && (
+              <div className="flex items-center gap-1 text-xs text-blue-600 mt-0.5 font-medium">
+                <Calendar className="h-3 w-3" />
+                {formatDate(
+                  data.item.rentalPeriod.returnLocation.dateTime
+                )} - {getHora(data.item.rentalPeriod.returnLocation.dateTime)}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      {data.item.price?.includedFeatures && (
+        <div className="mt-1 pt-3 border-t border-gray-100">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-600 leading-snug">
+              <span className="font-semibold text-gray-800">Incluye: </span>
+              {/* Reemplazamos comas por bullets o lo dejamos como texto corrido arreglado */}
+              {fixEncoding(data.item.price.includedFeatures)
+                .split(",")
+                .join(" • ")}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

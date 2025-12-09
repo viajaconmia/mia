@@ -4,6 +4,8 @@ import { Hotel } from "../types/hotel";
 import { ImageSlider } from "./ImageSlider";
 import { ImageModal } from "./ImageModal";
 import { fetchHotelById } from "../services/database";
+import Button from "./atom/Button";
+import { useChat } from "../hooks/useChat";
 
 interface HotelCardProps {
   id_hotel?: string;
@@ -18,6 +20,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
     data_hotel ? data_hotel : null
   );
   const [showModal, setShowModal] = useState(false);
+  const { setSelected } = useChat();
 
   useEffect(() => {
     try {
@@ -78,7 +81,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
           </div> */}
 
           {/* Desayuno incluido */}
-          {hotel.desayuno_incluido.toUpperCase() === "SI" && (
+          {(hotel.desayuno_incluido || "").toUpperCase() === "SI" && (
             <div className="mb-2 flex items-center gap-2 text-sm text-green-700">
               <Coffee size={14} />
               <span>Desayuno incluido ({hotel.desayuno_comentarios})</span>
@@ -98,11 +101,18 @@ export const HotelCard: React.FC<HotelCardProps> = ({
                     precio por noche:{" "}
                   </span>
                   {room.precio}
-                  <span>{}</span>
+                  <span>{hotel.currency || "MXN"}</span>
                 </span>
               </div>
             ))}
           </div>
+          <Button
+            onClick={() => setSelected({ type: "hotel", item: hotel })}
+            className="mt-4"
+            size="sm"
+          >
+            Seleccionar este hotel
+          </Button>
         </div>
       </div>
 

@@ -1,37 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import type { BookingData } from "../types";
-import {
-  Calendar,
-  Users,
-  CreditCard,
-  Building2,
-  ArrowRight,
-  Clock,
-  ShoppingCartIcon,
-  Car,
-  Plane,
-} from "lucide-react";
-import { useSolicitud } from "../hooks/useSolicitud";
-import { Reservation } from "../types/chat";
-import { Hotel } from "../types/hotel";
-import { fetchHotelById } from "../services/database";
+import { useState, useEffect } from "react";
+import { Building2, ShoppingCartIcon, Car, Plane } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import Button from "./atom/Button";
-import { CartService } from "../services/CartService";
 import { useNotification } from "../hooks/useNotification";
-import { useCart } from "../context/cartContext";
 import { Logo } from "./atom/Logo";
-import {
-  CarRentalOption,
-  FlightOption,
-} from "../context/ChatContext";
 import { useChat } from "../hooks/useChat";
-import { URL } from "../constants/apiConstant";
-
-const API_KEY =
-  "nkt-U9TdZU63UENrblg1WI9I1Ln9NcGrOyaCANcpoS2PJT3BlbkFJ1KW2NIGUYF87cuvgUF3Q976fv4fPrnWQroZf0RzXTZTA942H3AMTKFKJHV6cTi8c6dd6tybUD65fybhPJT3BlbkFJ1KW2NIGPrnWQroZf0RzXTZTA942H3AMTKFy15whckAGSSRSTDvsvfHsrtbXhdrT";
+import { Viajero, ViajerosService } from "../services/ViajerosService";
+import { calcularEdad } from "../lib/calculates";
+import {
+  ComboBox,
+  ComboBoxOption2,
+  InputDate,
+  NumberInput,
+  SelectInput,
+} from "./atom/Input";
+import { SolicitudService } from "../services/SolicitudService";
+import { useCart } from "../context/cartContext";
+import { getHora } from "../utils/formatters";
 
 function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   if (obj === null || obj === undefined) return false;
@@ -61,319 +48,98 @@ function areAllFieldsFilled(obj: any, excludeKeys: string[] = []): boolean {
   return false;
 }
 
-interface ReservationPanelProps {
-  booking?: Reservation | null;
-  selectedCar?: CarRentalOption | null; // sigue existiendo como prop opcional
-}
-
-const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return null;
-
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  return {
-    weekday: date.toLocaleDateString("es-MX", { weekday: "long" }),
-    day: date.getDate(),
-    month: date.toLocaleDateString("es-MX", { month: "long" }),
-    year: date.getFullYear(),
-  };
-};
-
-// 👇 viajeros de ejemplo (por ahora sin back)
-interface Viajero {
-  id_viajero: string;
-  nombre_completo: string;
-  fecha_nacimiento?: string;
-
-}
-
-
-const fetchViajerosFromAgent = async (
-  id: string,
-  callback: (data: Viajero[]) => void
-) => {
-  try {
-    const response = await fetch(`${URL}/v1/mia/viajeros/id?id=${id}`, {
-      headers: {
-        "x-api-key": API_KEY || "",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-      cache: "no-store",
-    }).then((res) => res.json());
-    if (response.error) {
-      console.error(response);
-      throw new Error("Error al buscar los viajeros");
-    }
-    callback(response as Viajero[]);
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-};
-
-// ==== TYPE GUARDS para distinguir Auto vs Vuelo ====
-
-const isCarRentalOption = (option: any): option is CarRentalOption => {
-  return option && typeof option === "object" && "carDetails" in option;
-};
-
-const isFlightOption = (option: any): option is FlightOption => {
-  return option && typeof option === "object" && "segments" in option;
-};
-
-export const ReservationPanel: React.FC<ReservationPanelProps> = ({
-  booking,
-  selectedCar: selectedCarProp,
-}) => {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [idSolicitud, setIdSolicitud] = useState<string | null>(null);
-  const [bookingData, setBookingData] = useState<BookingData | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isBookingSaved, setIsBookingSaved] = useState(false);
-  const [dataHotel, setDataHotel] = useState<Hotel | null>(null);
-
-  // estados para auto / vuelo (viajero principal y adicionales)
-  const [mainDriver, setMainDriver] = useState<string>("");
-  const [mainDriverAge, setMainDriverAge] = useState<number | "">("");
-  const [additionalDriver, setAdditionalDriver] = useState<string>("");
-  const [additionalDriverAge, setAdditionalDriverAge] = useState<number | string>("");
-  const [viajeros, setViajeros] = useState<Viajero[]>([]);
-
+export const ReservationPanel = () => {
   const { state } = useChat();
   const { user } = useAuth();
+  const [viajeros, setViajeros] = useState<Viajero[]>();
+  const { showNotification } = useNotification();
   const { handleActualizarCarrito } = useCart();
-  const { crearSolicitudChat } = useSolicitud();
-  console.log("informacion user", user)
-  const notificationContext = useNotification();
-  const showNotification = notificationContext?.showNotification;
-  const [showAdditionalDrivers, setShowAdditionalDrivers] = useState(false);
-
-  // Selección global desde el contexto (puede ser auto o vuelo)
-  const selectedFromContext = state.select;
-
-  // Normalizamos: primero lo que venga del contexto; si no es auto, usamos el prop como fallback
-  const selectedCar = isCarRentalOption(selectedFromContext)
-    ? selectedFromContext
-    : isCarRentalOption(selectedCarProp)
-      ? selectedCarProp
-      : null;
-
-  const selectedFlight = isFlightOption(selectedFromContext)
-    ? selectedFromContext
-    : null;
-
-  // LOGs para debug
-  useEffect(() => {
-    console.log("selectedCar (efectivo) en ReservationPanel:", selectedCar);
-  }, [selectedCar]);
 
   useEffect(() => {
     if (user?.info?.id_agente) {
-      fetchViajerosFromAgent(user.info.id_agente, (data) => {
-        console.log("Viajero(s) recibido(s):", data);
-        setViajeros(data);
-        // Aquí puedes manejar la data recibida, por ejemplo, actualizar un estado.
-      });
+      ViajerosService.getInstance()
+        .getViajeros()
+        .then((res) => setViajeros(res.data || []));
     }
-    console.log("selectedCar (efectivo) en ReservationPanel:", user?.info?.id_agente);
   }, [user?.info?.id_agente]);
 
-  useEffect(() => {
-    console.log("selectedFlight (efectivo) en ReservationPanel:", selectedFlight);
-  }, [selectedFlight]);
-
-  useEffect(() => {
-    let currentBooking = booking || null;
-    let currentBookingData = bookingData || {
-      confirmationCode: null,
-      hotel: {
-        name: null,
-        location: null,
-        image: null,
-        additionalImages: [],
-      },
-      dates: {
-        checkIn: null,
-        checkOut: null,
-      },
-      room: {
-        type: null,
-        pricePerNight: null,
-        totalPrice: null,
-      },
-      guests: [],
-      totalNights: null,
-    };
-
-    if (currentBooking?.check_in && currentBooking?.check_out) {
-      const checkIn = new Date(currentBooking?.check_in);
-      const checkOut = new Date(currentBooking?.check_out);
-      const totalNights = Math.ceil(
-        (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24)
-      );
-
-      currentBookingData = {
-        ...currentBookingData,
-        dates: {
-          checkIn: currentBooking.check_in,
-          checkOut: currentBooking.check_out,
-        },
-        totalNights,
-      };
-    }
-
-    if (
-      currentBooking?.id_hotel &&
-      (!dataHotel || dataHotel?.id_hotel != currentBooking.id_hotel)
-    ) {
-      fetchHotelById(currentBooking.id_hotel, (hotel_response) => {
-        console.log(hotel_response);
-        setDataHotel(hotel_response);
-      });
-    }
-
-    if (dataHotel) {
-      currentBookingData = {
-        ...currentBookingData,
-        hotel: {
-          name: dataHotel.hotel,
-          location: dataHotel.direccion,
-          image: dataHotel.imagenes[0],
-          additionalImages: dataHotel.imagenes,
-        },
-      };
-      if (currentBooking?.room) {
-        let room = dataHotel.tipos_cuartos.find(
-          (room) =>
-            room.id_tipo_cuarto ===
-            (currentBooking.room == "single"
-              ? 1
-              : currentBooking.room == "double"
-                ? 2
-                : 0)
-        );
-        if (!room) {
-          room = dataHotel.tipos_cuartos[0];
-        }
-
-        currentBookingData = {
-          ...currentBookingData,
-          room: {
-            ...currentBookingData.room,
-            type: room.cuarto,
-            pricePerNight: parseFloat(room.precio),
-            totalPrice:
-              parseFloat(room.precio) * (currentBookingData.totalNights || 0),
-          },
-        };
-      }
-    }
-
-    if (currentBooking?.viajero || currentBooking?.id_viajero) {
-      currentBookingData = {
-        ...currentBookingData,
-        guests: [currentBooking.viajero || currentBooking.id_viajero].filter(
-          (guest): guest is string => typeof guest === "string"
-        ),
-      };
-    }
-
-    if (areAllFieldsFilled(currentBookingData, ["confirmationCode"])) {
-      currentBookingData = {
-        ...currentBookingData,
-        confirmationCode: `RES${Math.round(Math.random() * 10000000)}`,
-      };
-    }
-
-    setBookingData(currentBookingData);
-  }, [booking, dataHotel]);
-
-  useEffect(() => {
-    // Auto-save booking when confirmation code is generated
-    if (bookingData?.confirmationCode && !isBookingSaved) {
-      saveBookingToDatabase();
-    }
-  }, [bookingData?.confirmationCode]);
-
-  const calcularEdad = (fechaNacimiento: string): number => {
-    const hoy = new Date();
-    const fechaNacimientoDate = new Date(fechaNacimiento);
-    let edad = hoy.getFullYear() - fechaNacimientoDate.getFullYear();
-    const mes = hoy.getMonth();
-    const dia = hoy.getDate();
-
-    // Ajustar si no ha cumplido años este año
-    if (mes < fechaNacimientoDate.getMonth() || (mes === fechaNacimientoDate.getMonth() && dia < fechaNacimientoDate.getDate())) {
-      edad--;
-    }
-    return edad;
-  };
-
-  const saveBookingToDatabase = async () => {
-    if (!bookingData || isSaving || isBookingSaved) return;
-
+  const handleSubmit = async () => {
     try {
-      setIsSaving(true);
+      if (!state.select) throw new Error("");
+      const { extra, type, item } = state.select;
+      if (extra == null) throw new Error("");
 
-      if (!user) {
-        throw new Error("Usuario no autenticado");
-      }
+      const solicitud = {
+        type:
+          type == "vuelo" ? "flight" : type == "carro" ? "car_rental" : "hotel",
+        proveedor:
+          type == "carro"
+            ? item.provider?.name
+            : type == "hotel"
+            ? item.hotel
+            : Array.isArray(item.segments.segment)
+            ? item.segments.segment[0].airline
+            : item.segments.segment.airline,
+        id_usuario_generador: user?.info?.id_viajero,
+        id_viajero:
+          type == "carro"
+            ? extra.principal?.id_viajero
+            : type == "hotel"
+            ? extra.viajero?.id_viajero
+            : extra.viajero?.id_viajero,
+        viajero_principal:
+          type == "carro"
+            ? extra.principal?.nombre_completo
+            : type == "hotel"
+            ? extra.viajero?.nombre_completo
+            : extra.viajero?.nombre_completo,
+        hotel: type == "hotel" ? item.hotel : null,
+        check_in:
+          type == "carro"
+            ? item.rentalPeriod?.pickupLocation?.dateTime
+            : type == "hotel"
+            ? extra.check_in
+            : Array.isArray(item.segments.segment)
+            ? item.segments.segment[0].departureTime
+            : item.segments.segment.departureTime,
+        check_out:
+          type == "carro"
+            ? item.rentalPeriod?.returnLocation?.dateTime
+            : type == "hotel"
+            ? extra.check_out
+            : Array.isArray(item.segments.segment)
+            ? item.segments.segment[item.segments.segment.length - 1]
+                .arrivalTime
+            : item.segments.segment.arrivalTime,
+        room: type == "hotel" ? extra.room : null,
+        total:
+          type == "carro"
+            ? item.price?.total
+            : type == "hotel"
+            ? extra.precio
+            : item.price?.total,
+        status: "pending",
+        viajeros_adicionales: type == "hotel" ? extra.acompanantes : null,
+        id_agente: user?.info?.id_agente,
+        origen: "cliente",
+        usuario_creador: user?.info?.id_viajero,
+        item: { ...state.select },
+      };
 
-      const imageUrl =
-        bookingData.hotel.additionalImages?.[0] ||
-        bookingData.hotel.image ||
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80";
-
-      console.log("Saving booking data:", bookingData, "image:", imageUrl);
-
-      const responseSolicitud = await crearSolicitudChat(
-        {
-          confirmation_code: bookingData.confirmationCode,
-          hotel_name: bookingData.hotel.name,
-          dates: {
-            checkIn: bookingData.dates.checkIn,
-            checkOut: bookingData.dates.checkOut,
-          },
-          room: {
-            type: bookingData.room.type,
-            totalPrice: bookingData.room.totalPrice,
-          },
-          nombre_viajero: bookingData.guests[0],
-        },
-        user.info?.id_agente || ""
-      );
-
-      console.log(
-        "Response from crearSolicitudChat:",
-        responseSolicitud.data.response.resultsCallback[0]
-      );
-      console.log(responseSolicitud.data.response.resultsCallback);
-      setIdSolicitud(responseSolicitud.data.response.resultsCallback[0]);
-
-      setIsBookingSaved(true);
+      const { message, data } =
+        await SolicitudService.getInstance().crearSolicitud({
+          solicitudes: solicitud,
+          tradicional: false,
+        });
+      handleActualizarCarrito();
+      showNotification("success", message);
+      return data;
     } catch (error: any) {
-      console.error("Error saving booking:", error);
-    } finally {
-      setIsSaving(false);
+      showNotification("error", error.message || "Error al guardar la reserva");
     }
   };
 
-  if (!bookingData && !selectedCar && !selectedFlight) {
-    return null;
-  }
-
-  const hasAnyData =
-    bookingData?.hotel?.name ||
-    bookingData?.dates?.checkIn ||
-    bookingData?.room?.type ||
-    bookingData?.confirmationCode ||
-    selectedCar ||
-    selectedFlight;
-
-  if (!hasAnyData) {
+  if (state.select == null) {
     return (
       <div className="h-full p-6  flex items-center justify-center">
         <div className="text-center text-[#10244c93]">
@@ -388,816 +154,651 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
     );
   }
 
-  const checkInDate = formatDate(bookingData?.dates?.checkIn || null);
-  const checkOutDate = formatDate(bookingData?.dates?.checkOut || null);
+  return (
+    <div className="h-full py-4 space-y-2 overflow-y-auto">
+      <div className="flex items-center space-x-2 px-4">
+        {/* === AUTO DE RENTA === */}
+        {state.select?.type == "carro" && (
+          <>
+            <Car className="w-5 h-5 text-[#10244c]" />
+            <h3 className="text-lg font-semibold text-[#10244c]">
+              Renta de Auto
+            </h3>
+          </>
+        )}
+        {state.select.type == "vuelo" && (
+          <>
+            <Plane className="w-5 h-5 text-[#10244c]" />
+            <h3 className="text-lg font-semibold text-[#10244c]">
+              Vuelo seleccionado
+            </h3>
+          </>
+        )}
+        {state.select.type == "hotel" && (
+          <>
+            <Building2 className="w-5 h-5 text-[#10244c]" />
+            <h3 className="text-lg font-semibold text-[#10244c]">
+              Hotel seleccionado
+            </h3>
+          </>
+        )}
+      </div>
+      {state.select?.type == "carro" && (
+        <>
+          <RentaCartSolicitud
+            onSubmit={handleSubmit}
+            viajeros={viajeros || []}
+          />
+        </>
+      )}
+      {state.select.type == "vuelo" && (
+        <>
+          <RentaVueloSolicitud
+            onSubmit={handleSubmit}
+            viajeros={viajeros || []}
+          />
+        </>
+      )}
+      {state.select.type == "hotel" && (
+        <>
+          <RentaHotelSolicitud
+            onSubmit={handleSubmit}
+            viajeros={viajeros || []}
+          ></RentaHotelSolicitud>
+        </>
+      )}
+    </div>
+  );
+};
 
-  const handleAddToCart = async (total: string, type: "hotel" | "auto" | "vuelo") => {
+const RentaCartSolicitud = ({
+  onSubmit,
+  viajeros,
+}: {
+  onSubmit: () => void;
+  viajeros: Viajero[];
+}) => {
+  const { state, updateSelect } = useChat();
+  const { showNotification } = useNotification();
+  if (state.select?.type != "carro") return null;
+
+  const handleSubmit = () => {
     try {
-      setLoading(true);
-
-      let payload: any;
-
-      // Crear el payload basado en el tipo (hotel, auto, vuelo)
-      if (type === "hotel") {
-        // Payload para hotel
-        payload = {
-          id_solicitud: idSolicitud,
-          total,
-          type: "hotel",
-          selected: true,
-          hotel: {
-            nombre: bookingData?.hotel?.name || "",
-            ubicacion: bookingData?.hotel?.location || "",
-            precio: bookingData?.room?.totalPrice || 0,
-            fechas: {
-              checkIn: bookingData?.dates.checkIn || "",
-              checkOut: bookingData?.dates.checkOut || "",
-            },
-          },
-        };
-      } else if (type === "auto" && selectedCar) {
-        // Payload para auto
-        payload = {
-          id_solicitud: idSolicitud,
-          total,
-          type: "auto",
-          selected: true,
-          auto: {
-            proveedor: selectedCar.provider?.name || "",
-            url_detalle: selectedCar.url || "",
-            vehiculo: {
-              marca: selectedCar.carDetails?.make || "",
-              modelo: selectedCar.carDetails?.model || "",
-              categoria: selectedCar.carDetails?.category || "",
-              pasajeros: selectedCar.carDetails?.passengers || null,
-            },
-            renta: {
-              fecha_inicio: selectedCar.rentalPeriod?.pickupLocation?.dateTime || "",
-              fecha_fin: selectedCar.rentalPeriod?.returnLocation?.dateTime || "",
-              dias: selectedCar.rentalPeriod?.days || null,
-            },
-            precio: {
-              total: selectedCar.price?.total || null,
-              moneda: selectedCar.price?.currency || null,
-            },
-          },
-          viajero_principal: {
-            nombre: mainDriver,
-            edad: mainDriverAge,
-          },
-          viajeros_adicionales: {
-            nombre: additionalDriver,
-            edad: additionalDriverAge,
-          },
-        };
-      } else if (type === "vuelo" && selectedFlight) {
-        // Payload para vuelo
-        const segmentsArray = Array.isArray(selectedFlight.segments.segment)
-          ? selectedFlight.segments.segment
-          : [selectedFlight.segments.segment];
-
-        const firstSeg = segmentsArray[0];
-        const lastSeg = segmentsArray[segmentsArray.length - 1];
-
-        payload = {
-          id_solicitud: idSolicitud,
-          total,
-          type: "vuelo",
-          selected: true,
-          vuelo: {
-            url_detalle: selectedFlight.url,
-            origen: {
-              aeropuerto: firstSeg.origin.airportName,
-              ciudad: firstSeg.origin.city,
-              salida: firstSeg.departureTime,
-            },
-            destino: {
-              aeropuerto: lastSeg.destination.airportName,
-              ciudad: lastSeg.destination.city,
-              llegada: lastSeg.arrivalTime,
-            },
-            aerolinea: firstSeg.airline,
-            numero_vuelo: firstSeg.flightNumber,
-            precio: {
-              total: selectedFlight.price?.total || null,
-              moneda: selectedFlight.price?.currency || null,
-            },
-            equipaje: {
-              incluye: selectedFlight.baggage?.hasCheckedBaggage === "true",
-              piezas: selectedFlight.baggage?.pieces || null,
-            },
-          },
-          pasajero_principal: {
-            nombre: mainDriver,
-            edad: mainDriverAge === "" ? null : Number(mainDriverAge),
-          },
-        };
-      }
-
-      // Si el payload está correctamente creado, lo enviamos al carrito
-      if (payload) {
-        const { message } = await CartService.getInstance().createCartItem(payload);
-        showNotification?.("success", message || "Agregado al carrito");
-        handleActualizarCarrito(); // Actualiza el carrito después de agregar el item
-      }
-
+      if (state.select?.type != "carro") return null;
+      if (
+        !state.select.extra?.principal?.fecha_nacimiento &&
+        !state.select.extra?.edad
+      )
+        throw new Error("El viajero principal no tiene fecha de cumpleaños");
+      onSubmit();
     } catch (error: any) {
-      console.error(error.response || error.message || "Error al agregar al carrito");
-      showNotification?.("error", error.message);
-    } finally {
-      setLoading(false);
+      showNotification(
+        "error",
+        error.message || "Error al procesar la solicitud del carro"
+      );
     }
   };
 
-  // payload de ejemplo para auto
-  const handleAddCarToCart = () => {
-    if (!selectedCar) return;
-
-    const payload = {
-      id_solicitud: idSolicitud,
-      tipo: "auto",
-      auto: {
-        proveedor: selectedCar.provider?.name || "",
-        url_detalle: selectedCar.url || "",
-        vehiculo: {
-          marca: selectedCar.carDetails?.make || "",
-          modelo: selectedCar.carDetails?.model || "",
-          categoria: selectedCar.carDetails?.category || "",
-          pasajeros: selectedCar.carDetails?.passengers || null,
-        },
-        renta: {
-          fecha_inicio:
-            selectedCar.rentalPeriod?.pickupLocation?.dateTime || null,
-          fecha_fin:
-            selectedCar.rentalPeriod?.returnLocation?.dateTime || null,
-          dias: selectedCar.rentalPeriod?.days || null,
-        },
-        precio: {
-          total: selectedCar.price?.total || null,
-          moneda: selectedCar.price?.currency || null,
-        },
-      },
-      viajero_principal: {
-        nombre: mainDriver,
-        edad: mainDriverAge,
-      },
-      viajeros_adicionales: {
-        nombre: additionalDriver,
-        edad: additionalDriverAge
-      }
-    };
-
-    console.log("Payload para auto listo para enviar:", payload);
+  const addDriver = () => {
+    if (state.select?.type != "carro") return;
+    if (state.select == null) return;
+    const currentDrivers = state.select.extra?.conductoresExtras || [];
+    actualizarCarro("conductoresExtras", [...currentDrivers, null]);
   };
 
-  // payload de ejemplo para vuelo
-  const handleAddFlightToCart = () => {
-    if (!selectedFlight) return;
+  const actualizarCarro = (
+    key: keyof {
+      principal?: Viajero;
+      conductoresExtras?: (Viajero | null)[];
+      edad?: number;
+    },
+    value: Viajero | (Viajero | null)[] | number
+  ) => {
+    if (state.select == null) return;
+    if (state.select.type != "carro") return;
 
-    const segmentsArray = Array.isArray(selectedFlight.segments.segment)
-      ? selectedFlight.segments.segment
-      : [selectedFlight.segments.segment];
-
-    const firstSeg = segmentsArray[0];
-    const lastSeg = segmentsArray[segmentsArray.length - 1];
-
-    const payload = {
-      id_solicitud: idSolicitud,
-      tipo: "vuelo",
-      vuelo: {
-        url_detalle: selectedFlight.url,
-        origen: {
-          aeropuerto: firstSeg.origin.airportName,
-          codigo: firstSeg.origin.airportCode,
-          ciudad: firstSeg.origin.city,
-          salida: firstSeg.departureTime,
-        },
-        destino: {
-          aeropuerto: lastSeg.destination.airportName,
-          codigo: lastSeg.destination.airportCode,
-          ciudad: lastSeg.destination.city,
-          llegada: lastSeg.arrivalTime,
-        },
-        aerolinea: firstSeg.airline,
-        numero_vuelo: firstSeg.flightNumber,
-        precio: {
-          total: selectedFlight.price?.total || null,
-          moneda: selectedFlight.price?.currency || null,
-        },
-        equipaje: {
-          incluye: selectedFlight.baggage?.hasCheckedBaggage === "true",
-          piezas: selectedFlight.baggage?.pieces || null,
-        },
-      },
-      pasajero_principal: {
-        nombre: mainDriver,
-        edad: mainDriverAge === "" ? null : Number(mainDriverAge),
-      },
+    const newExtra = { ...state.select.extra, [key]: value } as {
+      principal?: Viajero;
+      conductoresExtras?: Viajero[];
+      edad: number;
     };
 
-    console.log("Payload para vuelo listo para enviar:", payload);
+    updateSelect({
+      ...state.select,
+      extra: newExtra,
+    });
   };
 
-  const isTravelerFormValid =
-    mainDriver.trim().length > 0
   return (
-    <div className="h-full p-6 space-y-10 overflow-y-auto">
-      {idSolicitud && (
+    <div className="space-y-4">
+      <div className="rounded-lg p-6 space-y-6">
+        {/* resumen del auto */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-sm text-[#10244c]/80">Vehículo</p>
+            <p className="text-lg font-semibold text-[#10244c]">
+              {state.select?.item.carDetails?.make || "Vehículo"}{" "}
+              {state.select?.item.carDetails?.model || ""}
+            </p>
+            {state.select?.item.carDetails?.category && (
+              <p className="text-sm text-[#10244c]/70">
+                {state.select?.item.carDetails.category}
+              </p>
+            )}
+            {state.select?.item.carDetails?.passengers && (
+              <p className="text-sm text-[#10244c]/70 mt-1">
+                {state.select?.item.carDetails.passengers} pasajeros
+              </p>
+            )}
+          </div>
+
+          {state.select?.item.price?.total && (
+            <div className="text-right">
+              <p className="text-sm text-[#10244c]/80">Precio Total</p>
+              <p className="text-xl font-semibold text-[#10244c]">
+                {state.select?.item.price.total}{" "}
+                {state.select?.item.price.currency || ""}
+              </p>
+              {state.select?.item.rentalPeriod?.days && (
+                <p className="text-xs text-[#10244c]/70 mt-1">
+                  {state.select?.item.rentalPeriod.days} días de renta
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* campos viajero para auto */}
+        <div className="">
+          <ComboBox
+            label="Conductor principal"
+            value={
+              state.select.extra?.principal
+                ? {
+                    name: state.select.extra.principal.nombre_completo ?? "",
+                    content: state.select.extra.principal,
+                  }
+                : null
+            }
+            options={viajeros.map((v) => ({
+              name: v.nombre_completo ?? "",
+              content: v,
+            }))}
+            onChange={(value: ComboBoxOption2<Viajero> | null) => {
+              if (value == null) return;
+              actualizarCarro("principal", value.content);
+            }}
+          />
+
+          <NumberInput
+            label="Edad del conductor"
+            value={state.select.extra?.edad || 0}
+            onChange={(value: string) => {
+              actualizarCarro("edad", Number(value || 0));
+            }}
+          />
+          {state.select.extra?.principal?.fecha_nacimiento && (
+            <p
+              className="text-xs text-blue-500 hover:text-blue-700 hover:underline cursor-pointer"
+              onClick={() => {
+                if (state.select == null) return;
+                if (state.select.type != "carro") return;
+
+                actualizarCarro(
+                  "edad",
+                  calcularEdad(
+                    state.select?.extra?.principal?.fecha_nacimiento || ""
+                  ) ?? 0
+                );
+              }}
+            >
+              Segun los datos, esta es la edad del viajero:{" "}
+              {calcularEdad(state.select.extra.principal.fecha_nacimiento)},
+              quieres actualizarla?
+            </p>
+          )}
+
+          <div className="space-y-2 md:col-span-2">
+            {/* Solo muestra el select si showAdditionalDrivers es true */}
+            {state.select.extra?.conductoresExtras &&
+              state.select.extra.conductoresExtras.length > 0 && (
+                <div>
+                  {state.select.extra.conductoresExtras.map((driv, index) => (
+                    <ComboBox
+                      label="Conductor extra"
+                      value={
+                        driv
+                          ? {
+                              name: driv.nombre_completo ?? "",
+                              content: driv,
+                            }
+                          : null
+                      }
+                      options={viajeros
+                        .filter(
+                          (v) =>
+                            state.select?.type == "carro" &&
+                            v.id_viajero !=
+                              state.select.extra?.principal?.id_viajero
+                        )
+                        .map((v) => ({
+                          name: v.nombre_completo ?? "",
+                          content: v,
+                        }))}
+                      onChange={(value: ComboBoxOption2<Viajero> | null) => {
+                        if (value == null) return;
+                        if (state.select?.type != "carro") return;
+                        if (state.select == null) return;
+
+                        const newArray: (Viajero | null)[] | undefined =
+                          state.select.extra?.conductoresExtras;
+                        if (!newArray) return;
+                        newArray[index] = value.content;
+                        actualizarCarro("conductoresExtras", newArray);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Button onClick={addDriver} size="full" variant="ghost">
+            ¿Deseas agregar un conductor adicional?
+          </Button>
+          <Button
+            variant="primary"
+            size="full"
+            icon={ShoppingCartIcon}
+            onClick={handleSubmit}
+          >
+            Agregar al carrito
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RentaHotelSolicitud = ({
+  onSubmit,
+  viajeros,
+}: {
+  onSubmit: () => void;
+  viajeros: Viajero[];
+}) => {
+  const { state, updateSelect, updatePrecioByFechas } = useChat();
+  const { showNotification } = useNotification();
+  if (state.select?.type != "hotel") return null;
+
+  const handleSubmit = () => {
+    try {
+      if (state.select?.type != "hotel") return null;
+      const extra = state.select.extra;
+      if (
+        extra &&
+        (!extra.check_in ||
+          !extra.check_out ||
+          !extra.precio ||
+          !extra.room ||
+          !extra.viajero)
+      )
+        throw new Error("Faltan datos");
+      onSubmit();
+    } catch (error: any) {
+      showNotification(
+        "error",
+        error.message || "Error al procesar la solicitud del carro"
+      );
+    }
+  };
+
+  const addAcompanante = () => {
+    if (state.select?.type != "hotel") return;
+    if (state.select == null) return;
+    const currentAcompanantes = state.select.extra?.acompanantes || [];
+    actualizarReserva("acompanantes", [...currentAcompanantes, null]);
+  };
+
+  const actualizarReserva = (
+    key: keyof {
+      viajero?: Viajero;
+      acompanantes?: Viajero[];
+      check_in?: string;
+      check_out?: string;
+      precio?: string;
+      currency?: string;
+      room?: string;
+    },
+    value: Viajero | (Viajero | null)[] | number | string
+  ) => {
+    if (state.select == null) return;
+    if (state.select.type != "hotel") return;
+
+    const newExtra = { ...state.select.extra, [key]: value } as {
+      viajero?: Viajero;
+      acompanantes?: Viajero[];
+      check_in?: string;
+      check_out?: string;
+      precio?: string;
+      currency?: string;
+      room?: string;
+    };
+
+    updateSelect({
+      ...state.select,
+      extra: newExtra,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {state.select.item.imagenes[0] && (
+        <div>
+          <img
+            className="rounded-md h-36 w-full object-cover"
+            src={state.select.item.imagenes[0]}
+            alt=""
+          />
+        </div>
+      )}
+      <div className="rounded-lg space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-4">
+          <div>
+            <p className="text-lg font-semibold text-[#10244c]">
+              {state.select?.item.hotel || "Vehículo"}{" "}
+            </p>
+            {state.select?.item.direccion && (
+              <p className="text-xs text-[#10244c]/70">
+                {state.select?.item.direccion || ""}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full flex flex-col gap-2 px-4">
+          <p className="text-sm font-semibold">Precio por noche:</p>
+          {state.select.item.tipos_cuartos.map((cuarto) => (
+            <div className="flex gap-2 w-full bg-gray-200/70 p-2 text-sm font-normal rounded-md justify-between">
+              <p>{cuarto.cuarto || ""}</p>
+              <p>
+                {cuarto.precio || ""}{" "}
+                {state.select?.type == "hotel" &&
+                  (state.select.item.currency || "MXN").toUpperCase()}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-4 space-y-2">
+          <ComboBox
+            label="Viajero principal"
+            value={
+              state.select.extra?.viajero
+                ? {
+                    name: state.select.extra.viajero.nombre_completo ?? "",
+                    content: state.select.extra.viajero,
+                  }
+                : null
+            }
+            options={viajeros.map((v) => ({
+              name: v.nombre_completo ?? "",
+              content: v,
+            }))}
+            onChange={(value: ComboBoxOption2<Viajero> | null) => {
+              if (value == null) return;
+              actualizarReserva("viajero", value.content);
+            }}
+          />
+
+          <SelectInput
+            label="Cuarto"
+            onChange={(value: string) => {
+              updatePrecioByFechas({ room: value });
+            }}
+            placeholder="Selecciona un cuarto"
+            value={state.select.extra?.room || ""}
+            options={state.select.item.tipos_cuartos.map((r) => ({
+              value: r.cuarto,
+              label: r.cuarto,
+            }))}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <InputDate
+              label="Check in"
+              onChange={(value: string) => {
+                updatePrecioByFechas({ check_in: value });
+              }}
+              value={state.select.extra?.check_in || ""}
+            />
+            <InputDate
+              label="Check out"
+              onChange={function (value: string): void {
+                updatePrecioByFechas({ check_out: value });
+              }}
+              value={state.select.extra?.check_out || ""}
+            />
+          </div>
+          <div className="space-y-4">
+            {state.select.extra?.acompanantes &&
+              state.select.extra.acompanantes.length > 0 && (
+                <div>
+                  {state.select.extra.acompanantes.map((driv, index) => (
+                    <ComboBox
+                      label="Conductor extra"
+                      value={
+                        driv
+                          ? {
+                              name: driv.nombre_completo ?? "",
+                              content: driv,
+                            }
+                          : null
+                      }
+                      options={viajeros.map((v) => ({
+                        name: v.nombre_completo ?? "",
+                        content: v,
+                      }))}
+                      onChange={(value: ComboBoxOption2<Viajero> | null) => {
+                        if (value == null) return;
+                        if (state.select?.type != "hotel") return;
+                        if (state.select == null) return;
+
+                        const newArray: (Viajero | null)[] | undefined =
+                          state.select.extra?.acompanantes;
+                        if (!newArray) return;
+                        newArray[index] = value.content;
+                        actualizarReserva("acompanantes", newArray);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+          </div>
+        </div>
+        {state.select.extra?.precio && (
+          <div className="w-full flex justify-end px-4 pt-2 border-t">
+            <p className="text-lg font-semibold">
+              {state.select.extra.precio || ""}{" "}
+              {state.select.item.currency || "MXN"}
+            </p>
+          </div>
+        )}
+        <div className="space-y-2 px-4">
+          <Button onClick={addAcompanante} size="full" variant="ghost">
+            ¿Deseas agregar un acompanante?
+          </Button>
+          <Button
+            variant="primary"
+            size="full"
+            icon={ShoppingCartIcon}
+            onClick={handleSubmit}
+          >
+            Agregar al carrito
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RentaVueloSolicitud = ({
+  onSubmit,
+  viajeros,
+}: {
+  onSubmit: () => void;
+  viajeros: Viajero[];
+}) => {
+  const { state, updateSelect } = useChat();
+  const { showNotification } = useNotification();
+  if (state.select?.type != "vuelo") return null;
+
+  const handleSubmit = () => {
+    try {
+      if (state.select?.type != "vuelo") return null;
+      if (!state.select.extra?.viajero)
+        throw new Error("Falta el viajero principal");
+      onSubmit();
+    } catch (error: any) {
+      showNotification(
+        "error",
+        error.message || "Error al procesar la solicitud del carro"
+      );
+    }
+  };
+
+  const segmentsArray = Array.isArray(state.select.item.segments.segment)
+    ? state.select.item.segments.segment
+    : [state.select.item.segments.segment];
+
+  const firstSeg = segmentsArray[0];
+  const lastSeg = segmentsArray[segmentsArray.length - 1];
+
+  const formatShortDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+    });
+
+  const formatTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-gray-50 rounded-lg p-6 space-y-6 shadow-md">
+        {/* Resumen del vuelo */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col">
+            <p className="text-sm text-[#10244c]/80">Itinerario</p>
+            <p className="text-lg font-semibold text-[#10244c]">
+              {firstSeg.origin.city} ({firstSeg.origin.airportCode}) →{" "}
+              {lastSeg.destination.city} ({lastSeg.destination.airportCode})
+            </p>
+            <p className="text-sm text-[#10244c]/70 mt-1">
+              {formatShortDate(firstSeg.departureTime)}{" "}
+              {formatTime(firstSeg.departureTime)} ·{" "}
+              {state.select.item.itineraryType
+                ?.replace("_", " ")
+                .toUpperCase() || "TRIP"}
+            </p>
+            <p className="text-xs text-[#10244c]/60 mt-1">
+              {segmentsArray.length}{" "}
+              {segmentsArray.length === 1 ? "segmento" : "segmentos"} ·{" "}
+              {firstSeg.airline} {firstSeg.flightNumber}
+            </p>
+          </div>
+
+          {state.select.item.price?.total && (
+            <div className="text-right">
+              <p className="text-sm text-[#10244c]/80">Precio Total</p>
+              <p className="text-xl font-semibold text-[#10244c]">
+                {state.select.item.price.total}{" "}
+                {state.select.item.price.currency}
+              </p>
+              {state.select.item.baggage && (
+                <p className="text-xs text-[#10244c]/70 mt-1">
+                  {state.select.item.baggage.hasCheckedBaggage === "true"
+                    ? `Incluye ${state.select.item.baggage.pieces} maleta(s) documentada(s)`
+                    : "Sin equipaje documentado"}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Mostrar si es ida o redondo */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-[#10244c]">
+            {state.select.item.itineraryType === "round_trip"
+              ? "Vuelo redondo"
+              : "Vuelo solo ida"}
+          </span>
+        </div>
+
+        {/* Mostrar todos los segmentos */}
+        <div className="space-y-4">
+          {segmentsArray.map((segment, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <p className="text-sm text-[#10244c]/80">
+                  {index === 0 ? "Vuelo de ida" : "Vuelo de regreso"}
+                </p>
+              </div>
+              <div className="text-sm text-[#10244c]/70">
+                <p>
+                  {segment.origin.city} ({segment.origin.airportCode}) →{" "}
+                  {segment.destination.city} ({segment.destination.airportCode})
+                </p>
+                <p>
+                  {formatShortDate(segment.departureTime)} -{" "}
+                  {formatTime(segment.departureTime)}
+                </p>
+                <p>
+                  {segment.airline} {segment.flightNumber}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Campos del viajero */}
+        <div className="">
+          <ComboBox
+            label="Pasajero"
+            value={
+              state.select.extra?.viajero
+                ? {
+                    name: state.select.extra.viajero.nombre_completo ?? "",
+                    content: state.select.extra.viajero,
+                  }
+                : null
+            }
+            options={viajeros.map((v) => ({
+              name: v.nombre_completo ?? "",
+              content: v,
+            }))}
+            onChange={(value: ComboBoxOption2<Viajero> | null) => {
+              if (value == null) return;
+              if (state.select?.type == "vuelo")
+                updateSelect({
+                  ...state.select,
+                  extra: { viajero: value.content },
+                });
+            }}
+          />
+        </div>
         <Button
-          icon={ShoppingCartIcon}
           variant="primary"
           size="full"
-          disabled={loading}
-          onClick={() =>
-            handleAddToCart(
-              (bookingData?.room?.totalPrice || 0).toFixed(2),
-              "hotel"
-            ).then(() => handleActualizarCarrito())
-          }
+          icon={ShoppingCartIcon}
+          onClick={handleSubmit}
         >
-          Agregar hotel al carrito
+          Agregar al carrito
         </Button>
-      )}
-
-      <div id="reservation-content" className="space-y-8">
-        {/* HOTEL */}
-        {bookingData?.hotel?.name && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Building2 className="w-5 h-5 text-[#10244c]" />
-              <h3 className="text-lg font-semibold text-[#10244c]">Hotel</h3>
-            </div>
-            <div className="bg-gray-50 rounded-lg overflow-hidden">
-              {bookingData.hotel.image && (
-                <img
-                  src={bookingData.hotel.image}
-                  alt={bookingData.hotel.name || ""}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <div className="p-4">
-                <h4 className="font-semibold text-lg text-[#10244c]">
-                  {bookingData.hotel.name}
-                </h4>
-                {bookingData.hotel.location && (
-                  <p className="text-[#10244c]/80">
-                    {bookingData.hotel.location}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {bookingData.hotel.additionalImages &&
-              bookingData.hotel.additionalImages.length > 0 && (
-                <div className="grid grid-cols-3 gap-4 mt-4">
-                  {bookingData.hotel.additionalImages
-                    .slice(0, 3)
-                    .map((imageUrl, index) => (
-                      <div
-                        key={index}
-                        className="aspect-square rounded-lg overflow-hidden shadow-sm"
-                      >
-                        <img
-                          src={imageUrl}
-                          alt={`${bookingData.hotel.name} - Vista ${index + 1
-                            }`}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    ))}
-                </div>
-              )}
-          </div>
-        )}
-
-        {/* FECHAS */}
-        {(bookingData?.dates?.checkIn || bookingData?.dates?.checkOut) && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-[#10244c]" />
-              <h3 className="text-lg font-semibold text-[#10244c]">
-                Fechas de Estancia
-              </h3>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex justify-between items-center">
-                <div className="space-y-1">
-                  <p className="text-[#10244c]/80 text-sm uppercase tracking-wider">
-                    Check-in
-                  </p>
-                  {checkInDate ? (
-                    <div className="space-y-1">
-                      <p className="text-3xl font-bold text-[#10244c]">
-                        {checkInDate.day}
-                      </p>
-                      <div>
-                        <p className="text-lg capitalize text-[#10244c]">
-                          {checkInDate.month} - {checkInDate.year}
-                        </p>
-                        <p className="text-sm text-[#10244c]/80 capitalize">
-                          {checkInDate.weekday}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-lg text-[#10244c]">Por definir</p>
-                  )}
-                </div>
-
-                {bookingData?.totalNights && (
-                  <div className="flex flex-col items-center">
-                    <ArrowRight className="w-6 h-6 text-[#10244c]/80" />
-                    <div className="mt-2 text-center">
-                      <p className="text-sm text-[#10244c]/80">Duración</p>
-                      <p className="font-bold text-[#10244c]">
-                        {bookingData.totalNights}{" "}
-                        {bookingData.totalNights === 1 ? "noche" : "noches"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <p className="text-[#10244c]/80 text-sm uppercase tracking-wider">
-                    Check-out
-                  </p>
-                  {checkOutDate ? (
-                    <div className="space-y-1">
-                      <p className="text-3xl font-bold text-[#10244c]">
-                        {checkOutDate.day}
-                      </p>
-                      <div>
-                        <p className="text-lg capitalize text-[#10244c]">
-                          {checkOutDate.month} - {checkOutDate.year}
-                        </p>
-                        <p className="text-sm text-[#10244c]/80 capitalize">
-                          {checkOutDate.weekday}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-lg text-[#10244c]">Por definir</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* HABITACIÓN */}
-        {bookingData?.room?.type && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <CreditCard className="w-5 h-5 text-[#10244c]" />
-              <h3 className="text-lg font-semibold text-[#10244c]">
-                Detalles de la Habitación
-              </h3>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-[#10244c]/80">
-                      Tipo de Habitación
-                    </p>
-                    <p className="text-lg font-medium text-[#10244c]">
-                      {bookingData.room.type || ""}
-                    </p>
-                  </div>
-                  {bookingData.totalNights && (
-                    <div>
-                      <p className="text-sm text-[#10244c]/80">Duración</p>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-[#10244c]/80" />
-                        <p className="text-lg font-medium text-[#10244c]">
-                          {bookingData.totalNights}{" "}
-                          {bookingData.totalNights === 1 ? "noche" : "noches"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-4">
-                  {bookingData.room.pricePerNight && (
-                    <div>
-                      <p className="text-sm text-[#10244c]/80">
-                        Precio por Noche
-                      </p>
-                      <p className="text-lg font-medium text-[#10244c]">
-                        $
-                        {bookingData.room.pricePerNight.toLocaleString("es-MX")}{" "}
-                        MXN
-                      </p>
-                    </div>
-                  )}
-                  {bookingData.room.totalPrice && (
-                    <div>
-                      <p className="text-sm text-[#10244c]/80">Precio Total</p>
-                      <p className="text-xl font-semibold text-[#10244c]">
-                        $
-                        {bookingData.room.totalPrice.toLocaleString("es-MX")}{" "}
-                        MXN
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* HUÉSPEDES */}
-        {bookingData?.guests?.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Users className="w-5 h-5 text-[#10244c]" />
-              <h3 className="text-lg font-semibold text-[#10244c]">
-                Huéspedes
-              </h3>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <ul className="space-y-2">
-                {bookingData.guests.map((guest, index) => (
-                  <li key={index} className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full bg-[#10244c]/10 flex items-center justify-center">
-                      <span className="text-[#10244c] font-medium">
-                        {guest.charAt(0)}
-                      </span>
-                    </div>
-                    <span className="text-[#10244c]/90">{guest}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {/* === AUTO DE RENTA === */}
-        {selectedCar && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Car className="w-5 h-5 text-[#10244c]" />
-              <h3 className="text-lg font-semibold text-[#10244c]">
-                Renta de Auto
-              </h3>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-6 space-y-6">
-              {/* resumen del auto */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <p className="text-sm text-[#10244c]/80">Vehículo</p>
-                  <p className="text-lg font-semibold text-[#10244c]">
-                    {selectedCar.carDetails?.make || "Vehículo"}{" "}
-                    {selectedCar.carDetails?.model || ""}
-                  </p>
-                  {selectedCar.carDetails?.category && (
-                    <p className="text-sm text-[#10244c]/70">
-                      {selectedCar.carDetails.category}
-                    </p>
-                  )}
-                  {selectedCar.carDetails?.passengers && (
-                    <p className="text-sm text-[#10244c]/70 mt-1">
-                      {selectedCar.carDetails.passengers} pasajeros
-                    </p>
-                  )}
-                </div>
-
-                {selectedCar.price?.total && (
-                  <div className="text-right">
-                    <p className="text-sm text-[#10244c]/80">Precio Total</p>
-                    <p className="text-xl font-semibold text-[#10244c]">
-                      {selectedCar.price.total}{" "}
-                      {selectedCar.price.currency || ""}
-                    </p>
-                    {selectedCar.rentalPeriod?.days && (
-                      <p className="text-xs text-[#10244c]/70 mt-1">
-                        {selectedCar.rentalPeriod.days} días de renta
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* campos viajero para auto */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Conductor principal */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#10244c]">
-                    Conductor principal / Viajero
-                  </label>
-                  <select
-                    value={mainDriver}
-                    onChange={(e) => setMainDriver(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                  >
-                    <option value="">Selecciona un viajero</option>
-                    {viajeros.map((v) => (
-                      <option key={v.id_viajero} value={v.nombre_completo}>
-                        {v.nombre_completo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Edad del conductor */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#10244c]">
-                    Edad del conductor principal
-                  </label>
-                  <input
-                    type="number"
-                    min={18}
-                    value={
-                      // Si el viajero tiene fecha de nacimiento, mostrar la edad calculada
-                      viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento
-                        ? calcularEdad(
-                          viajeros.find((v) => v.nombre_completo === mainDriver)!.fecha_nacimiento!
-                        )
-                        : mainDriverAge // Si no hay fecha de nacimiento, se usa la edad manual
-                    }
-                    onChange={(e) =>
-                      setMainDriverAge(
-                        e.target.value === "" ? "" : Number(e.target.value)
-                      )
-                    }
-                    disabled={!!viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento} // Deshabilitar si hay fecha de nacimiento
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                    placeholder="Edad"
-                  />
-                  {/* Si el viajero tiene fecha de nacimiento, mostramos la edad calculada */}
-                  {mainDriver &&
-                    viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento && (
-                      <p className="text-sm text-gray-500 mt-2">
-                        Edad calculada:{" "}
-                        {calcularEdad(
-                          viajeros.find((v) => v.nombre_completo === mainDriver)!.fecha_nacimiento!
-                        )}
-                      </p>
-                    )}
-                </div>
-
-                {/* Conductores adicionales */}
-                <div className="space-y-2 md:col-span-2">
-                  {/* Pregunta si desea agregar un conductor adicional */}
-
-                  {/* Solo muestra el select si showAdditionalDrivers es true */}
-                  {showAdditionalDrivers && (
-                    <div>
-                      <label className="block text-sm font-medium text-[#10244c] mt-4">
-                        Conductor adicional / Viajero adicional
-                      </label>
-                      <select
-                        value={additionalDriver}
-                        onChange={(e) => setAdditionalDriver(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                      >
-                        <option value="">Selecciona un conductor adicional</option>
-                        {viajeros
-                          .filter((v) => v.nombre_completo !== mainDriver) // Filtra el conductor principal
-                          .map((v) => (
-                            <option key={v.id_viajero} value={v.nombre_completo}>
-                              {v.nombre_completo}{" "}
-                              {v.fecha_nacimiento && (
-                                <span className="text-xs text-gray-500 ml-2">
-                                  (Edad: {calcularEdad(v.fecha_nacimiento)})
-                                </span>
-                              )}
-                            </option>
-                          ))}
-                      </select>
-                      <div className="space-y-2 mt-4">
-                        <label className="block text-sm font-medium text-[#10244c]">Edad del conductor adicional</label>
-                        <input
-                          type="number"
-                          min={18}
-                          value={
-                            // Si el conductor adicional tiene fecha de nacimiento, mostrar la edad calculada
-                            viajeros.find((v) => v.nombre_completo === additionalDriver)?.fecha_nacimiento
-                              ? calcularEdad(viajeros.find((v) => v.nombre_completo === additionalDriver)!.fecha_nacimiento!)
-                              : additionalDriverAge // Si no hay fecha de nacimiento, se usa la edad manual
-                          }
-                          onChange={(e) =>
-                            setAdditionalDriverAge(e.target.value === "" ? "" : Number(e.target.value))
-                          }
-                          disabled={!!viajeros.find((v) => v.nombre_completo === additionalDriver)?.fecha_nacimiento} // Deshabilitar si hay fecha de nacimiento
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                          placeholder="Edad"
-                        />
-                        {additionalDriver &&
-                          viajeros.find((v) => v.nombre_completo === additionalDriver)?.fecha_nacimiento && (
-                            <p className="text-sm text-gray-500 mt-2">
-                              Edad calculada:{" "}
-                              {calcularEdad(viajeros.find((v) => v.nombre_completo === additionalDriver)!.fecha_nacimiento!)}
-                            </p>
-                          )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Botón para mostrar conductor adicional */}
-                  {!showAdditionalDrivers && (
-                    <button
-                      onClick={() => setShowAdditionalDrivers(true)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-[#10244c] text-white focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                    >
-                      ¿Deseas agregar un conductor adicional?
-                    </button>
-                  )}
-
-                </div>
-              </div>
-
-              <div className="pt-2">
-                {/* <Button
-                  variant="secondary"
-                  size="full"
-                  disabled={!isTravelerFormValid}
-                  onClick={handleAddCarToCart}
-                >
-                  Guardar datos del auto (console.log payload)
-                </Button> */}
-                <Button
-                  variant="primary"
-                  size="full"
-                  onClick={() => handleAddToCart("precio del auto", "auto")}
-                >
-                  Agregar auto al carrito
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* === VUELO === */}
-        {selectedFlight && (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-2">
-              <Plane className="w-5 h-5 text-[#10244c]" />
-              <h3 className="text-lg font-semibold text-[#10244c]">
-                Vuelo seleccionado
-              </h3>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-6 space-y-6 shadow-md">
-              {/* Resumen del vuelo */}
-              {(() => {
-                const segmentsArray = Array.isArray(
-                  selectedFlight.segments.segment
-                )
-                  ? selectedFlight.segments.segment
-                  : [selectedFlight.segments.segment];
-
-                const firstSeg = segmentsArray[0];
-                const lastSeg = segmentsArray[segmentsArray.length - 1];
-
-                const formatShortDate = (dateStr: string) =>
-                  new Date(dateStr).toLocaleDateString("es-MX", {
-                    day: "2-digit",
-                    month: "short",
-                  });
-
-                const formatTime = (dateStr: string) =>
-                  new Date(dateStr).toLocaleTimeString("es-MX", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-
-                return (
-                  <>
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex flex-col">
-                        <p className="text-sm text-[#10244c]/80">Itinerario</p>
-                        <p className="text-lg font-semibold text-[#10244c]">
-                          {firstSeg.origin.city} ({firstSeg.origin.airportCode}) → {lastSeg.destination.city} ({lastSeg.destination.airportCode})
-                        </p>
-                        <p className="text-sm text-[#10244c]/70 mt-1">
-                          {formatShortDate(firstSeg.departureTime)} {formatTime(firstSeg.departureTime)} ·{" "}
-                          {selectedFlight.itineraryType?.replace("_", " ").toUpperCase() || "TRIP"}
-                        </p>
-                        <p className="text-xs text-[#10244c]/60 mt-1">
-                          {segmentsArray.length} {segmentsArray.length === 1 ? "segmento" : "segmentos"} · {firstSeg.airline} {firstSeg.flightNumber}
-                        </p>
-                      </div>
-
-                      {selectedFlight.price?.total && (
-                        <div className="text-right">
-                          <p className="text-sm text-[#10244c]/80">Precio Total</p>
-                          <p className="text-xl font-semibold text-[#10244c]">
-                            {selectedFlight.price.total} {selectedFlight.price.currency}
-                          </p>
-                          {selectedFlight.baggage && (
-                            <p className="text-xs text-[#10244c]/70 mt-1">
-                              {selectedFlight.baggage.hasCheckedBaggage === "true"
-                                ? `Incluye ${selectedFlight.baggage.pieces} maleta(s) documentada(s)`
-                                : "Sin equipaje documentado"}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mostrar si es ida o redondo */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[#10244c]">
-                        {selectedFlight.itineraryType === "round_trip"
-                          ? "Vuelo redondo"
-                          : "Vuelo solo ida"}
-                      </span>
-                    </div>
-
-                    {/* Mostrar todos los segmentos */}
-                    <div className="space-y-4">
-                      {segmentsArray.map((segment, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm text-[#10244c]/80">
-                              {index === 0 ? "Vuelo de ida" : "Vuelo de regreso"}
-                            </p>
-                          </div>
-                          <div className="text-sm text-[#10244c]/70">
-                            <p>
-                              {segment.origin.city} ({segment.origin.airportCode}) → {segment.destination.city} ({segment.destination.airportCode})
-                            </p>
-                            <p>{formatShortDate(segment.departureTime)} - {formatTime(segment.departureTime)}</p>
-                            <p>{segment.airline} {segment.flightNumber}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
-
-              {/* Campos del viajero */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Pasajero principal */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#10244c]">Pasajero principal</label>
-                  <select
-                    value={mainDriver}
-                    onChange={(e) => setMainDriver(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                  >
-                    <option value="">Selecciona un viajero</option>
-                    {viajeros.map((v) => (
-                      <option key={v.id_viajero} value={v.nombre_completo}>
-                        {v.nombre_completo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Edad del pasajero principal */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#10244c]">Edad del pasajero principal</label>
-                  <input
-                    type="number"
-                    min={18}
-                    value={
-                      // Si el viajero tiene fecha de nacimiento, mostrar la edad calculada
-                      viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento
-                        ? calcularEdad(
-                          viajeros.find((v) => v.nombre_completo === mainDriver)!.fecha_nacimiento!
-                        )
-                        : mainDriverAge // Si no hay fecha de nacimiento, se usa la edad manual
-                    }
-                    onChange={(e) =>
-                      setMainDriverAge(
-                        e.target.value === "" ? "" : Number(e.target.value)
-                      )
-                    }
-                    disabled={!!viajeros.find((v) => v.nombre_completo === mainDriver)?.fecha_nacimiento} // Deshabilitar si hay fecha de nacimiento
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#10244c]"
-                    placeholder="Edad"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2">
-                {/* <Button
-                  variant="secondary"
-                  size="full"
-                  disabled={!isTravelerFormValid}
-                  onClick={handleAddFlightToCart}
-                >
-                  Guardar datos del vuelo (console.log payload)
-                </Button> */}
-                <Button
-                  variant="primary"
-                  size="full"
-                  onClick={() => handleAddToCart("precio del vuelo", "vuelo")}
-                >
-                  Agregar vuelo al carrito
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-
       </div>
-      <div></div>
     </div>
   );
 };
