@@ -127,3 +127,64 @@ export const HotelCard: React.FC<HotelCardProps> = ({
     </>
   );
 };
+
+// Constantes para las banderas (así evitas "magic strings" en tu código)
+export const SOURCE_FLAGS = {
+  GEMINI: "AI_PROCESSED",
+  STANDARD: "DB_STANDARD",
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(Number(amount) || 0);
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "---";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch (e) {
+    return "Fecha inválida";
+  }
+};
+
+export const normalizeRequest = (data: any) => {
+  // 🚩 LÓGICA DE DETECCIÓN DE BANDERA
+  // Si tiene 'item.item', asumimos que es la estructura compleja de Gemini
+  const deepItem = data.objeto_gemini?.item?.item;
+
+  // Asignamos la bandera
+  const currentFlag = deepItem ? SOURCE_FLAGS.GEMINI : SOURCE_FLAGS.STANDARD;
+
+  const location = deepItem
+    ? `${deepItem.ciudad}, ${deepItem.colonia}`
+    : "Ubicación pendiente";
+
+  return {
+    // Metadatos y Bandera
+    id: data.id_solicitud,
+    sourceType: currentFlag, // <--- AQUÍ ESTÁ TU BANDERA 🚩
+
+    // Datos normalizados
+    hotelName: data.hotel || deepItem?.hotel || "Hotel desconocido",
+    location: location,
+    image: deepItem?.imagenes?.[0] || "https://placehold.co/600x400?text=Hotel",
+    checkIn: formatDate(data.check_in),
+    checkOut: formatDate(data.check_out),
+    roomType:
+      data.room ||
+      deepItem?.tipos_cuartos?.[0]?.cuarto ||
+      "Habitación Estándar",
+    guestName: data.nombre_viajero || data.viajero_principal || "Huésped",
+    totalPrice: formatCurrency(data.total_solicitud),
+    status: data.estado_solicitud || "pending",
+    confirmationCode: data.confirmation_code || null,
+  };
+};
