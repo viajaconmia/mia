@@ -117,7 +117,10 @@ export class ApiService {
       ) {
         return result as ApiResponse<T>;
       } else {
-        console.error("Respuesta de API exitosa no conforme:", result);
+        console.error(
+          `Respuesta de API exitosa no conforme en el endpoint: ${path}`,
+          result
+        );
         throw new Error(
           "La respuesta de la API exitosa no sigue el formato esperado { message, data }."
         );
