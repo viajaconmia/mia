@@ -121,6 +121,7 @@ export type Segment = {
 };
 
 export type FlightOption = {
+  option: any;
   id: string;
   url: string;
   itineraryType?: string;
