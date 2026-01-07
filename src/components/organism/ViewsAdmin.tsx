@@ -107,8 +107,9 @@ const ExpandedContentRenderer = ({
   const normalizeFacturas = (arr: any[] = []) =>
     arr.map((f) => ({
       ...f,
-      id_factura: f.id_factura || f.folio || f.id_facturama || "",
+      id_factura: f.uuid_factura || f.id_facturama || "",
       total: f.total ?? f.total_factura ?? f.amount ?? 0,
+      descarga: f,
     }));
 
   useEffect(() => {
@@ -201,6 +202,74 @@ const ExpandedContentRenderer = ({
       },
     },
     { key: "total", header: "Total", component: "precio" },
+    {
+      key: null,
+      header: "Detalles",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Invoice }) => (
+          <div className="flex w-full gap-2">
+            {(item.id_facturama || item.url_pdf) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (item.id_facturama) {
+                    FacturamaService.getInstance()
+                      .downloadCFDI({ id: item.id_facturama, type: "pdf" })
+                      .then(({ data }) => viewPDFBase64(data?.Content || ""))
+                      .catch((error) =>
+                        console.log(
+                          error.response ||
+                            error.message ||
+                            "Error al obtener la factura"
+                        )
+                      );
+                  } else if (item.url_pdf) {
+                    viewPDFUrl(item.url_pdf);
+                  }
+                }}
+              >
+                PDF
+              </Button>
+            )}
+
+            {(item.id_facturama || item.url_xml) && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  if (item.id_facturama) {
+                    FacturamaService.getInstance()
+                      .downloadCFDI({ id: item.id_facturama, type: "xml" })
+                      .then(({ data }) =>
+                        downloadXMLBase64(
+                          data?.Content || "",
+                          `${item.id_factura.slice(0, 8)}.xml`
+                        )
+                      )
+                      .catch((error) =>
+                        console.log(
+                          error.response ||
+                            error.message ||
+                            "Error al obtener la factura"
+                        )
+                      );
+                  } else if (item.url_xml) {
+                    downloadXMLUrl(
+                      item.url_xml,
+                      `${item.id_factura.slice(0, 8)}.xml`
+                    );
+                  }
+                }}
+              >
+                XML
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    },
   ];
 
   console.log("this is the reservation", full);
