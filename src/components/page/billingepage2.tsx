@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-
   Download,
   Mail,
   Receipt,
@@ -10,7 +9,6 @@ import {
   Percent,
   ArrowRight,
   CheckCircle2,
-
   AlertCircle,
   X,
 } from "lucide-react";
@@ -145,10 +143,14 @@ const paymentMethodOptions = [
   { value: "PPD", label: "PPD - Pago en parcialidades o diferido" },
 ];
 
-const base64ToFile = (base64String: string, fileName: string, mimeType: string): File => {
+const base64ToFile = (
+  base64String: string,
+  fileName: string,
+  mimeType: string
+): File => {
   try {
     // Remover el prefijo data: si existe
-    const base64Data = base64String.replace(/^data:[^;]+;base64,/, '');
+    const base64Data = base64String.replace(/^data:[^;]+;base64,/, "");
 
     // Decodificar base64
     const byteCharacters = atob(base64Data);
@@ -163,13 +165,16 @@ const base64ToFile = (base64String: string, fileName: string, mimeType: string):
 
     return new File([blob], fileName, { type: mimeType });
   } catch (error) {
-    console.error('Error al convertir base64 a archivo:', error);
-    throw new Error('Error al procesar el archivo');
+    console.error("Error al convertir base64 a archivo:", error);
+    throw new Error("Error al procesar el archivo");
   }
 };
 
 // Función para subir archivo a S3
-const subirArchivoAS3Seguro = async (file: File, bucket: string = "comprobantes") => {
+const subirArchivoAS3Seguro = async (
+  file: File,
+  bucket: string = "comprobantes"
+) => {
   try {
     //console.log(`Iniciando subida de ${file.name} (${file.type})`);
 
@@ -195,12 +200,20 @@ const subirArchivoAS3Seguro = async (file: File, bucket: string = "comprobantes"
 };
 
 // Función para asignar URLs de factura
-const asignarURLS_factura = async (id_factura: string, url_pdf: string, url_xml: string) => {
+const asignarURLS_factura = async (
+  id_factura: string,
+  url_pdf: string,
+  url_xml: string
+) => {
   try {
     //console.log('Asignando URLs a factura:', { id_factura, url_pdf, url_xml });
 
     const resp = await fetch(
-      `${URL}/mia/factura/asignarURLS_factura?id_factura=${encodeURIComponent(id_factura)}&url_pdf=${encodeURIComponent(url_pdf)}&url_xml=${encodeURIComponent(url_xml)}`,
+      `${URL}/mia/factura/asignarURLS_factura?id_factura=${encodeURIComponent(
+        id_factura
+      )}&url_pdf=${encodeURIComponent(url_pdf)}&url_xml=${encodeURIComponent(
+        url_xml
+      )}`,
       {
         method: "POST",
         headers: {
@@ -226,9 +239,9 @@ const asignarURLS_factura = async (id_factura: string, url_pdf: string, url_xml:
 //---------------------------------------------------------------------
 // --- Helpers mínimos (no cambian tu lógica) ---
 type PagoMinimal = {
-  tipo_pago?: string;    // "Wallet", etc.
-  metodo?: string;       // "tarjeta" | "transferencia" | "efectivo"...
-  tipo?: string;         // "credito" | "debito" | "servicios"
+  tipo_pago?: string; // "Wallet", etc.
+  metodo?: string; // "tarjeta" | "transferencia" | "efectivo"...
+  tipo?: string; // "credito" | "debito" | "servicios"
   monto_por_facturar?: string | number;
   saldo?: string | number;
 };
@@ -242,11 +255,15 @@ const norm = (v?: string) =>
 
 // CFDI Forma de pago (01..99)
 function pickFormaPago(p: PagoMinimal): string {
-  const tipoPago = norm(p.tipo_pago);  // "wallet"
-  const metodo = norm(p.metodo);     // "tarjeta" | "transferencia"
-  const tipo = norm(p.tipo);       // "credito" | "debito" | "servicios"
+  const tipoPago = norm(p.tipo_pago); // "wallet"
+  const metodo = norm(p.metodo); // "tarjeta" | "transferencia"
+  const tipo = norm(p.tipo); // "credito" | "debito" | "servicios"
 
-  if (tipoPago === "wallet" || tipoPago === "monedero" || tipoPago === "monedero electronico")
+  if (
+    tipoPago === "wallet" ||
+    tipoPago === "monedero" ||
+    tipoPago === "monedero electronico"
+  )
     return "03"; // Monedero electrónico
 
   if (metodo === "transferencia" || metodo === "transfer" || metodo === "spei")
@@ -271,9 +288,7 @@ function pickMetodoPago(p: PagoMinimal): "PUE" | "PUE" {
   return m > 0 ? "PUE" : "PUE";
 }
 
-
 export const BillingPage2: React.FC<BillingPageProps> = ({
-
   userId,
   saldoMonto = 0, // Valor por defecto 0
   rawIds = [], // Valor por defecto array vacío
@@ -281,7 +296,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   isBatch = false, // Valor por defecto false
   pagoData,
 }) => {
-  const { user } = useAuth()
+  const { user } = useAuth();
   //console.log(user, "info usuarios")
   const { showNotification } = useNotification();
   userId = user?.info?.id_agente || "";
@@ -307,8 +322,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   const [error, setError] = useState(null);
   const [pagoData2, setPagoData2] = useState<Pago | null>(null);
 
-
-
   const [selectedPaymentForm, setSelectedPaymentForm] = useState("03");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("PUE");
 
@@ -316,7 +329,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     //console.log("holawwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
     if (!id) throw new Error("Falta rawId (array vacío o indefinido)");
 
-    const url = `${URL}/v1/mia/pagos/getPagoPrepago?raw_id=${id}`
+    const url = `${URL}/v1/mia/pagos/getPagoPrepago?raw_id=${id}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -325,7 +338,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
-      throw new Error(`HTTP ${response.status} ${response.statusText} — ${body}`);
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText} — ${body}`
+      );
     }
 
     return response.json();
@@ -343,7 +358,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
         const pagoObj: Pago | undefined = result?.data?.[0];
         //console.log(userId, "😒😒😒😒😒😒😒😒😒")
         if (pagoObj?.id_agente == userId) {
-
           // Si existe, obtén el monto como número
           const saldo = pagoObj?.monto_por_facturar
             ? Number(pagoObj.monto_por_facturar)
@@ -351,14 +365,11 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
           // Guarda ambos valores
           setPago(saldo);
-          setPagoData2(pagoObj || null); // guarda el objeto completo          
-        }
-        else if (pagoObj?.monto_por_facturar == 0) {
-          showNotification("info", "Ya fue facturado este pago", 1)
-
-        }
-        else {
-          showNotification("error", "No puedes facturar este pago", 1)
+          setPagoData2(pagoObj || null); // guarda el objeto completo
+        } else if (pagoObj?.monto_por_facturar == 0) {
+          showNotification("info", "Ya fue facturado este pago", 1);
+        } else {
+          showNotification("error", "No puedes facturar este pago", 1);
         }
       } catch (err) {
         console.error("Error al obtener pago:", err);
@@ -377,7 +388,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   saldoMonto = pago || 0;
   //console.log("montofacturado2", saldoMonto)
 
-
   const [cfdi, setCfdi] = useState({
     Receiver: {
       Name: "",
@@ -389,7 +399,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     CfdiType: "",
     NameId: "",
     Observations: "",
-    ExpeditionPlace: "11570",
+    ExpeditionPlace: "11560",
     //ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
 
     Serie: null,
@@ -439,13 +449,12 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     setSelectedPaymentMethod(metodo);
 
     // Opcional: sincroniza el objeto cfdi que ya usas al enviar
-    setCfdi(prev => ({
+    setCfdi((prev) => ({
       ...prev,
       PaymentForm: forma,
       PaymentMethod: metodo,
     }));
   }, [pagoData2]);
-
 
   const updateInvoiceAmounts = (totalAmount: number) => {
     // Convertir el totalAmount a número por si acaso
@@ -475,16 +484,14 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   //console.log("saldo", saldoMonto)
   const [customAmount, setCustomAmount] = useState(saldoMonto);
 
-
   const handleConfig = () => {
     window.location.href = "/settings"; // Redirige a la página principal
-  }
+  };
 
   useEffect(() => {
     //console.log("Nuevo saldo detectado:", saldoMonto);
     setCustomAmount(saldoMonto);
   }, [saldoMonto]);
-
 
   const handleUpdateCompany = (company: any) => {
     //console.log("Company object:", company);
@@ -546,7 +553,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
   //console.log(customAmount, "ye torn")
 
-
   // Modificar el input para respetar el mínimo y máximo
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
@@ -586,12 +592,13 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   };
 
   const handleGenerateInvoice = async () => {
-
     if (customAmount > saldoMonto) {
-      showNotification("error",
+      showNotification(
+        "error",
         `El monto debe estar entre ${formatCurrency(
           minAmount
-        )} y ${formatCurrency(saldoMonto)}`, 1
+        )} y ${formatCurrency(saldoMonto)}`,
+        1
       );
       return;
     }
@@ -746,7 +753,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
         const { data } = await resp.json();
         if (!resp.ok) {
-          showNotification("error", data?.message, 1)
+          showNotification("error", data?.message, 1);
           throw new Error(data?.message || "Error al generar (individual)");
         }
         showNotification("info", "Factura generada con éxito", 1);
@@ -822,7 +829,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
               //console.log("✅ PDF subido exitosamente:", pdfUrl);
             } catch (pdfError) {
               console.error("❌ Error al procesar/subir PDF:", pdfError);
-              alert("Error al subir PDF a S3, pero la factura se generó correctamente");
+              alert(
+                "Error al subir PDF a S3, pero la factura se generó correctamente"
+              );
             }
           } else {
             console.warn("⚠️ No hay contenido PDF para subir");
@@ -834,7 +843,10 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
               //console.log("📄 Procesando XML...");
 
               // Verificar que el contenido XML es válido
-              if (typeof xmlResponse.Content === 'string' && xmlResponse.Content.trim()) {
+              if (
+                typeof xmlResponse.Content === "string" &&
+                xmlResponse.Content.trim()
+              ) {
                 const xmlFile = base64ToFile(
                   xmlResponse.Content,
                   `factura_${data.facturama.Id}.xml`,
@@ -848,7 +860,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
               }
             } catch (xmlError) {
               console.error("❌ Error al procesar/subir XML:", xmlError);
-              alert("Error al subir XML a S3, pero la factura se generó correctamente");
+              alert(
+                "Error al subir XML a S3, pero la factura se generó correctamente"
+              );
             }
           } else {
             console.warn("⚠️ No hay contenido XML para subir");
@@ -864,22 +878,35 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
 
               // Notificar al usuario si algún archivo no se pudo subir
               if (!pdfUrl && !xmlUrl) {
-                alert("Factura generada, pero no se pudieron subir los archivos a S3");
+                alert(
+                  "Factura generada, pero no se pudieron subir los archivos a S3"
+                );
               } else if (!pdfUrl) {
-                alert("Factura generada. XML subido correctamente, pero hubo un error con el PDF");
+                alert(
+                  "Factura generada. XML subido correctamente, pero hubo un error con el PDF"
+                );
               } else if (!xmlUrl) {
-                alert("Factura generada. PDF subido correctamente, pero hubo un error con el XML");
+                alert(
+                  "Factura generada. PDF subido correctamente, pero hubo un error con el XML"
+                );
               } else {
                 alert("Factura generada y archivos subidos correctamente a S3");
               }
-
             } catch (assignError) {
               console.error("❌ Error al asignar URLs en BD:", assignError);
-              showNotification("error", "Factura generada y archivos subidos, pero error al registrar URLs en BD", 1)
+              showNotification(
+                "error",
+                "Factura generada y archivos subidos, pero error al registrar URLs en BD",
+                1
+              );
             }
           } else {
-            console.warn("⚠️ No se pudieron subir ninguno de los archivos a S3");
-            alert("Factura generada, pero no se pudieron subir los archivos a S3");
+            console.warn(
+              "⚠️ No se pudieron subir ninguno de los archivos a S3"
+            );
+            alert(
+              "Factura generada, pero no se pudieron subir los archivos a S3"
+            );
           }
         }
       } catch (downloadError) {
@@ -908,7 +935,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
       setIsInvoiceGenerated(data.facturama);
 
       //console.log("=== PROCESO COMPLETADO ===");
-
     } catch (error: any) {
       console.error("Error:", error);
       alert(error?.message || "Ocurrió un error al generar la(s) factura(s)");
@@ -988,14 +1014,16 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   <div className="space-y-2">
                     <AmountDetailsSplit
                       amount={formatCurrency(
-                        Number(cfdi?.Items?.[0]?.Subtotal) || saldoMonto * 1 / 1.16
+                        Number(cfdi?.Items?.[0]?.Subtotal) ||
+                          (saldoMonto * 1) / 1.16
                       )}
                       label="Subtotal"
                       icon={<DollarSign className="w-4 h-4 text-gray-400" />}
                     />
                     <AmountDetailsSplit
                       amount={formatCurrency(
-                        Number(cfdi?.Items?.[0]?.Taxes?.[0]?.Total) || saldoMonto * 0.16 / 1.16
+                        Number(cfdi?.Items?.[0]?.Taxes?.[0]?.Total) ||
+                          (saldoMonto * 0.16) / 1.16
                       )}
                       label={`IVA (${(
                         (Number(cfdi?.Items?.[0]?.Taxes?.[0]?.Rate) ?? 0) * 100
@@ -1076,7 +1104,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                       // Encuentra la opción correspondiente al valor seleccionado
                       <span className="text-gray-900">
                         {
-                          paymentFormOptions.find(option => option.value === selectedPaymentForm)?.label
+                          paymentFormOptions.find(
+                            (option) => option.value === selectedPaymentForm
+                          )?.label
                         }
                       </span>
                     ) : (
@@ -1085,7 +1115,6 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </div>
                 </div>
 
-
                 {/* Payment Method */}
                 <div className="space-y-1 mb-4">
                   <label className="block text-xs font-medium text-gray-700">
@@ -1093,14 +1122,15 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </label>
                   <div className="block w-full text-sm rounded-md border-gray-300 shadow-sm bg-gray-100 p-2">
                     {selectedPaymentMethod ? (
-                      <span className="text-gray-900">{selectedPaymentMethod}</span>
+                      <span className="text-gray-900">
+                        {selectedPaymentMethod}
+                      </span>
                     ) : (
                       <span className="text-gray-500">No disponible</span>
                     )}
                   </div>
                 </div>
               </div>
-
 
               <div className="space-y-2">
                 {isInvoiceGenerated ? (
@@ -1144,9 +1174,9 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
               </div>
 
               <legend className="text-sm font-medium text-gray-500 mb-2 mt-2">
-                Para realizar algún cambio en su factura, favor de comunicarse con soporte
+                Para realizar algún cambio en su factura, favor de comunicarse
+                con soporte
               </legend>
-
             </div>
           </div>
         </div>
@@ -1258,10 +1288,9 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showNoRfcAlert, setShowNoRfcAlert] = useState(false);
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   agentId = user?.info?.id_agente || "";
-
 
   useEffect(() => {
     if (isOpen && agentId) {
@@ -1275,8 +1304,8 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
           const empresasValidas = Array.isArray(data)
             ? data.filter((empresa) => empresa.rfc) // Solo empresas con RFC
             : (data?.data || data?.empresas || []).filter(
-              (empresa) => empresa.rfc
-            );
+                (empresa) => empresa.rfc
+              );
 
           setEmpresas(empresasValidas);
 
@@ -1288,7 +1317,9 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
           }
 
           if (empresasValidas.length === 0) {
-            setError("No tienes rfc registrado o tampoco cuentas con una empresa con RFC registrado");
+            setError(
+              "No tienes rfc registrado o tampoco cuentas con una empresa con RFC registrado"
+            );
             setShowNoRfcAlert(true);
           }
         } catch (err) {
@@ -1311,7 +1342,7 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
   const handleConfig = () => {
     window.location.href = "/settings"; // Redirige a la página principal
     onClose();
-  }
+  };
 
   if (!isOpen) return null;
 
@@ -1401,5 +1432,3 @@ const DataFiscalModalWithCompanies: React.FC<DataFiscalModalProps> = ({
     </div>
   );
 };
-
-;
