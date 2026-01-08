@@ -132,9 +132,9 @@ const ExpandedContentRenderer = ({
         const resp = await fetchFullDetalles({ id_agente, id_buscar });
 
         setFull({
-          reservas: normalizeReservas(resp.reservas),
-          pagos: normalizePagos(resp.pagos),
-          facturas: normalizeFacturas(resp.facturas),
+          reservas: normalizeReservas(resp.data.reservas),
+          pagos: normalizePagos(resp.data.pagos),
+          facturas: normalizeFacturas(resp.data.facturas),
         });
       } catch (err) {
         console.error("Error getFullDetalles (Expanded):", err);
