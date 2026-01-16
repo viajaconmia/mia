@@ -17,6 +17,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 import Loader from "./components/atom/Loader";
 import { Impersonado } from "./components/page/Impersonado";
 import Chat from "./components/page/Chat";
+import { BillingPage2 } from "./components/page/billingepage2";
 // import { facturas_pagos } from "./pages/facturas_pagos";
 
 const App = () => {
@@ -53,11 +54,11 @@ const App = () => {
           component={Configuration}
           path={ROUTES.SETTINGS}
         />
-        {/* <RouteSecure
+        <RouteSecure
           restricted={true}
-          component={facturas_pagos}
+          component={BillingPage2}
           path={ROUTES.FACTURACION.PAGOS}
-        /> */}
+        />
         <RouteSecure
           restricted={true}
           component={AdminDashboard}

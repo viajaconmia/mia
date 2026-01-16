@@ -58,6 +58,8 @@ export class PagosService extends ApiService {
 
 export interface Payment {
   id_movimiento: number;
+  is_facturable: string;
+  monto_pendiente_relacionar: string;
   tipo_pago: string;
   raw_id: string;
   id_agente: string;
