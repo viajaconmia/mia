@@ -310,7 +310,7 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
           },
           CfdiType: "I",
           NameId: "1",
-          ExpeditionPlace: "11570",
+          ExpeditionPlace: "11560",
           // ExpeditionPlace: "42501", //Codigo Postal DE PRUEBA
           Serie: null,
           Folio: Math.round(Math.random() * 999999999),

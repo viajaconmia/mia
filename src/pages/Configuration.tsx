@@ -298,16 +298,19 @@ export const Configuration = () => {
                           {activeTab === "employees" && (
                             <>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Viajero
+                                Nombre completo
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Empresas
+                                Telefono
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Fecha de nacimiento
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Contacto
+                                Correo
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Nacionalidad
                               </th>
                             </>
                           )}
@@ -423,12 +426,7 @@ export const Configuration = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm text-gray-900">
-                                  {employee.empresas
-                                    ?.map(
-                                      (emp: { razon_social: any }) =>
-                                        emp.razon_social
-                                    )
-                                    .join(", ")}
+                                  {employee.telefono}
                                 </div>
                               </td>
                               <td className="px-6 py-4">
@@ -441,7 +439,10 @@ export const Configuration = () => {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {employee.correo}
                                 <br />
-                                {employee.telefono}
+                                {/* {employee.telefono} */}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {employee.nacionalidad}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
                                 {employee.rn != 1 && (
