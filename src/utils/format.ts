@@ -29,6 +29,16 @@ export const formatDate = (dateString: string) => {
   });
 };
 
+export const formatLargeDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
+
 // export const formatDate = (input?: string | Date | null): string => {
 //   // Logs útiles (corrige tu console.log)
 //   // console.log("formatDate input:", input);
@@ -66,7 +76,7 @@ export const formatDate = (dateString: string) => {
 // };
 
 export function formatNumberWithCommas(
-  numberStr: string | number | undefined | null
+  numberStr: string | number | undefined | null,
 ): string {
   // Si el valor es undefined o null, retornar cadena vacía
   if (numberStr == null) return "";

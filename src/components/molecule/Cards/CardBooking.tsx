@@ -1,13 +1,13 @@
 import { Calendar, ChevronDown, ExternalLink } from "lucide-react";
 import { formatCurrency, formatDate } from "../../../utils/format";
 import { calcularNoches } from "../../../lib/calculates";
-import { Reserva } from "../../../types/services";
 import { useState } from "react";
+import { Booking } from "../../../services/BookingService";
 
 interface BookingCardProps {
-  data: Reserva;
+  data: Booking;
   OnToggleExpand: () => React.ReactNode;
-  onViewDetails: (item: Reserva) => void;
+  onViewDetails: (item: Booking) => void;
 }
 
 export function BookingCard({
@@ -22,10 +22,9 @@ export function BookingCard({
         <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
           <img
             src={
-              data.URLImagenHotel ||
               "https://img.freepik.com/vector-gratis/fondo-plano-edificio-hotel_23-2148136541.jpg"
             }
-            alt={data.hotel || ""}
+            alt={data.proveedor || ""}
             className="w-full h-full object-cover"
           />
         </div>
@@ -33,7 +32,7 @@ export function BookingCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <h3 className="text-sm font-semibold text-slate-900 truncate leading-tight">
-              {data.hotel}
+              {data.proveedor}
             </h3>
             <button
               onClick={() => {
@@ -52,34 +51,34 @@ export function BookingCard({
 
           <div className="flex items-center gap-1.5 text-xs text-slate-600 mb-1.5">
             <Calendar className="w-3 h-3" />
-            <span>{formatDate(data.check_in)}</span>
+            <span>{formatDate(data.check_in || "")}</span>
             <span className="text-slate-400">→</span>
-            <span>{formatDate(data.check_out)}</span>
+            <span>{formatDate(data.check_out || "")}</span>
           </div>
 
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="flex-1 min-w-0">
               <p className="text-xs text-slate-500 leading-tight">Código</p>
               <p className="text-xs font-medium text-slate-900 truncate">
-                {data.codigo_reservacion_hotel}
+                {data.codigo_confirmacion}
               </p>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-slate-500 leading-tight">Viajero</p>
               <p className="text-xs font-medium text-slate-900 truncate">
-                {data.nombre_viajero_reservacion}
+                {data.viajero}
               </p>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-900">
-              {formatCurrency(Number(data.total))}
+              {formatCurrency(Number(data.total || 0))}
             </span>
             <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs ml-auto">
               {`${calcularNoches(
                 data.check_in || "",
-                data.check_out || ""
+                data.check_out || "",
               )} noches`}
             </span>
           </div>
