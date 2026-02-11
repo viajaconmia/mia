@@ -157,8 +157,8 @@ const ExpandedContentRenderer = ({
           setLocation(
             ROUTES.CONSULTAS.SEARCH(
               "reservaciones",
-              item.codigo_reservacion_hotel || ""
-            )
+              item.codigo_reservacion_hotel || "",
+            ),
           );
         },
       },
@@ -179,8 +179,8 @@ const ExpandedContentRenderer = ({
           setLocation(
             ROUTES.CONSULTAS.SEARCH(
               "pagos",
-              String(item.raw_id || item.id_pago) || ""
-            )
+              String(item.raw_id || item.id_pago) || "",
+            ),
           );
         },
       },
@@ -197,7 +197,7 @@ const ExpandedContentRenderer = ({
         variant: "ghost",
         onClick: ({ item }: { item: Invoice }) =>
           setLocation(
-            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || "")
+            ROUTES.CONSULTAS.SEARCH("facturas", item.id_factura || ""),
           ),
       },
     },
@@ -222,8 +222,8 @@ const ExpandedContentRenderer = ({
                         console.log(
                           error.response ||
                             error.message ||
-                            "Error al obtener la factura"
-                        )
+                            "Error al obtener la factura",
+                        ),
                       );
                   } else if (item.url_pdf) {
                     viewPDFUrl(item.url_pdf);
@@ -245,20 +245,20 @@ const ExpandedContentRenderer = ({
                       .then(({ data }) =>
                         downloadXMLBase64(
                           data?.Content || "",
-                          `${item.id_factura.slice(0, 8)}.xml`
-                        )
+                          `${item.id_factura.slice(0, 8)}.xml`,
+                        ),
                       )
                       .catch((error) =>
                         console.log(
                           error.response ||
                             error.message ||
-                            "Error al obtener la factura"
-                        )
+                            "Error al obtener la factura",
+                        ),
                       );
                   } else if (item.url_xml) {
                     downloadXMLUrl(
                       item.url_xml,
-                      `${item.id_factura.slice(0, 8)}.xml`
+                      `${item.id_factura.slice(0, 8)}.xml`,
                     );
                   }
                 }}
@@ -339,15 +339,18 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const [searchParams] = useSearchParams();
   const { setSize } = useResize();
   const params = searchParams.get("search");
-
+  console.log(bookings, "bookings en view");
   let search = params ? params : "";
   const filterBookings = bookings.filter(
     (booking) =>
       booking.id_booking?.includes(search) ||
-      booking.nombre_viajero_reservacion?.includes(search) ||
+      (booking.nombre_viajero_reservacion || "")
+        ?.trim()
+        .replace("  ", " ")
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
       booking.codigo_reservacion_hotel?.includes(search) ||
-      booking.id_hospedaje?.includes(search) ||
-      booking.nombre_viajero_reservacion?.includes(search)
+      booking.id_hospedaje?.includes(search),
   );
 
   const bookingColumns: ColumnsTable<Reserva>[] = [
@@ -421,7 +424,7 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
                   )}
                   onViewDetails={(item: Reserva) => {
                     setLocation(
-                      ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud)
+                      ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud),
                     );
                   }}
                 />
@@ -460,7 +463,7 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
   console.log(payments);
   let search = params ? params : "";
   const filterPayments = payments.filter((payment) =>
-    String(payment.raw_id)?.includes(search)
+    String(payment.raw_id)?.includes(search),
   );
   const paymentColumns: ColumnsTable<Payment>[] = [
     {
@@ -560,7 +563,7 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
 
   let search = params ? params : "";
   const filterInvoices = invoices.filter((invoice) =>
-    invoice.id_factura?.includes(search)
+    invoice.id_factura?.includes(search),
   );
   const invoiceColumns: ColumnsTable<Invoice>[] = [
     {
@@ -592,8 +595,8 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         console.log(
                           error.response ||
                             error.message ||
-                            "Error al obtener la factura"
-                        )
+                            "Error al obtener la factura",
+                        ),
                       );
                   } else if (item.url_pdf) {
                     viewPDFUrl(item.url_pdf);
@@ -617,22 +620,22 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                           data?.Content || "",
                           `${item.id_factura.slice(0, 8)}-${
                             item.created_at.split("T")[0]
-                          }.xml`
-                        )
+                          }.xml`,
+                        ),
                       )
                       .catch((error) =>
                         console.log(
                           error.response ||
                             error.message ||
-                            "Error al obtener la factura"
-                        )
+                            "Error al obtener la factura",
+                        ),
                       );
                   } else if (item.url_xml) {
                     downloadXMLUrl(
                       item.url_xml,
                       `${item.id_factura.slice(0, 8)}-${
                         item.created_at.split("T")[0]
-                      }.xml`
+                      }.xml`,
                     );
                   }
                 }}
@@ -692,10 +695,10 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
 
 export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>(
-    String(new Date().getMonth() + 1)
+    String(new Date().getMonth() + 1),
   );
   const [selectedYear, setSelectedYear] = useState(
-    String(new Date().getFullYear())
+    String(new Date().getFullYear()),
   );
   const { user } = useAuth();
 
@@ -808,7 +811,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
   const nightsByHotel = calculateNightsByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
     Number(selectedMonth),
-    Number(selectedYear)
+    Number(selectedYear),
   );
 
   const currentMonth = today.getMonth() + 1;
@@ -817,13 +820,13 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
   const total = calculateGrandTotalForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
     currentMonth,
-    currentYear
+    currentYear,
   );
 
   const totalByHotel = calculateTotalByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
     Number(selectedMonth),
-    Number(selectedYear)
+    Number(selectedYear),
   );
   const gastosHotel = { total, totalByHotel };
 
@@ -909,5 +912,5 @@ const months = [
   { value: "12", label: "Diciembre" },
 ];
 const years = Array.from({ length: 5 }, (_, i) =>
-  String(new Date().getFullYear() + 2 - i)
+  String(new Date().getFullYear() + 2 - i),
 ).map((year) => ({ value: year, label: year }));
