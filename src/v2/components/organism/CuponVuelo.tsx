@@ -21,10 +21,15 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
   return (
     <div className="relative">
       <div className="rounded-xl border-2 border-slate-200 p-6 hover:shadow-md">
-        <div className="flex gap-1 items-center">
-          <p className="text-sm font-medium text-slate-700">Tarifa:</p>
+        <div className="flex justify-between">
+          <div className="flex gap-1 items-center">
+            <p className="text-sm font-medium text-slate-700">Tarifa:</p>
+            <span className="p-1 px-3 bg-blue-200 rounded-full text-xs font-semibold border border-blue-300 hidden md:inline-block">
+              {vuelo.rate_type}
+            </span>
+          </div>
           <span className="p-1 px-3 bg-blue-200 rounded-full text-xs font-semibold border border-blue-300 hidden md:inline-block">
-            {vuelo.rate_type}
+            {vuelo.fly_type.split(" ").slice(-1)[0].toUpperCase()}
           </span>
         </div>
         <div className="mb-4">
@@ -144,13 +149,16 @@ export default function FlightCard({ item }: FlightCardProps) {
               <p className="text-gray-700 text-sm mb-2">Origen</p>
               <p className="text-2xl font-bold text-gray-900">{item.origen}</p>
             </div>
-            <div className="flex-shrink-0 px-6 flex flex-col items-center gap-1">
+            <div className="flex-shrink-0 px-6 flex flex-col items-center gap-2">
               <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 hidden md:inline-block">
                 Codigo: {item.codigo_confirmacion}
               </span>
               <div className="text-4xl text-gray-900/80">
                 {getTripTypeIcon()}
               </div>
+              <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 hidden md:inline-block">
+                {item.tipo}
+              </span>
             </div>
             <div className="text-center flex-1">
               <p className="text-gray-700 text-sm mb-2">Destino</p>

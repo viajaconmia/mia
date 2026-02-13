@@ -19,6 +19,7 @@ import {
   calculateGrandTotalForMonthYear,
   calculateNightsByHotelForMonthYear,
   calculateTotalByHotelForMonthYear,
+  isDifferentMonth,
 } from "../../utils/calculos";
 import {
   Building,
@@ -497,7 +498,8 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
           // Si tiene monto pendiente diferente de 0, no muestra el botón
           if (
             Number(item.monto_pendiente_relacionar) <= 0 ||
-            item.is_facturable == "0"
+            item.is_facturable == "0" ||
+            isDifferentMonth(item.fecha_creacion)
           ) {
             return null;
           }

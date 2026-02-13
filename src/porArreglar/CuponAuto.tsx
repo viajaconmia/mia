@@ -72,7 +72,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
     <div className="w-full h-full p-4">
       <div className="w-full max-w-4xl mx-auto bg-white rounded-xl mt-6 shadow">
         {/* Header Card */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl p-8 mb-6 rounded-xl">
+        <div className="bg-gradient-to-t from-blue-700 to-blue-800 shadow-xl p-8 mb-6 rounded-xl">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -137,7 +137,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
 
         {/* Pickup and Dropoff Details */}
         <div className="p-4">
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg p-8 mb-6 border">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Pickup */}
               <div>
@@ -227,7 +227,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
           </div>
 
           {/* Insurance and Additional Info */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="bg-white border rounded-2xl shadow-lg p-6 mb-6">
             <div className="flex items-start gap-3">
               <Shield className="w-5 h-5 text-blue-600 mt-1" />
               <div className="flex-1">
