@@ -48,7 +48,7 @@ export class BookingService extends ApiService {
     return this.get({
       path,
       params: {
-        id_agente: this.user.getUser()?.info?.id_agente,
+        id_client: this.user.getUser()?.info?.id_agente,
         ...(this.user.getUser()?.info?.rol == "reservante"
           ? { usuario_creador: this.user.getUser()?.info?.id_viajero }
           : {}),

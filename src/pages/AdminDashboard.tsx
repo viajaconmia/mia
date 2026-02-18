@@ -70,7 +70,7 @@ export const AdminDashboard = () => {
   const fetchBookings = async () => {
     try {
       const { data } = await BookingService.getInstance().getByService({
-        estado: "Confirmada",
+        status: "Confirmada",
       });
       console.log(data);
       setBookings(data || []);
