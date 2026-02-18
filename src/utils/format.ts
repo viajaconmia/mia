@@ -30,7 +30,11 @@ export const formatDate = (dateString: string) => {
 };
 
 export const formatLargeDate = (dateString: string) => {
-  const date = new Date(dateString);
+  if (!dateString) return "";
+
+  const [year, month, day] = dateString.split("T")[0].split("-");
+  const date = new Date(+year, +month - 1, +day);
+
   return new Intl.DateTimeFormat("es-MX", {
     weekday: "long",
     day: "numeric",
