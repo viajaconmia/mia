@@ -30,13 +30,13 @@ export const calculateNightsByHotelForMonthYear = (
   data: Booking[],
   selectedMonth: number,
   selectedYear: number,
-  debug = false
+  debug = false,
 ): HotelNights[] => {
   const MS_PER_DAY = 86_400_000;
   const dayIndex = (ms: number) => Math.floor(ms / MS_PER_DAY);
 
   const monthStartUTC = Date.UTC(selectedYear, selectedMonth - 1, 1); // [incl)
-  const monthEndUTC = Date.UTC(selectedYear, selectedMonth, 1);       // [excl)
+  const monthEndUTC = Date.UTC(selectedYear, selectedMonth, 1); // [excl)
   const monthStartDay = dayIndex(monthStartUTC);
   const monthEndDay = dayIndex(monthEndUTC);
 
@@ -49,7 +49,8 @@ export const calculateNightsByHotelForMonthYear = (
 
     const inMs = Date.parse(b.check_in);
     const outMs = Date.parse(b.check_out);
-    if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs) continue;
+    if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs)
+      continue;
 
     // Calcular solape con el mes
     const startDay = Math.max(dayIndex(inMs), monthStartDay);
@@ -57,7 +58,9 @@ export const calculateNightsByHotelForMonthYear = (
     const nights = endDay - startDay;
 
     if (debug) {
-      console.log(`🏨 ${b.hotel} | estado=${b.status_solicitud} | nochesMes=${nights}`);
+      console.log(
+        `🏨 ${b.hotel} | estado=${b.status_solicitud} | nochesMes=${nights}`,
+      );
     }
 
     if (nights > 0) {
@@ -80,7 +83,7 @@ export const calculateTotalByHotelForMonthYear = (
   data: Booking[],
   selectedMonth: number,
   selectedYear: number,
-  debug = false
+  debug = false,
 ): HotelTotal[] => {
   const map: Record<string, number> = {};
 
@@ -111,7 +114,7 @@ export const calculateGrandTotalForMonthYear = (
   data: Booking[],
   selectedMonth: number,
   selectedYear: number,
-  debug = false
+  debug = false,
 ): number => {
   let sum = 0;
   for (const b of data) {
@@ -128,3 +131,13 @@ export const calculateGrandTotalForMonthYear = (
   if (debug) console.log("💵 Gran total:", sum);
   return sum;
 };
+
+export function isDifferentMonth(createdAt: string): boolean {
+  const date = new Date(createdAt);
+  const now = new Date();
+
+  return (
+    date.getMonth() !== now.getMonth() ||
+    date.getFullYear() !== now.getFullYear()
+  );
+}

@@ -1,5 +1,5 @@
 import { useLocation, useSearchParams } from "wouter";
-import { Invoice, ModalType, Reserva } from "../../types/services";
+import { Invoice, ModalType } from "../../types/services";
 import { ColumnsTable, Table } from "../atom/table";
 import ROUTES from "../../constants/routes";
 import { Payment } from "../../services/PagosService";
@@ -19,8 +19,16 @@ import {
   calculateGrandTotalForMonthYear,
   calculateNightsByHotelForMonthYear,
   calculateTotalByHotelForMonthYear,
+  isDifferentMonth,
 } from "../../utils/calculos";
-import { Building2, Calendar, DollarSign } from "lucide-react";
+import {
+  Building,
+  Building2,
+  Calendar,
+  Car,
+  DollarSign,
+  Plane,
+} from "lucide-react";
 import { formatNumberWithCommas } from "../../utils/format";
 import { StatCard } from "../atom/StatCard";
 import { SelectInput } from "../atom/Input";
@@ -28,6 +36,7 @@ import useResize from "../../hooks/useResize";
 import { BookingCard } from "../molecule/Cards/CardBooking";
 import { PaymentCard } from "../molecule/Cards/CardPayment";
 import { InvoiceCard } from "../molecule/Cards/CardInvoice";
+import { Booking } from "../../services/BookingService";
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
@@ -130,6 +139,7 @@ const ExpandedContentRenderer = ({
       try {
         setLoading(true);
         const resp = await fetchFullDetalles({ id_agente, id_buscar });
+        console.log("thid id resp", resp);
 
         setFull({
           reservas: normalizeReservas(resp.data.reservas),
@@ -146,25 +156,25 @@ const ExpandedContentRenderer = ({
   }, [user?.info?.id_agente, item, itemType]);
 
   // columnas — iguales a las tuyas
-  const booking_columns: ColumnsTable<Reserva>[] = [
+  const booking_columns: ColumnsTable<Booking>[] = [
     {
-      key: "codigo_reservacion_hotel",
+      key: "codigo_confirmacion",
       header: "ID",
       component: "copiar_and_button",
       componentProps: {
         variant: "ghost",
-        onClick: ({ item }: { item: Reserva }) => {
+        onClick: ({ item }: { item: Booking }) => {
           setLocation(
             ROUTES.CONSULTAS.SEARCH(
               "reservaciones",
-              item.codigo_reservacion_hotel || "",
+              item.codigo_confirmacion || "",
             ),
           );
         },
       },
     },
-    { key: "hotel", header: "Hotel", component: "text" },
-    { key: "nombre_viajero_reservacion", header: "Viajero", component: "text" },
+    { key: "proveedor", header: "Proveedor", component: "text" },
+    { key: "viajero", header: "Viajero", component: "text" },
     { key: "total", header: "Total", component: "precio" },
   ];
 
@@ -334,7 +344,7 @@ const ExpandedContentRenderer = ({
   );
 };
 
-export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
+export const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
   const { setSize } = useResize();
@@ -344,30 +354,40 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
   const filterBookings = bookings.filter(
     (booking) =>
       booking.id_booking?.includes(search) ||
-      (booking.nombre_viajero_reservacion || "")
-        ?.trim()
-        .replace("  ", " ")
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      booking.codigo_reservacion_hotel?.includes(search) ||
+      booking.viajero?.includes(search) ||
+      booking.codigo_confirmacion?.includes(search) ||
       booking.id_hospedaje?.includes(search),
   );
 
-  const bookingColumns: ColumnsTable<Reserva>[] = [
+  const bookingColumns: ColumnsTable<Booking>[] = [
+    {
+      key: "type",
+      header: "",
+      component: "custom",
+      componentProps: {
+        component: ({ item }: { item: Booking }) => (
+          <div className="flex items-center justify-center w-full">
+            {item.type == "hotel" && <Building className="w-6 h-6" />}
+            {item.type == "flyght" && <Plane className="w-6 h-6" />}
+            {item.type == "car_rental" && <Car className="w-6 h-6" />}
+          </div>
+        ),
+      },
+    },
     { key: "created_at", header: "Creado", component: "date" },
-    { key: "codigo_reservacion_hotel", header: "Código", component: "text" },
-    { key: "hotel", header: "Hotel", component: "text" },
-    { key: "nombre_viajero_reservacion", header: "Viajero", component: "text" },
+    { key: "codigo_confirmacion", header: "Código", component: "text" },
+    { key: "proveedor", header: "Proveedor", component: "text" },
+    { key: "viajero", header: "Viajero", component: "text" },
     { key: "check_in", header: "Check-in", component: "date" },
     { key: "check_out", header: "Check-out", component: "date" },
     {
-      key: "room",
-      header: "Cuarto",
+      key: "tipo_cuarto_vuelo",
+      header: "cuarto/vuelo",
       component: "custom",
       componentProps: {
-        component: ({ item }: { item: Reserva }) => (
+        component: ({ item }: { item: Booking }) => (
           <span className="font-semibold">
-            {(item.room || "").toUpperCase()}
+            {(item.tipo_cuarto_vuelo || "").toUpperCase()}
           </span>
         ),
       },
@@ -378,17 +398,8 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
       header: "Acciones",
       component: "custom",
       componentProps: {
-        component: ({ item }: { item: Reserva }) => (
+        component: ({ item }: { item: Booking }) => (
           <div className="flex gap-2">
-            {/* {!item.id_credito && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setLocation(ROUTES.FACTURACION.ID(item.id_solicitud))}
-              >
-                FACTURAR
-              </Button>
-            )} */}
             <Button
               size="sm"
               onClick={() =>
@@ -422,7 +433,7 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
                       itemType={"booking"}
                     />
                   )}
-                  onViewDetails={(item: Reserva) => {
+                  onViewDetails={(item: Booking) => {
                     setLocation(
                       ROUTES.BOOKINGS.ID_SOLICITUD(item.id_solicitud),
                     );
@@ -436,7 +447,7 @@ export const BookingsView = ({ bookings }: { bookings: Reserva[] }) => {
           size: "md",
           obj: (
             <>
-              <Table<Reserva>
+              <Table<Booking>
                 id="bookingsTable"
                 data={filterBookings}
                 columns={bookingColumns}
@@ -487,7 +498,8 @@ export const PaymentsView = ({ payments }: { payments: Payment[] }) => {
           // Si tiene monto pendiente diferente de 0, no muestra el botón
           if (
             Number(item.monto_pendiente_relacionar) <= 0 ||
-            item.is_facturable == "0"
+            item.is_facturable == "0" ||
+            isDifferentMonth(item.fecha_creacion)
           ) {
             return null;
           }
@@ -693,7 +705,7 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
   );
 };
 
-export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
+export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>(
     String(new Date().getMonth() + 1),
   );
@@ -799,7 +811,7 @@ export const OverviewView = ({ bookings }: { bookings: Reserva[] }) => {
     const currentYear = today.getFullYear();
 
     return (
-      obj.status_reserva === "Confirmada" &&
+      obj.estado === "Confirmada" &&
       checkInDate <= today &&
       checkInDate.getMonth() + 1 === currentMonth &&
       checkInDate.getFullYear() === currentYear

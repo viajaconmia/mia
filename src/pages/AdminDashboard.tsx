@@ -11,8 +11,8 @@ import { TabsList } from "../components/molecule/TabsList";
 import { PagosService, Payment } from "../services/PagosService";
 import { useNotification } from "../hooks/useNotification";
 import { FacturaService } from "../services/FacturaService";
-import { Invoice, Reserva } from "../types/services";
-import { BookingService } from "../services/BookingService";
+import { Invoice } from "../types/services";
+import { Booking, BookingService } from "../services/BookingService";
 import { Redirect, Route, Switch, useLocation, useSearchParams } from "wouter";
 import ROUTES from "../constants/routes";
 import { InputText } from "../components/atom/Input";
@@ -27,7 +27,7 @@ type ViewsConsultas = "general" | "reservaciones" | "pagos" | "facturas";
 
 export const AdminDashboard = () => {
   const [location, setLocation] = useLocation();
-  const [bookings, setBookings] = useState<Reserva[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -69,7 +69,10 @@ export const AdminDashboard = () => {
 
   const fetchBookings = async () => {
     try {
-      const { data } = await BookingService.getInstance().getReservas();
+      const { data } = await BookingService.getInstance().getByService({
+        estado: "Confirmada",
+      });
+      console.log(data);
       setBookings(data || []);
       // console.log(bookings);
     } catch (error: any) {
