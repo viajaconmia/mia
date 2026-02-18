@@ -69,6 +69,7 @@ export const AdminDashboard = () => {
 
   const fetchBookings = async () => {
     try {
+      //Viendo si si jala
       const { data } = await BookingService.getInstance().getByService({
         status: "Confirmada",
       });
