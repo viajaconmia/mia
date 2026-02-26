@@ -67,7 +67,7 @@ export const ManualReservationPage = () => {
       .getHotelById(id)
       .then(({ data }) => setHotel(data))
       .catch((error) =>
-        console.error(error.response || error.message || "error")
+        console.error(error.response || error.message || "error"),
       )
       .finally(() => {
         setLoadingHotel(false);
@@ -75,8 +75,10 @@ export const ManualReservationPage = () => {
 
     const fetchViajero = async () => {
       const data = await fetchViajerosCompanies();
-      console.log(data,"VIAJEROS")
-      setEmployees(data);
+      console.log(data, "VIAJEROS");
+      setEmployees(
+        data.sort((a, b) => a.primer_nombre.localeCompare(b.primer_nombre)),
+      );
     };
     fetchViajero();
   }, []);
@@ -84,7 +86,7 @@ export const ManualReservationPage = () => {
   const calculateTotalPrice = (
     checkIn: string,
     checkOut: string,
-    roomType: "single" | "double"
+    roomType: "single" | "double",
   ) => {
     if (!checkIn || !checkOut || !hotel)
       return { nights: 0, pricePerNight: 0, total: 0 };
@@ -92,7 +94,7 @@ export const ManualReservationPage = () => {
     const start = new Date(checkIn);
     const end = new Date(checkOut);
     const nights = Math.ceil(
-      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     const pricePerNightRaw =
@@ -112,7 +114,7 @@ export const ManualReservationPage = () => {
       const { nights, pricePerNight, total } = calculateTotalPrice(
         newData.checkIn,
         newData.checkOut,
-        newData.roomType
+        newData.roomType,
       );
       return {
         ...newData,
@@ -122,7 +124,7 @@ export const ManualReservationPage = () => {
       };
     });
   };
-console.log(reservationData,"reservationData")
+  console.log(reservationData, "reservationData");
   const handleAddCart = async () => {
     setLoading(true);
     const solicitud = {
@@ -144,7 +146,7 @@ console.log(reservationData,"reservationData")
     try {
       const { data } = await crearSolicitud(solicitud, user?.info?.id_agente);
       const { id_solicitud } = data;
-      console.log("nvjifnjvfbvhjfbvjifbv.",data)
+      console.log("nvjifnjvfbvhjfbvjifbv.", data);
       id_solicitud_current = id_solicitud;
     } catch (error) {
       console.log(error);
@@ -162,7 +164,7 @@ console.log(reservationData,"reservationData")
       handleActualizarCarrito();
     } catch (error: any) {
       console.error(
-        error.response || error.message || "Error al agregar al carrito"
+        error.response || error.message || "Error al agregar al carrito",
       );
       showNotification("error", error.message);
     } finally {
@@ -348,7 +350,7 @@ console.log(reservationData,"reservationData")
                           Number(e.target.value.split("-")[0]) > 999
                         ) {
                           setError(
-                            "No se pueden poner fechas menores al dia de hoy"
+                            "No se pueden poner fechas menores al dia de hoy",
                           );
                         } else {
                           setError("");
@@ -380,7 +382,7 @@ console.log(reservationData,"reservationData")
                           Number(e.target.value.split("-")[0]) > 999
                         ) {
                           setError(
-                            "No se pueden poner fechas menores al dia de hoy"
+                            "No se pueden poner fechas menores al dia de hoy",
                           );
                         } else {
                           setError("");
@@ -421,7 +423,7 @@ console.log(reservationData,"reservationData")
                             calculateTotalPrice(
                               prev.checkIn,
                               prev.checkOut,
-                              newRoomType
+                              newRoomType,
                             );
                           return {
                             ...prev,
@@ -475,7 +477,7 @@ console.log(reservationData,"reservationData")
                           parseInt(e.target.value) > 2
                         ) {
                           return setError(
-                            "El número de personas debe ser entre 1 y 2"
+                            "El número de personas debe ser entre 1 y 2",
                           );
                         }
 
@@ -548,24 +550,32 @@ console.log(reservationData,"reservationData")
                           const newGuests = [
                             ...reservationData.additionalGuests,
                           ];
-                          {console.log(reservationData,"eeeeeeeeeeeeeeeeeeeeeeeeeeeeee")}
+                          {
+                            console.log(
+                              reservationData,
+                              "eeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                            );
+                          }
                           newGuests[index] = e.target.value;
                           setReservationData((prev) => ({
                             ...prev,
                             additionalGuests: newGuests,
                           }));
-                        {console.log(reservationData,"errrrrrrrrrrrrrrrrrrrrrrrrrrrrr")}
-                                                {console.log("toriorororo0..",employees)}
+                          {
+                            console.log(
+                              reservationData,
+                              "errrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+                            );
+                          }
+                          {
+                            console.log("toriorororo0..", employees);
+                          }
                         }}
                         className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
-                        
                         <option value="">Selecciona un huésped</option>
                         {employees
-                          .filter(
-                            (empleado) =>
-                              empleado.id_viajero
-                          )
+                          .filter((empleado) => empleado.id_viajero)
                           .map((empleado) => (
                             <option
                               key={empleado.id_viajero}
@@ -578,7 +588,7 @@ console.log(reservationData,"reservationData")
                           ))}
                       </select>
                     </div>
-                  )
+                  ),
                 )}
               </div>
             )}
