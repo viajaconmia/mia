@@ -11,84 +11,15 @@ import {
 } from "lucide-react";
 import { SolicitudHotel } from "../services/BookingService";
 import { useEffect, useRef, useState } from "react";
-import { jsPDF } from "jspdf";
 import { getUbicacion } from "../services/reservas";
-import html2canvas from "html2canvas";
 import { SupportModal } from "../components/SupportModal";
-
-// ↑ Encima del componente Reserva()
-type LogoAsset = { key: string; src: string };
-
-type LogoLoaded = {
-  dataUrl: string;
-  ar: number; // aspect ratio = width/height
-};
-
-// Carga IMG (PNG/JPG) a dataURL + aspect ratio
-async function loadImageAsDataURL(src: string): Promise<LogoLoaded> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || 512;
-        canvas.height = img.naturalHeight || 512;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject(new Error("No 2D context"));
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/png");
-        const ar = (img.naturalWidth || 1) / (img.naturalHeight || 1) || 1;
-        resolve({ dataUrl, ar });
-      } catch (e) {
-        reject(e);
-      }
-    };
-    img.onerror = () =>
-      reject(new Error(`No se pudo cargar la imagen: ${src}`));
-    img.src = src;
-  });
-}
-
-// SVG de MIA (ajusta fill/color si lo necesitas)
-const MIA_SVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 493 539">
-    <path fill="#0A3A57" d="M205.1,500.5C205.1,500.5,205,500.6,205.1,500.5C140.5,436.1,71.7,369.1,71.7,291.1 c0-86.6,84.2-157.1,187.6-157.1S447,204.4,447,291.1c0,74.8-63.4,139.6-150.8,154.1c0,0,0,0,0,0l-8.8-53.1 c61.3-10.2,105.8-52.6,105.8-100.9c0-56.9-60-103.2-133.7-103.2s-133.7,46.3-133.7,103.2c0,49.8,48,93.6,111.7,101.8c0,0,0,0,0,0 L205.1,500.5L205.1,500.5z"/>
-    <path fill="#0A3A57" d="M341,125.5c-2.9,0-5.8-0.7-8.6-2.1c-70.3-37.3-135.9-1.7-138.7-0.2c-8.8,4.9-20,1.8-24.9-7.1 c-4.9-8.8-1.8-20,7-24.9c3.4-1.9,85.4-47.1,173.8-0.2c9,4.8,12.4,15.9,7.6,24.8C353.9,122,347.6,125.5,341,125.5z"/>
-    <g>
-      <path fill="#0A3A57" d="M248.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C257.8,277.6,255.4,268.3,248.8,263.8z"/>
-      <path fill="#0A3A57" d="M348.8,263.8c-38.1-26-73.7-0.8-75.2,0.2c-6.4,4.6-8.7,14-5.3,21.8c1.9,4.5,5.5,7.7,9.8,8.9 c4,1.1,8.2,0.3,11.6-2.1c0.9-0.6,21.4-14.9,43.5,0.2c2.2,1.5,4.6,2.3,7.1,2.4c0.2,0,0.4,0,0.6,0c0,0,0,0,0,0 c5.9,0,11.1-3.7,13.5-9.7C357.8,277.6,355.4,268.3,348.8,263.8z"/>
-    </g>
-  </svg>
-  `;
-
-// Convierte el SVG (string) a PNG dataURL y devuelve ar
-async function loadSvgStringAsPngDataURL(svg: string): Promise<LogoLoaded> {
-  const svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  const img = await new Promise<HTMLImageElement>((res, rej) => {
-    const im = new Image();
-    im.onload = () => res(im);
-    im.onerror = () => rej(new Error("No se pudo cargar el SVG"));
-    im.src = svgUrl;
-  });
-
-  const canvas = document.createElement("canvas");
-  const w = img.naturalWidth || 512;
-  const h = img.naturalHeight || 512;
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("No 2D context");
-  ctx.drawImage(img, 0, 0, w, h);
-
-  const dataUrl = canvas.toDataURL("image/png");
-  const ar = w / h || 1;
-  return { dataUrl, ar };
-}
+import { generatePdfHotel } from "./cupon";
+import { useNotification } from "../hooks/useNotification";
 
 export function CuponHotel({ item }: { item: SolicitudHotel }) {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
+  const { showNotification } = useNotification();
   const [reservationDetails, setReservationDetails] =
     useState<SolicitudHotel | null>(item);
 
@@ -96,39 +27,7 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
     setReservationDetails(item);
   }, [item]);
 
-  // 1. Crear una referencia para el contenedor que queremos capturar
   const pageRef = useRef<HTMLDivElement>(null);
-  const [logos, setLogos] = useState<Record<string, LogoLoaded>>({});
-
-  const logoAssets: LogoAsset[] = [
-    {
-      key: "noktos",
-      src: "https://luiscastaneda-tos.github.io/log/files/nokt.png",
-    },
-    // { key: "hotel", src: "https://tudominio.com/assets/hotel_logo.png" },
-  ];
-
-  useEffect(() => {
-    // Precargar logos al montar: PNG/JPG + MIA desde SVG
-    (async () => {
-      try {
-        const fromAssets = await Promise.all(
-          logoAssets.map(async (a) => {
-            const data = await loadImageAsDataURL(a.src);
-            return [a.key, data] as const;
-          }),
-        );
-
-        // MIA desde SVG
-        const miaData = await loadSvgStringAsPngDataURL(MIA_SVG);
-
-        const entries = [...fromAssets, ["mia", miaData] as const];
-        setLogos(Object.fromEntries(entries));
-      } catch (e) {
-        console.warn("Fallo precarga de logos:", e);
-      }
-    })();
-  }, []);
 
   const getAcompanantesValue = (viajeros: string) => {
     if (viajeros) return viajeros;
@@ -141,263 +40,6 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
     else if (room?.toUpperCase() === "DOUBLE") updateRoom = "DOBLE";
     return updateRoom;
   };
-
-  // Dibuja logos LATERALES en el PDF (Noktos izquierda, MIA derecha)
-  function drawLogosOnPage(pdf: jsPDF, logosMap: Record<string, LogoLoaded>) {
-    const pageW = pdf.internal.pageSize.getWidth();
-
-    // ── Tuning del header lateral ───────────────────────────────────────
-    const TOP_Y = 14; // posición Y (mm) de los logos
-    const PADDING_X = 10; // margen lateral (mm)
-    const HEADER_H = 16; // altura base de cada logo (mm)
-    const MAX_W_RATIO = 0.28; // % máx. del ancho de página por logo (evita corte)
-    const FOOTER_H = 8; // altura del logo del pie (si lo usas)
-    // ───────────────────────────────────────────────────────────────────
-
-    // NOKTOS → izquierda
-    if (logosMap["noktos"]) {
-      const { dataUrl, ar } = logosMap["noktos"];
-      let w = HEADER_H * ar;
-      const maxW = pageW * MAX_W_RATIO;
-      if (w > maxW) {
-        const scale = maxW / w;
-        w *= scale;
-      }
-      pdf.addImage(dataUrl, "PNG", PADDING_X, TOP_Y, w, HEADER_H);
-    }
-
-    // MIA → derecha
-    if (logosMap["mia"]) {
-      const { dataUrl, ar } = logosMap["mia"];
-      let w = HEADER_H * ar;
-      const maxW = pageW * MAX_W_RATIO;
-      if (w > maxW) {
-        const scale = maxW / w;
-        w *= scale;
-      }
-      const x = pageW - PADDING_X - w;
-      pdf.addImage(dataUrl, "PNG", x, TOP_Y, w, HEADER_H);
-    }
-
-    // Footer (opcional)
-    if (logosMap["hotel"]) {
-      const pageH = pdf.internal.pageSize.getHeight();
-      const { dataUrl, ar } = logosMap["hotel"];
-      const w = FOOTER_H * ar;
-      const x = (pageW - w) / 2;
-      const y = pageH - 8 - FOOTER_H; // padding inferior
-      pdf.addImage(dataUrl, "PNG", x, y, w, FOOTER_H);
-    }
-  }
-  function drawContactInfoOnCurrentPage(pdf: jsPDF) {
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-
-    // === Colores Tailwind ===
-    const BLUE_50 = { r: 239, g: 246, b: 255 }; // #eff6ff
-    const BLUE_200 = { r: 191, g: 219, b: 254 }; // #bfdbfe
-    const BLUE_600 = { r: 37, g: 99, b: 235 }; // #2563eb
-    const BLUE_900 = { r: 30, g: 58, b: 138 }; // #1e3a8a
-    const TEXT_DARK = { r: 30, g: 41, b: 59 };
-
-    // — Layout / tamaños reducidos —
-    const marginX = 12;
-    const bottomMargin = 12;
-    const boxW = pageW - marginX * 2;
-
-    const title = "DATOS DE CONTACTO 24/7";
-
-    // Contenido
-    const whatsappLabel = "Whatsapp:";
-    const whatsappNumber = "5510445254";
-    const mailLabel = "Correo:";
-    const mail = "support@noktos.zohodesk.com";
-    const phoneLabel = "Teléfono:";
-    const phone = "800 666 5867 opción 2";
-
-    // Métricas tipográficas (más pequeño)
-    const paddingX = 7;
-    const paddingY = 6;
-    const titleBarH = 9;
-    const lineGap = 3;
-    const topPaddingFromPolicies = -3; // ← separación superior entre políticas y contacto
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9.5);
-    const lineH = 5;
-
-    // 3 líneas
-    const contentH = lineH * 3 + lineGap * 2;
-    const boxH = paddingY + titleBarH + paddingY + contentH + paddingY;
-
-    // Ajustamos la posición para incluir padding desde las políticas
-    const x = marginX;
-    const y = pageH - bottomMargin - boxH - topPaddingFromPolicies;
-
-    // Caja
-    pdf.setDrawColor(BLUE_200.r, BLUE_200.g, BLUE_200.b);
-    pdf.setFillColor(BLUE_50.r, BLUE_50.g, BLUE_50.b);
-    if ((pdf as any).roundedRect) {
-      (pdf as any).roundedRect(x, y, boxW, boxH, 3, 3, "FD");
-    } else {
-      pdf.rect(x, y, boxW, boxH, "FD");
-    }
-
-    // Barra título
-    pdf.setFillColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.rect(x, y, boxW, titleBarH, "F");
-
-    // Título más pequeño
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(10.5);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(title, x + paddingX, y + titleBarH - 2.2);
-
-    // Contenido
-    let cursorY = y + titleBarH + paddingY + lineH - 2;
-
-    const drawLabel = (label: string, baseX: number, baseY: number) => {
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(9.5);
-      pdf.setTextColor(BLUE_900.r, BLUE_900.g, BLUE_900.b);
-      pdf.text(label, baseX, baseY);
-    };
-    const drawValue = (value: string, baseX: number, baseY: number) => {
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9.5);
-      pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-      pdf.text(value, baseX, baseY);
-    };
-
-    const textX = x + paddingX;
-
-    // 1) Whatsapp
-    drawLabel(whatsappLabel, textX, cursorY);
-    const wsLabelW = pdf.getTextWidth(whatsappLabel + " ");
-    pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.textWithLink(whatsappNumber, textX + wsLabelW, cursorY, {
-      url: "https://wa.me/5215510445254",
-    });
-
-    // 2) Correo
-    cursorY += lineH + lineGap;
-    drawLabel(mailLabel, textX, cursorY);
-    const mailLabelW = pdf.getTextWidth(mailLabel + " ");
-    pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.textWithLink(mail, textX + mailLabelW, cursorY, {
-      url: `mailto:${mail}`,
-    });
-
-    // 3) Teléfono
-    cursorY += lineH + lineGap;
-    drawLabel(phoneLabel, textX, cursorY);
-    const phoneLabelW = pdf.getTextWidth(phoneLabel + " ");
-    pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-    drawValue(phone, textX + phoneLabelW, cursorY);
-    pdf.setTextColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.textWithLink(
-      " Llamar",
-      textX + phoneLabelW + pdf.getTextWidth(phone) + 1,
-      cursorY,
-      {
-        url: "tel:+528006665867",
-      },
-    );
-
-    // reset
-    pdf.setTextColor(0, 0, 0);
-    pdf.setDrawColor(0, 0, 0);
-  }
-  function drawPoliciesOnCurrentPage(pdf: jsPDF) {
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-
-    const BLUE_50 = { r: 239, g: 246, b: 255 };
-    const BLUE_200 = { r: 191, g: 219, b: 254 };
-    const BLUE_600 = { r: 37, g: 99, b: 235 };
-    const TEXT_DARK = { r: 30, g: 41, b: 59 };
-
-    const marginX = 12;
-    const sideW = pageW - marginX * 2;
-
-    const politicas = [
-      "1.- Los cambios y cancelaciones solo aplican cuando se tratan de Tarifas Reembolsables y están sujetas a disponibilidad.",
-      "2.- Cualquier cambio o cancelación a la reservación deberá ser solicitada a los canales de contacto oficiales con una anticipación mínima de 72 horas antes de la fecha de llegada o inicio de servicios proporcionando la (s) clave (s) de confirmación y la sede.",
-      "3.- El huésped debe realizar el check out con base en los horarios y formas establecidas por cada hotel, si el huésped no ejecuta la actividad en tiempo y forma, el proveedor podrá cobrar al viajero penalizaciones.",
-      "4.- En caso de que el viajero realice una salida anticipada o desee extender su estadía (sujeto a disponibilidad), deberá notificarlo al proveedor y a Noktos a través de correo electrónico, teléfono o whatsapp: para evitar penalizaciones adicionales.",
-      "5.- El viajero debe respetar las políticas y lineamientos de cada proveedor para evitar incurrir en multas y penalizaciones. En caso de que el hotel reporte algún mal comportamiento o una penalización que el viajero se haya negado a pagar, MIA by NOKTOS se reserva el derecho de seguirle brindando servicio al cliente / huésped involucrado.",
-      "6.- El link de google maps es aproximado, favor de validar la dirección abajo del nombre del proveedor.",
-    ];
-
-    // Títulos/tipo más pequeño
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(10.5); // antes 12.5
-    const title = "POLÍTICAS";
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9.5); // antes 11
-    const paddingX = 1; // antes 8
-    const paddingY = 6; // antes 8
-    const titleBarH = 9; // antes 11
-    const maxTextWidth = sideW - paddingX * 2;
-
-    const wrapped = politicas.flatMap((p) =>
-      pdf.splitTextToSize(p, maxTextWidth),
-    );
-    const lineH = 5; // antes 6
-    const contentH = wrapped.length * lineH;
-
-    const boxH = paddingY + titleBarH + paddingY + contentH + paddingY;
-
-    // La colocamos arriba del bloque de contacto reducido
-    const bottomMargin = 12;
-    const contactApproxH = 42; // antes 50 (porque también lo hicimos más pequeño)
-    const gapBetweenCards = 6;
-    const y = pageH - bottomMargin - contactApproxH - gapBetweenCards - boxH;
-    const x = marginX;
-
-    // Fondo y borde
-    pdf.setDrawColor(BLUE_200.r, BLUE_200.g, BLUE_200.b);
-    pdf.setFillColor(BLUE_50.r, BLUE_50.g, BLUE_50.b);
-    if ((pdf as any).roundedRect) {
-      (pdf as any).roundedRect(x, y, sideW, boxH, 3, 3, "FD");
-    } else {
-      pdf.rect(x, y, sideW, boxH, "FD");
-    }
-
-    // Barra de título
-    pdf.setFillColor(BLUE_600.r, BLUE_600.g, BLUE_600.b);
-    pdf.rect(x, y, sideW, titleBarH, "F");
-
-    // Título
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(10.5);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(title, x + paddingX, y + titleBarH - 2.2);
-
-    // Contenido
-    let cursorY = y + titleBarH + paddingY;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9.5);
-    pdf.setTextColor(TEXT_DARK.r, TEXT_DARK.g, TEXT_DARK.b);
-
-    for (const line of wrapped) {
-      pdf.text(line as string, x + paddingX, cursorY);
-      cursorY += lineH;
-    }
-
-    // reset
-    pdf.setTextColor(0, 0, 0);
-    pdf.setDrawColor(0, 0, 0);
-  }
-  function paintFullBluePage(pdf: jsPDF) {
-    const w = pdf.internal.pageSize.getWidth();
-    const h = pdf.internal.pageSize.getHeight();
-    pdf.setFillColor(221, 235, 254); // #DDEBFE
-    pdf.rect(0, 0, w, h, "F");
-  }
-
-  const hotelCardRef = useRef<HTMLDivElement>(null);
 
   type UbicacionType =
     | { lat?: number; lng?: number }
@@ -465,138 +107,6 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
     }
   };
 
-  // 2. Función para descargar el PDF
-  const handleDownloadPdf = async () => {
-    // 1) Asegura tener la ubicación
-    const ubic = await handleUbication();
-    const mapsUrl = buildGoogleMapsUrl(
-      ubic,
-      reservationDetails?.hotel || "",
-      reservationDetails?.direccion || "",
-      // , true // ← descomenta si alguna vez quieres usar SOLO el nombre del hotel
-    );
-
-    const content = pageRef.current;
-    if (!content) return;
-
-    // Guarda estilos...
-    const original = {
-      position: content.style.position,
-      margin: content.style.margin,
-      width: content.style.width,
-    };
-
-    try {
-      // Ajuste para captura (¡haz esto ANTES de medir!)
-      content.style.position = "static";
-      content.style.margin = "0 auto";
-      content.style.width = "100%";
-
-      // ⚠️ Re-medir AHORA con el layout ya ajustado para html2canvas
-      const contentRect = content.getBoundingClientRect();
-      const hotelRect = hotelCardRef.current?.getBoundingClientRect();
-
-      // Captura
-      const canvas = await html2canvas(content, {
-        scale: Math.min(2, window.devicePixelRatio || 1) * 2,
-        useCORS: true,
-        backgroundColor: null,
-        scrollY: -window.scrollY,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-
-      // PDF
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWmm = pdf.internal.pageSize.getWidth(); // 210
-      const pageHmm = pdf.internal.pageSize.getHeight(); // 297
-
-      const imgWmm = pageWmm;
-      const imgHmm = (canvas.height * imgWmm) / canvas.width;
-
-      // Página 1
-      paintFullBluePage(pdf);
-      pdf.addImage(imgData, "PNG", 0, 0, imgWmm, imgHmm);
-      drawLogosOnPage(pdf, logos);
-
-      // Páginas siguientes
-      let heightLeft = imgHmm - pageHmm;
-      let position = 0;
-      while (heightLeft > 0) {
-        pdf.addPage();
-        paintFullBluePage(pdf);
-        position = heightLeft - imgHmm; // negativo
-        pdf.addImage(imgData, "PNG", 0, position, imgWmm, imgHmm);
-        drawLogosOnPage(pdf, logos);
-        heightLeft -= pageHmm;
-      }
-
-      // 👉 Añadir el link exactamente sobre el InfoCard (misma posición pero del tamaño completo)
-      if (hotelRect && mapsUrl) {
-        const relXpx = hotelRect.left - contentRect.left + 19;
-        const relYpx = hotelRect.top - contentRect.top;
-        const wpx = hotelRect.width;
-        const hpx = hotelRect.height;
-
-        const mmPerPxX = imgWmm / canvas.width;
-        const mmPerPxY = imgHmm / canvas.height;
-
-        // Mantén los mismos offsets que ya te funcionaron bien
-        const OFFSET_X_MM = 39; // → derecha
-        const OFFSET_Y_MM = 18; // ↓ abajo
-
-        // Coordenadas base (sin shrink)
-        let xmm_total = relXpx * mmPerPxX + OFFSET_X_MM;
-        let ymm_total = relYpx * mmPerPxY + OFFSET_Y_MM;
-        let wmm = wpx * mmPerPxX;
-        let hmm = hpx * mmPerPxY;
-
-        // Determinar página destino
-        const targetPageIndex = Math.floor(ymm_total / pageHmm);
-        const yOnPageMm = ymm_total - targetPageIndex * pageHmm;
-
-        const totalPages = (pdf as any).getNumberOfPages
-          ? (pdf as any).getNumberOfPages()
-          : pdf.getNumberOfPages?.();
-        const pageIndex1Based = Math.min(targetPageIndex + 1, totalPages || 1);
-        pdf.setPage(pageIndex1Based);
-
-        // Añade link invisible (o texto si la función link no existe)
-        if ((pdf as any).link) {
-          (pdf as any).link(xmm_total, yOnPageMm, wmm, hmm, { url: mapsUrl });
-        } else {
-          pdf.setTextColor(0, 0, 255);
-          pdf.setFontSize(1);
-          pdf.textWithLink(" ", xmm_total + 0.5, yOnPageMm + 1, {
-            url: mapsUrl,
-          });
-          pdf.setTextColor(0, 0, 0);
-        }
-      }
-
-      // Última página: Políticas (arriba) + Contacto (abajo)
-      const total = (pdf as any).getNumberOfPages
-        ? (pdf as any).getNumberOfPages()
-        : pdf.getNumberOfPages?.();
-      if (total && total > 0) {
-        pdf.setPage(total);
-        drawPoliciesOnCurrentPage(pdf);
-        drawContactInfoOnCurrentPage(pdf);
-      }
-
-      pdf.save(
-        `reservacion-${reservationDetails?.codigo_confirmacion || "sin-codigo"}.pdf`,
-      );
-    } catch (err) {
-      console.error("Error generando PDF:", err);
-      alert("No se pudo generar el PDF. Revisa la consola para más detalles.");
-    } finally {
-      content.style.position = original.position;
-      content.style.margin = original.margin;
-      content.style.width = original.width;
-    }
-  };
-
   useEffect(() => {
     const loadUbication = async () => {
       const ubic = await handleUbication();
@@ -615,7 +125,19 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
       {/* Botón de descarga */}
       <div className="text-right p-4 print:hidden">
         <button
-          onClick={handleDownloadPdf}
+          onClick={async () => {
+            try {
+              const pdf = await generatePdfHotel(item);
+              const filename = `reservacion-${item.huesped.toUpperCase()}-${item.codigo_confirmacion}.pdf`;
+              downloadPdfSafely(pdf, filename);
+            } catch (err: any) {
+              console.log(err);
+              showNotification(
+                "error",
+                err.message || "Error al realizar este pedouw",
+              );
+            }
+          }}
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           <FileDown className="mr-2" size={20} />
@@ -655,7 +177,7 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
                       label="Huésped"
                       value={reservationDetails.huesped || ""}
                     />
-                    <div ref={hotelCardRef} data-role="hotel-card">
+                    <div data-role="hotel-card">
                       <InfoCard
                         icon={Hotel}
                         label="Hotel"
@@ -822,4 +344,27 @@ const DateCard = ({
       </div>
     </div>
   );
+};
+
+export const downloadPdfSafely = (pdf: any, filename: string) => {
+  // más robusto que pdf.save() en algunos navegadores/bloqueos
+  try {
+    if (typeof pdf?.output === "function") {
+      const blob: Blob = pdf.output("blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+  } catch (e) {
+    // fallback abajo
+  }
+
+  // fallback clásico
+  pdf?.save?.(filename);
 };
