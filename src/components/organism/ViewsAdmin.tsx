@@ -714,6 +714,35 @@ export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
   );
   const { user } = useAuth();
 
+  // Calcular estadísticas para las tarjetas
+  const fechaHoy = new Date();
+  fechaHoy.setHours(0, 0, 0, 0);
+  // Calcular próximas reservas (con fecha después de hoy)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const nightsByHotel = calculateNightsByHotelForMonthYear(
+    bookings.filter((b) => b.check_in != null) as any,
+    Number(selectedMonth),
+    Number(selectedYear),
+  );
+
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+
+  const total = calculateGrandTotalForMonthYear(
+    bookings.filter((b) => b.check_in != null) as any,
+    currentMonth,
+    currentYear,
+  );
+
+  const totalByHotel = calculateTotalByHotelForMonthYear(
+    bookings.filter((b) => b.check_in != null) as any,
+    Number(selectedMonth),
+    Number(selectedYear),
+  );
+  const gastosHotel = { total, totalByHotel };
+
   if (!bookings?.length || !selectedMonth || !selectedYear)
     return (
       <div className="w-full h-full flex justify-center items-center p-6">
@@ -755,7 +784,7 @@ export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
       },
     ];
 
-    // console.log(summary, "respestas jbsumas gasto");
+    console.log(summary, "respestas jbsumas gasto");
     const summary1 = [
       {
         name: "Noches",
@@ -766,7 +795,7 @@ export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
         })),
       },
     ];
-    // console.log(nightsByHotel, "respestas noches");
+    console.log(nightsByHotel, "respestas noches");
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -785,14 +814,6 @@ export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
       </div>
     );
   };
-
-  // Calcular estadísticas para las tarjetas
-  const fechaHoy = new Date();
-  fechaHoy.setHours(0, 0, 0, 0);
-
-  // Calcular próximas reservas (con fecha después de hoy)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   const upcomingBookings = bookings.filter((booking) => {
     if (!booking.check_in) return false;
@@ -819,28 +840,6 @@ export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
   }).length;
 
   // console.log(activeBookings, "enviados de impresion")
-
-  const nightsByHotel = calculateNightsByHotelForMonthYear(
-    bookings.filter((b) => b.check_in != null) as any,
-    Number(selectedMonth),
-    Number(selectedYear),
-  );
-
-  const currentMonth = today.getMonth() + 1;
-  const currentYear = today.getFullYear();
-
-  const total = calculateGrandTotalForMonthYear(
-    bookings.filter((b) => b.check_in != null) as any,
-    currentMonth,
-    currentYear,
-  );
-
-  const totalByHotel = calculateTotalByHotelForMonthYear(
-    bookings.filter((b) => b.check_in != null) as any,
-    Number(selectedMonth),
-    Number(selectedYear),
-  );
-  const gastosHotel = { total, totalByHotel };
 
   const cards = [
     {
