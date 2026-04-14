@@ -46,7 +46,10 @@ export const calculateNightsByHotelForMonthYear = (
     // Solo contar si está completa
     if (b.status_solicitud !== "complete") continue;
     if (!b.check_in || !b.check_out || !b.hotel) continue;
-
+    console.log("Calculating nights by hotel for", selectedMonth, selectedYear);
+    console.log(
+      `Procesando reserva en ${b.hotel} con check-in ${b.check_in} y check-out ${b.check_out} (estado=${b.status_solicitud})`,
+    );
     const inMs = Date.parse(b.check_in);
     const outMs = Date.parse(b.check_out);
     if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs)
