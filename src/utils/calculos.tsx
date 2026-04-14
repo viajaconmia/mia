@@ -32,6 +32,7 @@ export const calculateNightsByHotelForMonthYear = (
   selectedYear: number,
   debug = false,
 ): HotelNights[] => {
+  console.log(data[0], "data[0] en calculo noches por hotel");
   const MS_PER_DAY = 86_400_000;
   const dayIndex = (ms: number) => Math.floor(ms / MS_PER_DAY);
 
@@ -44,11 +45,12 @@ export const calculateNightsByHotelForMonthYear = (
 
   for (const b of data) {
     // Solo contar si está completa
-    if (b.status_solicitud !== "complete") continue;
-    if (!b.check_in || !b.check_out || !b.hotel) continue;
+    if (b.estado !== "Confirmada") continue;
+    if (!b.id_hospedaje) continue;
+    if (!b.check_in || !b.check_out || !b.proveedor) continue;
     console.log("Calculating nights by hotel for", selectedMonth, selectedYear);
     console.log(
-      `Procesando reserva en ${b.hotel} con check-in ${b.check_in} y check-out ${b.check_out} (estado=${b.status_solicitud})`,
+      `Procesando reserva en ${b.proveedor} con check-in ${b.check_in} y check-out ${b.check_out} (estado=${b.status_solicitud})`,
     );
     const inMs = Date.parse(b.check_in);
     const outMs = Date.parse(b.check_out);
@@ -62,12 +64,12 @@ export const calculateNightsByHotelForMonthYear = (
 
     if (debug) {
       console.log(
-        `🏨 ${b.hotel} | estado=${b.status_solicitud} | nochesMes=${nights}`,
+        `🏨 ${b.proveedor} | estado=${b.status_solicitud} | nochesMes=${nights}`,
       );
     }
 
     if (nights > 0) {
-      map[b.hotel] = (map[b.hotel] ?? 0) + nights;
+      map[b.proveedor] = (map[b.proveedor] ?? 0) + nights;
     }
   }
 
@@ -76,6 +78,7 @@ export const calculateNightsByHotelForMonthYear = (
     .sort((a, b) => b.nights - a.nights);
 
   if (debug) console.log("✅ Noches por hotel:", result);
+  console.log("RESULTADO", result);
   return result;
 };
 
@@ -91,14 +94,15 @@ export const calculateTotalByHotelForMonthYear = (
   const map: Record<string, number> = {};
 
   for (const b of data) {
-    if (b.status_solicitud !== "complete") continue; // solo completas
-    if (!b.check_in || !b.hotel) continue;
+    if (b.estado !== "Confirmada") continue; // solo completas
+    if (!b.check_in || !b.proveedor) continue;
     if (!isInMonthUTC(b.check_in, selectedYear, selectedMonth)) continue;
 
     const total = parseFloat(b.total);
     if (Number.isFinite(total)) {
-      map[b.hotel] = (map[b.hotel] ?? 0) + total;
-      if (debug) console.log(`💰 ${b.hotel}: +${total} → ${map[b.hotel]}`);
+      map[b.proveedor] = (map[b.proveedor] ?? 0) + total;
+      if (debug)
+        console.log(`💰 ${b.proveedor}: +${total} → ${map[b.proveedor]}`);
     }
   }
 
@@ -121,14 +125,14 @@ export const calculateGrandTotalForMonthYear = (
 ): number => {
   let sum = 0;
   for (const b of data) {
-    if (b.status_solicitud !== "complete") continue; // solo completas
+    if (b.estado !== "Confirmada") continue; // solo completas
     if (!b.check_in) continue;
     if (!isInMonthUTC(b.check_in, selectedYear, selectedMonth)) continue;
 
     const t = parseFloat(b.total);
     if (Number.isFinite(t)) {
       sum += t;
-      if (debug) console.log(`➕ ${b.hotel}: +${t} → total=${sum}`);
+      if (debug) console.log(`➕ ${b.proveedor}: +${t} → total=${sum}`);
     }
   }
   if (debug) console.log("💵 Gran total:", sum);

@@ -720,7 +720,7 @@ export const OverviewView = ({ bookings }: { bookings: Booking[] }) => {
   // Calcular próximas reservas (con fecha después de hoy)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
+  // console.log(bookings, "bookings en overview");
   const nightsByHotel = calculateNightsByHotelForMonthYear(
     bookings.filter((b) => b.check_in != null) as any,
     Number(selectedMonth),
