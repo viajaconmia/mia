@@ -80,7 +80,7 @@ const ExpandedContentRenderer = ({
     console.log(it, type);
     switch (type) {
       case "booking":
-        return it?.id_hospedaje || null;
+        return it?.id_relacion || null;
       case "payment":
         return it?.raw_id || null;
       case "invoice":
