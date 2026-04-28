@@ -8,7 +8,7 @@ export class BookingService extends ApiService {
   private ENDPOINTS = {
     GET: {
       RESERVAS: "/reservasClient/get_reservasClient_by_id_agente",
-      SERVICES: "/reservas/services",
+      SERVICES: "/reservas/services/cliente",
       CUPON: "/reservas/v2/cupon",
     },
   };
@@ -48,7 +48,6 @@ export class BookingService extends ApiService {
     return this.get({
       path,
       params: {
-        is_client: true,
         id_client: this.user.getUser()?.info?.id_agente,
         ...(this.user.getUser()?.info?.rol == "reservante"
           ? { usuario_creador: this.user.getUser()?.info?.id_viajero }
