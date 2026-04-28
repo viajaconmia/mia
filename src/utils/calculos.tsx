@@ -44,14 +44,7 @@ export const calculateNightsByHotelForMonthYear = (
   const map: Record<string, number> = {};
 
   for (const b of data) {
-    // Solo contar si está completa
-    if (b.estado !== "Confirmada") continue;
-    if (!b.id_hospedaje) continue;
     if (!b.check_in || !b.check_out || !b.proveedor) continue;
-    console.log("Calculating nights by hotel for", selectedMonth, selectedYear);
-    console.log(
-      `Procesando reserva en ${b.proveedor} con check-in ${b.check_in} y check-out ${b.check_out} (estado=${b.status_solicitud})`,
-    );
     const inMs = Date.parse(b.check_in);
     const outMs = Date.parse(b.check_out);
     if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs)
@@ -61,12 +54,6 @@ export const calculateNightsByHotelForMonthYear = (
     const startDay = Math.max(dayIndex(inMs), monthStartDay);
     const endDay = Math.min(dayIndex(outMs), monthEndDay);
     const nights = endDay - startDay;
-
-    if (debug) {
-      console.log(
-        `🏨 ${b.proveedor} | estado=${b.status_solicitud} | nochesMes=${nights}`,
-      );
-    }
 
     if (nights > 0) {
       map[b.proveedor] = (map[b.proveedor] ?? 0) + nights;
