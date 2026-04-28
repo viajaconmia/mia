@@ -44,7 +44,10 @@ export const calculateNightsByHotelForMonthYear = (
   const map: Record<string, number> = {};
 
   for (const b of data) {
+    // Solo contar si está completa
+    if (b.type != "hotel") continue;
     if (!b.check_in || !b.check_out || !b.proveedor) continue;
+
     const inMs = Date.parse(b.check_in);
     const outMs = Date.parse(b.check_out);
     if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs)
