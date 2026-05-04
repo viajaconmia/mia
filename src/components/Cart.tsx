@@ -50,6 +50,25 @@ import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { SolicitudService } from "../services/SolicitudService";
 
+const FIFA_WC_2026_START = new Date("2026-06-09");
+const FIFA_WC_2026_END = new Date("2026-07-22");
+
+function isBlocked(item: CartItem): boolean {
+  const overlaps = (start: string, end: string) =>
+    new Date(start) <= FIFA_WC_2026_END && new Date(end) >= FIFA_WC_2026_START;
+
+  if (item.type === "hotel")
+    return overlaps(item.details.check_in, item.details.check_out);
+  if (item.type === "car_rental")
+    return overlaps(item.details.pickup_date, item.details.dropoff_date);
+  if (item.type === "flight")
+    return overlaps(
+      item.details.departure_date,
+      item.details.return_date ?? item.details.departure_date,
+    );
+  return false;
+}
+
 const CartItemComponent: React.FC<{
   item: CartItem;
   onSelect: (id: string, select: boolean) => void;
@@ -216,13 +235,13 @@ export const Cart = () => {
       .then(() => {
         setCart((prev) =>
           prev.map((cartItem) =>
-            cartItem.id == id ? { ...cartItem, selected: !value } : cartItem
-          )
+            cartItem.id == id ? { ...cartItem, selected: !value } : cartItem,
+          ),
         );
       })
       .catch((error) => {
         console.error(
-          error.response || error.message || "Error al agregar al carrito"
+          error.response || error.message || "Error al agregar al carrito",
         );
       });
   };
@@ -235,7 +254,7 @@ export const Cart = () => {
       })
       .catch((error) => {
         console.error(
-          error.response || error.message || "Error al agregar al carrito"
+          error.response || error.message || "Error al agregar al carrito",
         );
       });
   };
@@ -344,11 +363,20 @@ const DetailsPago = ({
   onProcedPayment: React.Dispatch<React.SetStateAction<ViewsToPayment>>;
 }) => {
   const { showNotification } = useNotification();
+  const { cart } = useCart();
 
   const handleProcedPayment = () => {
     try {
       if (total <= 0)
         throw new Error("Por favor selecciona un item para pagar");
+
+      const selectedItems = cart.filter((item) => item.selected);
+      const hasWorldCupConflict = selectedItems.some(isBlocked);
+
+      if (hasWorldCupConflict)
+        throw new Error(
+          "No es posible procesar pagos de reservas durante el Mundial FIFA 2026 (11 Jun – 19 Jul 2026)",
+        );
 
       onProcedPayment("forma_pago");
     } catch (error: any) {
@@ -415,7 +443,7 @@ const MetodosPago = ({
                     ...metodo,
                     description: saldos
                       ? `Saldo disponible: ${formatNumberWithCommas(
-                          saldos[metodo.id]
+                          saldos[metodo.id],
                         )}`
                       : "",
                   }
@@ -516,7 +544,7 @@ const PagoTarjeta = ({
       })
       .catch((error) => {
         console.error(
-          error.response || error.message || "Error en jalar tarjetas"
+          error.response || error.message || "Error en jalar tarjetas",
         );
       });
   }, []);
@@ -527,7 +555,7 @@ const PagoTarjeta = ({
         throw new Error("No se ha seleccionado ninguna tarjeta");
       const itemsCart = cart.filter((item) => item.selected);
       const selectedCard = tarjetas.filter(
-        (card) => card.id === selectedTarjeta
+        (card) => card.id === selectedTarjeta,
       );
       if (itemsCart.length == 0)
         throw new Error("No has seleccionado ningun item");
@@ -536,7 +564,7 @@ const PagoTarjeta = ({
         totalCart.toFixed(2),
         selectedTarjeta,
         itemsCart,
-        selectedCard[0]
+        selectedCard[0],
       );
 
       showNotification("success", message);
@@ -546,7 +574,7 @@ const PagoTarjeta = ({
     } catch (error: any) {
       showNotification("error", error.message || "Error al procesar el pago");
       console.log(
-        error.response || error.message || "Error en procesar el pago"
+        error.response || error.message || "Error en procesar el pago",
       );
     } finally {
       setLoading(false);
@@ -569,8 +597,8 @@ const PagoTarjeta = ({
                   selectedTarjeta === null
                     ? "scale-95 shadow-xl hover:shadow-none"
                     : selectedTarjeta === tarjeta.id
-                    ? "scale-100"
-                    : "scale-95 shadow-xl hover:shadow-none"
+                      ? "scale-100"
+                      : "scale-95 shadow-xl hover:shadow-none"
                 }`}
               >
                 <div
@@ -581,8 +609,8 @@ const PagoTarjeta = ({
                       selectedTarjeta === null
                         ? "bg-black/20"
                         : selectedTarjeta === tarjeta.id
-                        ? ""
-                        : "bg-black/40"
+                          ? ""
+                          : "bg-black/40"
                     }`}
                   >
                     <input
@@ -688,7 +716,7 @@ const ViewGuardarTarjeta = ({
         throw new Error("No se pudo crear el metodo de pago");
       const { message } =
         await StripeService.getInstance().guardarTarjetaStripe(
-          paymentMethod.id
+          paymentMethod.id,
         );
       showNotification("success", message);
       setView("tarjeta");
@@ -773,7 +801,7 @@ function PagoSaldo({
       const id_agente = UserSingleton.getInstance().getUser()?.info?.id_agente;
       if (!id_agente)
         throw new Error(
-          "Ha ocurrido un error inesperado, intenta iniciar sesion de nuevo"
+          "Ha ocurrido un error inesperado, intenta iniciar sesion de nuevo",
         );
       if (itemsCart.length == 0)
         throw new Error("No has seleccionado ningun item");
@@ -841,7 +869,7 @@ function PagoCredito({
       const id_agente = UserSingleton.getInstance().getUser()?.info?.id_agente;
       if (!id_agente)
         throw new Error(
-          "Ha ocurrido un error inesperado, intenta iniciar sesion de nuevo"
+          "Ha ocurrido un error inesperado, intenta iniciar sesion de nuevo",
         );
       const itemsCart = cart.filter((item) => item.selected);
       if (itemsCart.length == 0)
@@ -850,12 +878,12 @@ function PagoCredito({
       const { data, message } =
         await PagosService.getInstance().pagarCarritoCredito(
           totalCart.toFixed(2),
-          itemsCart
+          itemsCart,
         );
       // console.log({ items: itemsCart, total: totalCart.toFixed(2), id_agente });
       showNotification(
         "success",
-        message + `\n Tu credito actual es de: ${data?.current_saldo}`
+        message + `\n Tu credito actual es de: ${data?.current_saldo}`,
       );
       handleActualizarCarrito();
       handleActualizarMetodosPago();
