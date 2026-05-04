@@ -50,8 +50,8 @@ import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { SolicitudService } from "../services/SolicitudService";
 
-const FIFA_WC_2026_START = new Date("2026-06-09");
-const FIFA_WC_2026_END = new Date("2026-07-22");
+const FIFA_WC_2026_START = new Date("2026-06-01");
+const FIFA_WC_2026_END = new Date("2026-07-31");
 
 function isBlocked(item: CartItem): boolean {
   const overlaps = (start: string, end: string) =>
@@ -375,7 +375,7 @@ const DetailsPago = ({
 
       if (hasWorldCupConflict)
         throw new Error(
-          "No es posible procesar pagos de reservas durante el Mundial FIFA 2026 (11 Jun – 19 Jul 2026)",
+          "Por ser mes del mundial, es importante que si quieres reservar para esas fechas su reserva la haga a través de los medios de soporte",
         );
 
       onProcedPayment("forma_pago");
