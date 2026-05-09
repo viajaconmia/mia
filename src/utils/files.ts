@@ -58,7 +58,9 @@ export function downloadXMLBase64(
   const link = document.createElement("a");
   link.href = `data:text/xml;base64,${base64Data}`;
   link.download = fileName;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 }
 
 // =====================
@@ -67,11 +69,20 @@ export function downloadXMLBase64(
 
 // 📥 Descargar XML desde URL (solo descarga)
 export async function downloadXMLUrl(url: string, fileName = "archivo.xml") {
-  const res = await fetch(url);
-  const blob = await res.blob();
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    // Si CORS bloquea el fetch, abre en nueva pestaña para que el usuario guarde manualmente
+    window.open(url, "_blank");
+  }
 }
