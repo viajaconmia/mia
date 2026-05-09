@@ -144,7 +144,7 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                       const fileName = `factura-${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.xml`;
                       if (data.id_facturama) {
                         FacturamaService.getInstance()
-                          .downloadCFDI({ id: data.id_facturama, type: "xml" })
+                          .downloadXML(data.id_facturama)
                           .then(({ data: res }) =>
                             downloadXMLBase64(res?.Content || "", fileName)
                           )
