@@ -71,12 +71,21 @@ export function downloadXMLBase64(
   base64Data: string,
   fileName = "archivo.xml"
 ) {
+  const name = fileName.endsWith(".xml") ? fileName : `${fileName}.xml`;
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Uint8Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const blob = new Blob([byteNumbers], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = `data:text/xml;base64,${base64Data}`;
-  link.download = fileName;
+  link.href = url;
+  link.download = name;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // =====================
