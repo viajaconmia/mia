@@ -36,15 +36,23 @@ export function viewPDFUrl(url: string) {
 }
 
 // 📥 Descargar PDF desde URL
-// export async function downloadPDFUrl(url: string, fileName = "archivo.pdf") {
-//   const res = await fetch(url);
-//   const blob = await res.blob();
-//   const link = document.createElement("a");
-//   link.href = URL.createObjectURL(blob);
-//   link.download = fileName;
-//   link.click();
-//   URL.revokeObjectURL(link.href);
-// }
+export async function downloadPDFUrl(url: string, fileName = "archivo.pdf") {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    window.open(url, "_blank");
+  }
+}
 
 // =====================
 //   XML BASE64

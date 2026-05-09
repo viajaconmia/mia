@@ -4,7 +4,7 @@ import { Invoice } from "../../../types/services";
 import { formatNumberWithCommas } from "../../../utils/format";
 import Button from "../../atom/Button";
 import { FacturamaService } from "../../../services/FacturamaService";
-import { viewPDFBase64, viewPDFUrl } from "../../../utils/files";
+import { viewPDFBase64, downloadPDFUrl, downloadXMLUrl } from "../../../utils/files";
 
 interface InvoiceCardProps {
   data: Invoice;
@@ -127,7 +127,8 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                             )
                           );
                       } else if (data.url_pdf) {
-                        viewPDFUrl(data.url_pdf);
+                        const fileName = `factura-${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.pdf`;
+                        downloadPDFUrl(data.url_pdf, fileName);
                       }
                     }}
                   >
@@ -140,13 +141,8 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                     className="w-full"
                     variant="primary"
                     onClick={() => {
-                      const link = document.createElement("a");
-                      link.href = data.url_xml;
-                      link.download = `${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.xml`;
-                      link.target = "_blank";
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                      const fileName = `factura-${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.xml`;
+                      downloadXMLUrl(data.url_xml, fileName);
                     }}
                   >
                     XML
