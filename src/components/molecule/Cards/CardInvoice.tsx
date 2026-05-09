@@ -4,12 +4,7 @@ import { Invoice } from "../../../types/services";
 import { formatNumberWithCommas } from "../../../utils/format";
 import Button from "../../atom/Button";
 import { FacturamaService } from "../../../services/FacturamaService";
-import {
-  downloadXMLBase64,
-  downloadXMLUrl,
-  viewPDFBase64,
-  viewPDFUrl,
-} from "../../../utils/files";
+import { viewPDFBase64, viewPDFUrl } from "../../../utils/files";
 
 interface InvoiceCardProps {
   data: Invoice;
@@ -139,41 +134,19 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                     PDF
                   </Button>
                 )}
-                {(data.id_facturama || data.url_xml) && (
+                {data.url_xml && (
                   <Button
                     size="sm"
                     className="w-full"
                     variant="primary"
                     onClick={() => {
-                      if (data.id_facturama) {
-                        FacturamaService.getInstance()
-                          .downloadCFDI({
-                            id: data.id_facturama,
-                            type: "xml",
-                          })
-                          .then(({ data: response }) =>
-                            downloadXMLBase64(
-                              response?.Content || "",
-                              `${data.id_factura.slice(0, 8)}-${
-                                data.fecha_emision.split("T")[0]
-                              }.xml`
-                            )
-                          )
-                          .catch((error) =>
-                            console.log(
-                              error.response ||
-                                error.message ||
-                                "Error al obtener la factura"
-                            )
-                          );
-                      } else if (data.url_xml) {
-                        downloadXMLUrl(
-                          data.url_xml,
-                          `${data.id_factura.slice(0, 8)}-${
-                            data.fecha_emision.split("T")[0]
-                          }.xml`
-                        );
-                      }
+                      const link = document.createElement("a");
+                      link.href = data.url_xml;
+                      link.download = `${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.xml`;
+                      link.target = "_blank";
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
                     }}
                   >
                     XML
