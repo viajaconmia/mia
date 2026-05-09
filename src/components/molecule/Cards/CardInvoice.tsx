@@ -4,7 +4,7 @@ import { Invoice } from "../../../types/services";
 import { formatNumberWithCommas } from "../../../utils/format";
 import Button from "../../atom/Button";
 import { FacturamaService } from "../../../services/FacturamaService";
-import { viewPDFBase64, downloadPDFUrl, downloadXMLUrl } from "../../../utils/files";
+import { viewPDFBase64, downloadPDFUrl, downloadXMLUrl, downloadXMLBase64 } from "../../../utils/files";
 
 interface InvoiceCardProps {
   data: Invoice;
@@ -135,14 +135,29 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                     PDF
                   </Button>
                 )}
-                {data.url_xml && (
+                {(data.id_facturama || data.url_xml) && (
                   <Button
                     size="sm"
                     className="w-full"
                     variant="primary"
                     onClick={() => {
                       const fileName = `factura-${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.xml`;
-                      downloadXMLUrl(data.url_xml, fileName);
+                      if (data.id_facturama) {
+                        FacturamaService.getInstance()
+                          .downloadCFDI({ id: data.id_facturama, type: "xml" })
+                          .then(({ data: res }) =>
+                            downloadXMLBase64(res?.Content || "", fileName)
+                          )
+                          .catch((error) =>
+                            console.log(
+                              error.response ||
+                                error.message ||
+                                "Error al obtener el XML"
+                            )
+                          );
+                      } else if (data.url_xml) {
+                        downloadXMLUrl(data.url_xml, fileName);
+                      }
                     }}
                   >
                     XML
