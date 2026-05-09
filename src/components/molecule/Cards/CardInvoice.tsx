@@ -116,8 +116,8 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                             id: data.id_facturama,
                             type: "pdf",
                           })
-                          .then(({ data }) =>
-                            viewPDFBase64(data?.Content || "")
+                          .then((res) =>
+                            viewPDFBase64(res?.Content || "")
                           )
                           .catch((error) =>
                             console.log(
@@ -145,7 +145,7 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                       if (data.id_facturama) {
                         FacturamaService.getInstance()
                           .downloadXML(data.id_facturama)
-                          .then(({ data: res }) =>
+                          .then((res) =>
                             downloadXMLBase64(res?.Content || "", fileName)
                           )
                           .catch((error) =>

@@ -227,7 +227,7 @@ const ExpandedContentRenderer = ({
                   if (item.id_facturama) {
                     FacturamaService.getInstance()
                       .downloadCFDI({ id: item.id_facturama, type: "pdf" })
-                      .then(({ data }) => viewPDFBase64(data?.Content || ""))
+                      .then((res) => viewPDFBase64(res?.Content || ""))
                       .catch((error) =>
                         console.log(
                           error.response ||
@@ -252,9 +252,9 @@ const ExpandedContentRenderer = ({
                   if (item.id_facturama) {
                     FacturamaService.getInstance()
                       .downloadCFDI({ id: item.id_facturama, type: "xml" })
-                      .then(({ data }) =>
+                      .then((res) =>
                         downloadXMLBase64(
-                          data?.Content || "",
+                          res?.Content || "",
                           `${item.id_factura.slice(0, 8)}.xml`,
                         ),
                       )
@@ -602,7 +602,7 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                   if (item.id_facturama) {
                     FacturamaService.getInstance()
                       .downloadCFDI({ id: item.id_facturama, type: "pdf" })
-                      .then(({ data }) => viewPDFBase64(data?.Content || ""))
+                      .then((res) => viewPDFBase64(res?.Content || ""))
                       .catch((error) =>
                         console.log(
                           error.response ||
@@ -627,9 +627,9 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                   if (item.id_facturama) {
                     FacturamaService.getInstance()
                       .downloadCFDI({ id: item.id_facturama, type: "xml" })
-                      .then(({ data }) =>
+                      .then((res) =>
                         downloadXMLBase64(
-                          data?.Content || "",
+                          res?.Content || "",
                           `${item.id_factura.slice(0, 8)}-${
                             item.created_at.split("T")[0]
                           }.xml`,

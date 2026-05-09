@@ -174,6 +174,27 @@ export class ApiService {
     return this.request<T>("POST", path, body, headers, protect);
   }
 
+  protected async rawPost<T>({
+    path,
+    body,
+    headers: customHeaders = {},
+  }: {
+    path: string;
+    body?: any;
+    headers?: { [key: string]: any };
+  }): Promise<T> {
+    const headers = { ...this.headers, ...customHeaders };
+    const response = await fetch(`${this.url_base}${path}`, {
+      method: "POST",
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) {
+      throw new ApiError(`HTTP error: status: ${response.status}`, response.status);
+    }
+    return response.json() as Promise<T>;
+  }
+
   protected async put<T>({
     path,
     body,

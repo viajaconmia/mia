@@ -28,14 +28,14 @@ export class FacturamaService extends ApiService {
   }: {
     id: string;
     type: "xml" | "pdf";
-  }): Promise<ApiResponse<ArchivoBase64>> =>
-    this.post<ArchivoBase64>({
+  }): Promise<ArchivoBase64> =>
+    this.rawPost<ArchivoBase64>({
       path: this.formatPath(this.ENDPOINTS.POST.DOWNLOAD),
       body: { cfdi_id: id, type },
     });
 
-  public downloadXML = async (cfdi_id: string): Promise<ApiResponse<ArchivoBase64>> =>
-    this.post<ArchivoBase64>({
+  public downloadXML = async (cfdi_id: string): Promise<ArchivoBase64> =>
+    this.rawPost<ArchivoBase64>({
       path: this.formatPath(this.ENDPOINTS.POST.DOWNLOAD_XML),
       body: { cfdi_id },
     });
