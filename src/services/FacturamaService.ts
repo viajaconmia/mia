@@ -6,7 +6,7 @@ export class FacturamaService extends ApiService {
   private static instance: FacturamaService;
   private ENDPOINTS = {
     POST: {
-      DESCARGAR: "/descarga",
+      DOWNLOAD: "/download",
       DOWNLOAD_XML: "/downloadXML",
     },
   };
@@ -30,8 +30,8 @@ export class FacturamaService extends ApiService {
     type: "xml" | "pdf";
   }): Promise<ApiResponse<ArchivoBase64>> =>
     this.post<ArchivoBase64>({
-      path: this.formatPath(this.ENDPOINTS.POST.DESCARGAR),
-      body: { id, type },
+      path: this.formatPath(this.ENDPOINTS.POST.DOWNLOAD),
+      body: { cfdi_id: id, type },
     });
 
   public downloadXML = async (cfdi_id: string): Promise<ApiResponse<ArchivoBase64>> =>
