@@ -631,7 +631,7 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                         downloadXMLBase64(
                           res?.Content || "",
                           `${item.id_factura.slice(0, 8)}-${
-                            item.created_at.split("T")[0]
+                            (item.created_at ?? "").split("T")[0]
                           }.xml`,
                         ),
                       )
@@ -646,7 +646,7 @@ export const InvoicesView = ({ invoices }: { invoices: Invoice[] }) => {
                     downloadXMLUrl(
                       item.url_xml,
                       `${item.id_factura.slice(0, 8)}-${
-                        item.created_at.split("T")[0]
+                        (item.created_at ?? "").split("T")[0]
                       }.xml`,
                     );
                   }
