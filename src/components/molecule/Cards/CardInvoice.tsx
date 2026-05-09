@@ -127,7 +127,7 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                             )
                           );
                       } else if (data.url_pdf) {
-                        const fileName = `factura-${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.pdf`;
+                        const fileName = `factura-${data.id_factura.slice(0, 8)}-${(data.fecha_emision ?? "").split("T")[0]}.pdf`;
                         downloadPDFUrl(data.url_pdf, fileName);
                       }
                     }}
@@ -141,7 +141,7 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                     className="w-full"
                     variant="primary"
                     onClick={() => {
-                      const fileName = `factura-${data.id_factura.slice(0, 8)}-${data.fecha_emision.split("T")[0]}.xml`;
+                      const fileName = `factura-${data.id_factura.slice(0, 8)}-${(data.fecha_emision ?? "").split("T")[0]}.xml`;
                       if (data.id_facturama) {
                         FacturamaService.getInstance()
                           .downloadXML(data.id_facturama)
