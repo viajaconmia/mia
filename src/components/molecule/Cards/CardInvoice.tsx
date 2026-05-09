@@ -10,7 +10,7 @@ interface InvoiceCardProps {
   data: Invoice;
   OnToggleExpand?: () => React.ReactNode;
 }
-
+   
 export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
   const [open, setOpen] = useState<boolean>(false);
 
