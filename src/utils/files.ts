@@ -37,20 +37,28 @@ export function viewPDFUrl(url: string) {
 
 // 📥 Descargar PDF desde URL
 export async function downloadPDFUrl(url: string, fileName = "archivo.pdf") {
+  const name = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
   try {
     const res = await fetch(url, { mode: "cors" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
+    const blob = new Blob([await res.arrayBuffer()], { type: "application/octet-stream" });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = objectUrl;
-    link.download = fileName;
+    link.download = name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   } catch {
-    window.open(url, "_blank");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
 
@@ -77,20 +85,29 @@ export function downloadXMLBase64(
 
 // 📥 Descargar XML desde URL (solo descarga)
 export async function downloadXMLUrl(url: string, fileName = "archivo.xml") {
+  const name = fileName.endsWith(".xml") ? fileName : `${fileName}.xml`;
   try {
     const res = await fetch(url, { mode: "cors" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
+    // Forzar octet-stream para que el navegador descargue en vez de mostrar el XML
+    const blob = new Blob([await res.arrayBuffer()], { type: "application/octet-stream" });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = objectUrl;
-    link.download = fileName;
+    link.download = name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   } catch {
-    // Si CORS bloquea el fetch, abre en nueva pestaña para que el usuario guarde manualmente
-    window.open(url, "_blank");
+    // Fallback: anchor directo con download (funciona si S3 permite el header)
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
