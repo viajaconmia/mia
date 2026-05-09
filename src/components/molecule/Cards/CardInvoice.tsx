@@ -155,7 +155,7 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                             downloadXMLBase64(
                               response?.Content || "",
                               `${data.id_factura.slice(0, 8)}-${
-                                data.created_at.split("T")[0]
+                                data.fecha_emision.split("T")[0]
                               }.xml`
                             )
                           )
@@ -170,7 +170,7 @@ export function InvoiceCard({ data, OnToggleExpand }: InvoiceCardProps) {
                         downloadXMLUrl(
                           data.url_xml,
                           `${data.id_factura.slice(0, 8)}-${
-                            data.created_at.split("T")[0]
+                            data.fecha_emision.split("T")[0]
                           }.xml`
                         );
                       }
