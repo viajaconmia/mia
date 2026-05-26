@@ -18,6 +18,8 @@ import Loader from "./components/atom/Loader";
 import { Impersonado } from "./components/page/Impersonado";
 import Chat from "./components/page/Chat";
 import { BillingPage2 } from "./components/page/billingepage2";
+import { PagoExitoso } from "./pages/PagoExitoso";
+import { PagoCancelado } from "./pages/PagoCancelado";
 // import { facturas_pagos } from "./pages/facturas_pagos";
 
 const App = () => {
@@ -79,6 +81,8 @@ const App = () => {
           component={ResetPassword}
           path={ROUTES.AUTH.RESET_PASSWORD}
         />
+        <RouteSecure component={PagoExitoso} path={ROUTES.PAGO_EXITOSO} />
+        <RouteSecure component={PagoCancelado} path={ROUTES.PAGO_CANCELADO} />
         <Route path={"*"}>
           <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50">
             <Loader></Loader>

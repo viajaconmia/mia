@@ -92,18 +92,19 @@ const ExpandedContentRenderer = ({
 
   // normalizadores -> mapean lo que venga del SP a las keys usadas en tus columnas
   const normalizeReservas = (arr: any[] = []) =>
-    arr.map((r) => ({
-      ...r,
-      codigo_reservacion_hotel:
-        r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
-      hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
-      total:
-        r.total ??
-        r.total_price ??
-        r.solicitud_total ??
-        r.total_solicitado ??
-        0,
-    }));
+    arr.map((r) => {
+      const total =
+        r.total ?? r.total_price ?? r.solicitud_total ?? r.total_solicitado ?? 0;
+      const montoAsociado = Number(r.monto_items_pagos ?? 0);
+      return {
+        ...r,
+        codigo_reservacion_hotel:
+          r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
+        hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
+        total,
+        monto_items_pagos: montoAsociado > Number(total) ? total : montoAsociado,
+      };
+    });
 
   const normalizePagos = (arr: any[] = []) =>
     arr.map((p) => ({
@@ -156,7 +157,7 @@ const ExpandedContentRenderer = ({
   }, [user?.info?.id_agente, item, itemType]);
 
   // columnas — iguales a las tuyas
-  const booking_columns: ColumnsTable<Booking>[] = [
+  const booking_columns: ColumnsTable<any>[] = [
     {
       key: "codigo_confirmacion",
       header: "ID",
@@ -176,6 +177,7 @@ const ExpandedContentRenderer = ({
     { key: "proveedor", header: "Proveedor", component: "text" },
     { key: "viajero", header: "Viajero", component: "text" },
     { key: "total", header: "Total", component: "precio" },
+    { key: "monto_items_pagos", header: "Monto Asociado", component: "precio" },
   ];
 
   const payment_columns: ColumnsTable<Payment & { id_pago: string }>[] = [
@@ -212,6 +214,7 @@ const ExpandedContentRenderer = ({
       },
     },
     { key: "total", header: "Total", component: "precio" },
+    { key: "monto_asociado_factura" as any, header: "Monto Asociado", component: "precio" },
     {
       key: null,
       header: "Detalles",

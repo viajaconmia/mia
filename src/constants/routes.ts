@@ -39,6 +39,8 @@ const ROUTES = {
     ID_SOLICITUD: (id: string) => `/bookings/${btoa(id)}`,
   },
   IMPERSONADO: "/impersonado",
+  PAGO_EXITOSO: "/pago-exitoso",
+  PAGO_CANCELADO: "/pago-cancelado",
 };
 
 export default ROUTES;
