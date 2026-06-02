@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useSearch } from "wouter";
 import ROUTES from "../constants/routes";
 import { BookingService, Solicitud } from "../services/BookingService";
 import { CuponHotel } from "../porArreglar/CuponHotel";
@@ -7,9 +7,12 @@ import Loader from "../components/atom/Loader";
 import ErrorPage from "../v2/components/atom/ErrorPage";
 import CuponVuelo from "../v2/components/organism/CuponVuelo";
 import CarRentalCard from "../porArreglar/CuponAuto";
+import { Lang } from "../constants/translations";
 
 export function Reserva() {
   const [, params] = useRoute(`${ROUTES.BOOKINGS.ID}`);
+  const search = useSearch();
+  const lang: Lang = new URLSearchParams(search).get("lang") === "en" ? "en" : "es";
   const [booking, setBooking] = useState<Solicitud | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,13 +50,13 @@ export function Reserva() {
     );
 
   if (booking.type === "hotel") {
-    return <CuponHotel item={booking} />;
+    return <CuponHotel item={booking} lang={lang} />;
   }
   if (booking.type === "vuelo") {
-    return <CuponVuelo item={booking} />;
+    return <CuponVuelo item={booking} lang={lang} />;
   }
   if (booking.type === "renta_carros") {
-    return <CarRentalCard item={booking} />;
+    return <CarRentalCard item={booking} lang={lang} />;
   }
 
   return <ErrorPage message="No se encontró el tipo de reserva solicitado" />;

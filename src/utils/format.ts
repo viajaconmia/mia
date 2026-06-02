@@ -29,13 +29,14 @@ export const formatDate = (dateString: string) => {
   });
 };
 
-export const formatLargeDate = (dateString: string) => {
+export const formatLargeDate = (dateString: string, lang: "es" | "en" = "es") => {
   if (!dateString) return "";
 
   const [year, month, day] = dateString.split("T")[0].split("-");
   const date = new Date(+year, +month - 1, +day);
+  const locale = lang === "en" ? "en-US" : "es-MX";
 
-  return new Intl.DateTimeFormat("es-MX", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "numeric",
     month: "short",

@@ -13,12 +13,14 @@ import {
   SolicitudRentaCarros,
 } from "../services/BookingService";
 import { formatLargeDate } from "../utils/format";
+import { Lang, t, Translations } from "../constants/translations";
 
 interface DriverDetailProps {
   conductor: ConductorAdicional;
+  tr: Translations;
 }
 
-function DriverDetail({ conductor }: DriverDetailProps) {
+function DriverDetail({ conductor, tr }: DriverDetailProps) {
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-all duration-200 hover:shadow-sm">
       <div className="flex items-start gap-3">
@@ -40,7 +42,7 @@ function DriverDetail({ conductor }: DriverDetailProps) {
             )}
             {conductor.numero_pasaporte && (
               <p className="text-xs text-slate-500">
-                Pasaporte: {conductor.numero_pasaporte}
+                {tr.passport}: {conductor.numero_pasaporte}
               </p>
             )}
           </div>
@@ -52,9 +54,11 @@ function DriverDetail({ conductor }: DriverDetailProps) {
 
 interface CarRentalCardProps {
   item: SolicitudRentaCarros;
+  lang?: Lang;
 }
 
-export default function CarRentalCard({ item }: CarRentalCardProps) {
+export default function CarRentalCard({ item, lang = "es" }: CarRentalCardProps) {
+  const tr = t(lang);
   const extractLocation = (fullLocation: string) => {
     const parts = fullLocation.split(" - ");
     return {
@@ -79,9 +83,9 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                 <Car className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Renta de Auto</h2>
+                <h2 className="text-2xl font-bold text-white">{tr.carRental}</h2>
                 <p className="text-slate-300 text-sm">
-                  Confirmación:{" "}
+                  {tr.confirmation}:{" "}
                   <span className="font-mono font-semibold">
                     {item.codigo_confirmation}
                   </span>
@@ -89,7 +93,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-slate-300 text-sm mb-1">Proveedor</p>
+              <p className="text-slate-300 text-sm mb-1">{tr.provider}</p>
               <p className="text-xl font-bold text-white">
                 {item.nombre_proveedor}
               </p>
@@ -99,22 +103,22 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <p className="text-slate-300 text-sm mb-2">Tipo de Vehículo</p>
+                <p className="text-slate-300 text-sm mb-2">{tr.vehicleType}</p>
                 <p className="text-lg font-semibold text-white">
                   {item.tipo_auto}
                 </p>
                 <p className="text-sm text-slate-400 mt-1">
-                  Transmisión: {item.transmission}
+                  {tr.transmission}: {item.transmission}
                 </p>
               </div>
               <div>
-                <p className="text-slate-300 text-sm mb-2">Duración</p>
+                <p className="text-slate-300 text-sm mb-2">{tr.duration}</p>
                 <p className="text-lg font-semibold text-white">
-                  {item.dias} {item.dias === 1 ? "día" : "días"}
+                  {item.dias} {item.dias === 1 ? tr.day : tr.days}
                 </p>
               </div>
               <div>
-                <p className="text-slate-300 text-sm mb-2">Seguro</p>
+                <p className="text-slate-300 text-sm mb-2">{tr.insurance}</p>
                 <p className="text-lg font-semibold text-white">
                   {item.seguro_incluido}
                 </p>
@@ -126,7 +130,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
             <div className="flex items-center gap-3 mb-3">
               <User className="w-5 h-5 text-white" />
               <h3 className="text-lg font-semibold text-white">
-                Conductor Principal
+                {tr.mainDriver}
               </h3>
             </div>
             <p className="text-xl font-bold text-white">
@@ -147,13 +151,13 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">
-                      Recoger Auto
+                      {tr.pickup}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                       <Calendar className="w-4 h-4 text-slate-500" />
 
                       <span className="text-sm font-semibold text-slate-700">
-                        {formatLargeDate(item.check_in.split("T")[0])}
+                        {formatLargeDate(item.check_in.split("T")[0], lang)}
                       </span>
                       <Clock className="w-3.5 h-3.5 text-slate-500" />
                       <span className="text-sm font-semibold text-slate-700">
@@ -187,13 +191,13 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">
-                      Entregar Auto
+                      {tr.dropoff}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                       <Calendar className="w-4 h-4 text-slate-500" />
 
                       <span className="text-sm font-semibold text-slate-700">
-                        {formatLargeDate(item.check_out.split("T")[0])}
+                        {formatLargeDate(item.check_out.split("T")[0], lang)}
                       </span>
                       <Clock className="w-3.5 h-3.5 text-slate-500" />
                       <span className="text-sm font-semibold text-slate-700">
@@ -216,7 +220,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                       )}
                       {isSameLocation && (
                         <p className="text-sm text-emerald-600 mt-1 font-medium">
-                          Misma ubicación que recogida
+                          {tr.sameLocation}
                         </p>
                       )}
                     </div>
@@ -232,13 +236,13 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
               <Shield className="w-5 h-5 text-blue-600 mt-1" />
               <div className="flex-1">
                 <h3 className="text-base font-semibold text-slate-800 mb-2">
-                  Cobertura y Seguros
+                  {tr.coverage}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     <span className="text-sm text-slate-700">
-                      Seguro:{" "}
+                      {tr.insurance}:{" "}
                       <span className="font-semibold">
                         {item.seguro_incluido}
                       </span>
@@ -247,11 +251,11 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                   <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
                     <span className="text-sm text-slate-700">
-                      Conductores adicionales:{" "}
+                      {tr.additionalDriversLabel}:{" "}
                       <span className="font-semibold">
                         {item.additional_driver > 0
                           ? `${item.additional_driver} incluido(s)`
-                          : "No incluidos"}
+                          : tr.noAdditionalDrivers}
                       </span>
                     </span>
                   </div>
@@ -269,8 +273,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                 <div className="flex items-center gap-3 mb-4">
                   <Users className="w-5 h-5 text-slate-600" />
                   <h3 className="text-lg font-semibold text-slate-800">
-                    Conductores Adicionales (
-                    {item.conductores_adicionales.length})
+                    {tr.additionalDrivers} ({item.conductores_adicionales.length})
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -280,6 +283,7 @@ export default function CarRentalCard({ item }: CarRentalCardProps) {
                       <DriverDetail
                         key={conductor.id_viajero}
                         conductor={conductor}
+                        tr={tr}
                       />
                     ))}
                 </div>

@@ -15,8 +15,10 @@ import { getUbicacion } from "../services/reservas";
 import { SupportModal } from "../components/SupportModal";
 import { generatePdfHotel } from "./cupon";
 import { useNotification } from "../hooks/useNotification";
+import { Lang, t } from "../constants/translations";
 
-export function CuponHotel({ item }: { item: SolicitudHotel }) {
+export function CuponHotel({ item, lang = "es" }: { item: SolicitudHotel; lang?: Lang }) {
+  const tr = t(lang);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const { showNotification } = useNotification();
@@ -31,14 +33,14 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
 
   const getAcompanantesValue = (viajeros: string) => {
     if (viajeros) return viajeros;
-    return "No hay acompañantes";
+    return tr.noCompanions;
   };
 
   const cambiarLenguaje = (room: string) => {
-    let updateRoom = room;
-    if (room?.toUpperCase() === "SINGLE") updateRoom = "SENCILLO";
-    else if (room?.toUpperCase() === "DOUBLE") updateRoom = "DOBLE";
-    return updateRoom;
+    const upper = room?.toUpperCase();
+    if (upper === "SINGLE" || upper === "SENCILLO") return tr.single;
+    if (upper === "DOUBLE" || upper === "DOBLE") return tr.double;
+    return room;
   };
 
   type UbicacionType =
@@ -141,7 +143,7 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           <FileDown className="mr-2" size={20} />
-          Descargar PDF
+          {tr.downloadPdf}
         </button>
       </div>
 
@@ -158,11 +160,11 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
             <>
               <div className="text-center mb-12">
                 <h1 className="text-3xl font-bold text-blue-900">
-                  Detalles de la Reservación
+                  {tr.reservationDetails}
                 </h1>
                 {reservationDetails.codigo_confirmacion && (
                   <p className="text-blue-600 mt-2">
-                    Confirmación #{reservationDetails.codigo_confirmacion}
+                    {tr.confirmation} #{reservationDetails.codigo_confirmacion}
                   </p>
                 )}
               </div>
@@ -174,13 +176,13 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InfoCard
                       icon={User}
-                      label="Huésped"
+                      label={tr.guest}
                       value={reservationDetails.huesped || ""}
                     />
                     <div data-role="hotel-card">
                       <InfoCard
                         icon={Hotel}
-                        label="Hotel"
+                        label={tr.hotel}
                         value={reservationDetails.hotel || ""}
                         subValue={reservationDetails.direccion || ""}
                         href={url || null}
@@ -193,7 +195,7 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
                         <div className="">
                           <InfoCard
                             icon={Users}
-                            label="Acompañantes"
+                            label={tr.companions}
                             value={getAcompanantesValue(
                               reservationDetails.acompañantes,
                             )}
@@ -203,11 +205,11 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
                     <div className="">
                       <InfoCard
                         icon={CupSoda}
-                        label="Desayuno incluido"
+                        label={tr.breakfastLabel}
                         value={
                           reservationDetails.incluye_desayuno === 1
-                            ? "Desayuno incluido"
-                            : "No incluye desayuno"
+                            ? tr.breakfastIncluded
+                            : tr.noBreakfast
                         }
                       />
                     </div>
@@ -217,20 +219,18 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
                   <DateCard
                     check_in={reservationDetails.check_in}
                     check_out={reservationDetails.check_out}
+                    tr={tr}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Room Type */}
                     <InfoCard
                       icon={Bed}
-                      label="Tipo de Habitación"
+                      label={tr.roomType}
                       value={cambiarLenguaje(reservationDetails.room || "")}
                     />
                     <InfoCard
                       icon={MessageCircle}
-                      label="Comentarios"
-                      value={
-                        reservationDetails.comentarios || "No hay comentarios"
-                      }
+                      label={tr.comments}
+                      value={reservationDetails.comentarios || tr.noComments}
                     />
                   </div>
                 </div>
@@ -238,16 +238,16 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
                 {/* Additional Info */}
                 <div className="mt-8 p-4 bg-blue-50 text-sm rounded-lg border border-blue-100 text-gray-700">
                   <p>
-                    ¿Necesitas hacer cambios en tu reserva? <br />
+                    {tr.needChanges} <br />
                     <span
                       onClick={() => {
                         setIsSupportModalOpen(true);
                       }}
                       className="hover:underline cursor-pointer text-blue-500"
                     >
-                      Contacta al soporte de MIA{" "}
+                      {tr.contactSupport}{" "}
                     </span>{" "}
-                    para ayudarte con cualquier modificación
+                    {tr.helpWithChanges}
                   </p>
                 </div>
               </div>
@@ -256,12 +256,9 @@ export function CuponHotel({ item }: { item: SolicitudHotel }) {
             <>
               <div className="text-center mt-20">
                 <h1 className="text-3xl font-bold text-blue-900 mb-4">
-                  No se encontró información
+                  {tr.notFound}
                 </h1>
-                <p className="text-gray-600 text-lg">
-                  No pudimos encontrar una reservación con los datos
-                  proporcionados, por favor contacte con soporte.
-                </p>
+                <p className="text-gray-600 text-lg">{tr.notFoundDesc}</p>
               </div>
             </>
           )}
@@ -305,9 +302,11 @@ const InfoCard = ({
 const DateCard = ({
   check_in,
   check_out,
+  tr,
 }: {
   check_in: string;
   check_out: string;
+  tr: import("../constants/translations").Translations;
 }) => {
   // Helper para limpiar fecha solo si incluye "T"
   const formatDate = (dateStr: string) => {
@@ -321,11 +320,11 @@ const DateCard = ({
         <Calendar className="w-4 h-4 text-blue-600" />
         <div className="flex-1">
           <p className="text-xs font-medium text-blue-900/60">
-            Fechas de Estancia
+            {tr.stayDates}
           </p>
           <div className="flex items-center justify-between mt-2">
             <div>
-              <p className="text-xs text-blue-900/60">Check-in</p>
+              <p className="text-xs text-blue-900/60">{tr.checkIn}</p>
               <p className="text-base font-semibold text-blue-900">
                 {formatDate(check_in)}
               </p>
@@ -334,7 +333,7 @@ const DateCard = ({
               <ArrowRight className="text-blue-500 w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs text-blue-900/60">Check-out</p>
+              <p className="text-xs text-blue-900/60">{tr.checkOut}</p>
               <p className="text-base font-semibold text-blue-900">
                 {formatDate(check_out)}
               </p>

@@ -1,13 +1,16 @@
 import { AlertCircle, Armchair, BaggageClaim, User } from "lucide-react";
 import { SolicitudVuelo, VueloDetalle } from "../../../services/BookingService";
 import { formatLargeDate } from "../../../utils/format";
+import { Lang, t, Translations } from "../../../constants/translations";
 
 interface FlightDetailProps {
   vuelo: VueloDetalle;
   isLast: boolean;
+  tr: Translations;
+  lang: Lang;
 }
 
-function FlightDetail({ vuelo }: FlightDetailProps) {
+function FlightDetail({ vuelo, tr, lang }: FlightDetailProps) {
   const formatTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(":");
     return `${hours}:${minutes}`;
@@ -23,7 +26,7 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
       <div className="rounded-xl border-2 border-slate-200 p-6 hover:shadow-md">
         <div className="flex justify-between">
           <div className="flex gap-1 items-center">
-            <p className="text-sm font-medium text-slate-700">Tarifa:</p>
+            <p className="text-sm font-medium text-slate-700">{tr.rate}:</p>
             <span className="p-1 px-3 bg-blue-200 rounded-full text-xs font-semibold border border-blue-300 hidden md:inline-block">
               {vuelo.rate_type}
             </span>
@@ -45,7 +48,7 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
               </div>
               <div className="flex justify-center items-center gap-2 text-slate-600">
                 <span className="text-xs">
-                  {formatLargeDate(vuelo.departure_date)}{" "}
+                  {formatLargeDate(vuelo.departure_date, lang)}{" "}
                 </span>
               </div>
               <span className="font-semibold text-sm text-gray-800">
@@ -76,7 +79,7 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
               </div>
               <div className="flex justify-center items-center gap-2 text-slate-600">
                 <span className="text-xs">
-                  {formatLargeDate(vuelo.arrival_date)}{" "}
+                  {formatLargeDate(vuelo.arrival_date, lang)}{" "}
                 </span>
               </div>
               <span className="font-semibold text-sm text-gray-800">
@@ -91,7 +94,7 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-slate-500" />
             <span className="text-sm text-slate-600">
-              Viajero:{" "}
+              {tr.traveler}:{" "}
               <span className="font-semibold text-slate-800">
                 {vuelo.viajero}
               </span>
@@ -100,7 +103,7 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
           <div className="flex items-center gap-2">
             <Armchair className="w-4 h-4 text-slate-500" />
             <span className="text-sm text-slate-600">
-              Asiento:{" "}
+              {tr.seat}:{" "}
               <span className="font-semibold text-slate-800">
                 {vuelo.seat_number}
               </span>
@@ -112,13 +115,9 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
             <BaggageClaim className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-green-800">
-              {vuelo.eq_personal
-                ? "Articulo personal: " + vuelo.eq_personal
-                : ""}
-              {vuelo.eq_mano ? " Equipaje de mano: " + vuelo.eq_mano : ""}
-              {vuelo.eq_documentado
-                ? " Equipaje documentado: " + vuelo.eq_documentado
-                : ""}
+              {vuelo.eq_personal ? `${tr.personalItem}: ${vuelo.eq_personal}` : ""}
+              {vuelo.eq_mano ? ` ${tr.carryOn}: ${vuelo.eq_mano}` : ""}
+              {vuelo.eq_documentado ? ` ${tr.checkedBag}: ${vuelo.eq_documentado}` : ""}
             </p>
           </div>
         )}
@@ -126,7 +125,7 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
         {vuelo.comentarios && (
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-amber-800">Notas: {vuelo.comentarios}</p>
+            <p className="text-sm text-amber-800">{tr.notes}: {vuelo.comentarios}</p>
           </div>
         )}
       </div>
@@ -136,9 +135,11 @@ function FlightDetail({ vuelo }: FlightDetailProps) {
 
 interface FlightCardProps {
   item: SolicitudVuelo;
+  lang?: Lang;
 }
 
-export default function FlightCard({ item }: FlightCardProps) {
+export default function FlightCard({ item, lang = "es" }: FlightCardProps) {
+  const tr = t(lang);
   const getTripTypeIcon = () => {
     if (item.tipo.includes("REDONDO")) {
       return "⇄";
@@ -152,12 +153,12 @@ export default function FlightCard({ item }: FlightCardProps) {
         <div className="mb-4">
           <div className="flex flex-col md:flex-row items-center justify-between bg-blue-50 backdrop-blur-sm rounded-xl p-6 gap-4">
             <div className="text-center flex-1">
-              <p className="text-gray-700 text-sm mb-2">Origen</p>
+              <p className="text-gray-700 text-sm mb-2">{tr.origin}</p>
               <p className="text-2xl font-bold text-gray-900">{item.origen}</p>
             </div>
             <div className="flex-shrink-0 px-6 flex flex-col items-center gap-2">
               <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 hidden md:inline-block">
-                Codigo: {item.codigo_confirmacion}
+                {tr.code}: {item.codigo_confirmacion}
               </span>
               <div className="text-4xl text-gray-900/80">
                 {getTripTypeIcon()}
@@ -167,7 +168,7 @@ export default function FlightCard({ item }: FlightCardProps) {
               </span>
             </div>
             <div className="text-center flex-1">
-              <p className="text-gray-700 text-sm mb-2">Destino</p>
+              <p className="text-gray-700 text-sm mb-2">{tr.destination}</p>
               <p className="text-2xl font-bold text-gray-900">{item.destino}</p>
             </div>
           </div>
@@ -180,6 +181,8 @@ export default function FlightCard({ item }: FlightCardProps) {
               key={vuelo.id_vuelo}
               vuelo={{ ...vuelo, viajero: item.viajero }}
               isLast={index === item.vuelos.length - 1}
+              tr={tr}
+              lang={lang}
             />
           ))}
         </div>
