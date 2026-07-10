@@ -186,11 +186,11 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({
                     <dt className="text-sm text-gray-500">Fechas</dt>
                     <dd className="text-gray-900 font-medium">
                       {new Date(
-                        bookingData.dates.checkIn!
+                        bookingData.dates.checkIn!,
                       ).toLocaleDateString()}{" "}
                       -{" "}
                       {new Date(
-                        bookingData.dates.checkOut!
+                        bookingData.dates.checkOut!,
                       ).toLocaleDateString()}
                     </dd>
                   </div>

@@ -17,7 +17,13 @@ import { generatePdfHotel } from "./cupon";
 import { useNotification } from "../hooks/useNotification";
 import { Lang, t } from "../constants/translations";
 
-export function CuponHotel({ item, lang = "es" }: { item: SolicitudHotel; lang?: Lang }) {
+export function CuponHotel({
+  item,
+  lang = "es",
+}: {
+  item: SolicitudHotel;
+  lang?: Lang;
+}) {
   const tr = t(lang);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
@@ -319,9 +325,7 @@ const DateCard = ({
       <div className="flex items-center space-x-2">
         <Calendar className="w-4 h-4 text-blue-600" />
         <div className="flex-1">
-          <p className="text-xs font-medium text-blue-900/60">
-            {tr.stayDates}
-          </p>
+          <p className="text-xs font-medium text-blue-900/60">{tr.stayDates}</p>
           <div className="flex items-center justify-between mt-2">
             <div>
               <p className="text-xs text-blue-900/60">{tr.checkIn}</p>
