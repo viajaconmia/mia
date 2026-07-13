@@ -37,6 +37,10 @@ import { BookingCard } from "../molecule/Cards/CardBooking";
 import { PaymentCard } from "../molecule/Cards/CardPayment";
 import { InvoiceCard } from "../molecule/Cards/CardInvoice";
 import { Booking } from "../../services/BookingService";
+import {
+  CuponDispatcher,
+  ReservaType,
+} from "../../services/cupon/CuponDispacher";
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
@@ -94,7 +98,11 @@ const ExpandedContentRenderer = ({
   const normalizeReservas = (arr: any[] = []) =>
     arr.map((r) => {
       const total =
-        r.total ?? r.total_price ?? r.solicitud_total ?? r.total_solicitado ?? 0;
+        r.total ??
+        r.total_price ??
+        r.solicitud_total ??
+        r.total_solicitado ??
+        0;
       const montoAsociado = Number(r.monto_items_pagos ?? 0);
       return {
         ...r,
@@ -102,7 +110,8 @@ const ExpandedContentRenderer = ({
           r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
         hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
         total,
-        monto_items_pagos: montoAsociado > Number(total) ? total : montoAsociado,
+        monto_items_pagos:
+          montoAsociado > Number(total) ? total : montoAsociado,
       };
     });
 
@@ -214,7 +223,11 @@ const ExpandedContentRenderer = ({
       },
     },
     { key: "total", header: "Total", component: "precio" },
-    { key: "monto_asociado_factura" as any, header: "Monto Asociado", component: "precio" },
+    {
+      key: "monto_asociado_factura" as any,
+      header: "Monto Asociado",
+      component: "precio",
+    },
     {
       key: null,
       header: "Detalles",
@@ -346,7 +359,24 @@ const ExpandedContentRenderer = ({
     />
   );
 };
+const cuponDispatcher = new CuponDispatcher();
 
+const obtenerTipoCupon = (tipo?: string): ReservaType => {
+  switch (tipo) {
+    case "hotel":
+      return "hotel";
+
+    case "car_rental":
+      return "auto";
+
+    case "flyght":
+    case "flight":
+      return "avion";
+
+    default:
+      throw new Error(`Tipo de reserva no reconocido: ${tipo}`);
+  }
+};
 export const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
@@ -410,6 +440,25 @@ export const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
               }
             >
               VER RESERVA
+            </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                try {
+                  const tipoCupon = obtenerTipoCupon(item.type);
+                  const reservaId = item.id_relacion || item.id_booking;
+
+                  if (!reservaId) {
+                    throw new Error("La reserva no tiene un identificador");
+                  }
+
+                  await cuponDispatcher.generar(tipoCupon, reservaId);
+                } catch (error) {
+                  console.error("Error al generar el cupón:", error);
+                }
+              }}
+            >
+              DESCARGAR CUPÓN
             </Button>
           </div>
         ),

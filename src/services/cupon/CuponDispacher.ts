@@ -1,9 +1,10 @@
+//services/cupon/cuponDispacher.ts
 import { ICuponStrategy } from "./ICuponStrategy";
 import { HotelCuponStrategy } from "./strategies/HotelCuponStrategy";
 import { AutoCuponStrategy } from "./strategies/AutoCuponStrategy";
 import { AvionCuponStrategy } from "./strategies/AvionCuponStrategy";
 
-type ReservaType = "hotel" | "auto" | "avion";
+export type ReservaType = "hotel" | "auto" | "avion";
 
 export class CuponDispatcher {
   private strategies: Record<ReservaType, ICuponStrategy> = {
