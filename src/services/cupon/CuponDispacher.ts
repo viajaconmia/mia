@@ -1,3 +1,4 @@
+//services/cupon/cuponDispacher.ts
 import { ICuponStrategy } from "./ICuponStrategy";
 import { HotelCuponStrategy } from "./strategies/HotelCuponStrategy";
 import { AutoCuponStrategy } from "./strategies/AutoCuponStrategy";
