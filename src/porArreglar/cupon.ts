@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { SolicitudHotel } from "../services/BookingService";
 import { getUbicacion } from "../services/reservas";
 import { formatLargeDate } from "../utils/format";
+import { url } from "inspector";
 
 const STYLES = {
   COLORS: {
@@ -383,7 +384,11 @@ function drawCardBox(
   const textLines = doc.splitTextToSize(text, width - padding * 2);
 
   const textHeight = textLines.length * lineHeight;
-  const height = textHeight + padding * 2;
+  let height = textHeight + padding * 2;
+
+  if (link && placeholder) {
+    height += 5;
+  }
 
   // Fondo
   doc.setFillColor(...bgColor);
@@ -396,17 +401,19 @@ function drawCardBox(
   doc.text(label, x + padding, y + 4);
   doc.setFontSize(9);
   doc.setTextColor(...textColor);
-  doc.text(textLines, x + padding, y + 2 + height / 2);
+  doc.text(textLines, x + padding, y + padding + lineHeight - 1);
+
   if (link && placeholder) {
+    const nameHeight = textLines.length * lineHeight;
     doc.setFontSize(4);
     doc.setTextColor(0, 0, 255);
-    doc.textWithLink(placeholder, x + padding, y + 3 + height / 2 + 2, {
+    doc.textWithLink(placeholder, x + padding, y + padding + nameHeight + 2, {
       url: link,
     });
     doc.setTextColor(0, 0, 0);
   }
 
-  return y + height; // nuevo y
+  return y + height;
 }
 
 function drawList(
