@@ -3,13 +3,13 @@ import { HotelCuponStrategy } from "./strategies/HotelCuponStrategy";
 import { AutoCuponStrategy } from "./strategies/AutoCuponStrategy";
 import { AvionCuponStrategy } from "./strategies/AvionCuponStrategy";
 
-type ReservaType = "hotel" | "auto" | "avion";
+type ReservaType = "hotel" | "car_rental" | "flyght";
 
 export class CuponDispatcher {
   private strategies: Record<ReservaType, ICuponStrategy> = {
     hotel: new HotelCuponStrategy(),
-    auto: new AutoCuponStrategy(),
-    avion: new AvionCuponStrategy(),
+    car_rental: new AutoCuponStrategy(),
+    flyght: new AvionCuponStrategy(),
   };
 
   async generar(tipo: ReservaType, reservaId: string): Promise<void> {

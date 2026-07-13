@@ -94,7 +94,11 @@ const ExpandedContentRenderer = ({
   const normalizeReservas = (arr: any[] = []) =>
     arr.map((r) => {
       const total =
-        r.total ?? r.total_price ?? r.solicitud_total ?? r.total_solicitado ?? 0;
+        r.total ??
+        r.total_price ??
+        r.solicitud_total ??
+        r.total_solicitado ??
+        0;
       const montoAsociado = Number(r.monto_items_pagos ?? 0);
       return {
         ...r,
@@ -102,7 +106,8 @@ const ExpandedContentRenderer = ({
           r.codigo_reservacion_hotel || r.id_hospedaje || r.id_booking || "",
         hotel: r.hotel || r.hotel_name || r.nombre_hotel || "",
         total,
-        monto_items_pagos: montoAsociado > Number(total) ? total : montoAsociado,
+        monto_items_pagos:
+          montoAsociado > Number(total) ? total : montoAsociado,
       };
     });
 
@@ -214,7 +219,11 @@ const ExpandedContentRenderer = ({
       },
     },
     { key: "total", header: "Total", component: "precio" },
-    { key: "monto_asociado_factura" as any, header: "Monto Asociado", component: "precio" },
+    {
+      key: "monto_asociado_factura" as any,
+      header: "Monto Asociado",
+      component: "precio",
+    },
     {
       key: null,
       header: "Detalles",
