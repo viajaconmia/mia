@@ -57,7 +57,10 @@ interface CarRentalCardProps {
   lang?: Lang;
 }
 
-export default function CarRentalCard({ item, lang = "es" }: CarRentalCardProps) {
+export default function CarRentalCard({
+  item,
+  lang = "es",
+}: CarRentalCardProps) {
   const tr = t(lang);
   const extractLocation = (fullLocation: string) => {
     const parts = fullLocation.split(" - ");
@@ -73,7 +76,7 @@ export default function CarRentalCard({ item, lang = "es" }: CarRentalCardProps)
     item.id_sucursal_recoger_auto === item.id_sucursal_dejar_auto;
 
   return (
-    <div className="w-full h-full p-4">
+    <div className="w-full h-full p-4 py-12">
       <div className="w-full max-w-4xl mx-auto bg-white rounded-xl mt-6 shadow">
         {/* Header Card */}
         <div className="bg-gradient-to-t from-blue-700 to-blue-800 shadow-xl p-8 mb-6 rounded-xl">
@@ -83,7 +86,9 @@ export default function CarRentalCard({ item, lang = "es" }: CarRentalCardProps)
                 <Car className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">{tr.carRental}</h2>
+                <h2 className="text-2xl font-bold text-white">
+                  {tr.carRental}
+                </h2>
                 <p className="text-slate-300 text-sm">
                   {tr.confirmation}:{" "}
                   <span className="font-mono font-semibold">
@@ -273,7 +278,8 @@ export default function CarRentalCard({ item, lang = "es" }: CarRentalCardProps)
                 <div className="flex items-center gap-3 mb-4">
                   <Users className="w-5 h-5 text-slate-600" />
                   <h3 className="text-lg font-semibold text-slate-800">
-                    {tr.additionalDrivers} ({item.conductores_adicionales.length})
+                    {tr.additionalDrivers} (
+                    {item.conductores_adicionales.length})
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

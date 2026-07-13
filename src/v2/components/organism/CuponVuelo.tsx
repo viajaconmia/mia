@@ -115,9 +115,13 @@ function FlightDetail({ vuelo, tr, lang }: FlightDetailProps) {
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
             <BaggageClaim className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-green-800">
-              {vuelo.eq_personal ? `${tr.personalItem}: ${vuelo.eq_personal}` : ""}
+              {vuelo.eq_personal
+                ? `${tr.personalItem}: ${vuelo.eq_personal}`
+                : ""}
               {vuelo.eq_mano ? ` ${tr.carryOn}: ${vuelo.eq_mano}` : ""}
-              {vuelo.eq_documentado ? ` ${tr.checkedBag}: ${vuelo.eq_documentado}` : ""}
+              {vuelo.eq_documentado
+                ? ` ${tr.checkedBag}: ${vuelo.eq_documentado}`
+                : ""}
             </p>
           </div>
         )}
@@ -125,7 +129,9 @@ function FlightDetail({ vuelo, tr, lang }: FlightDetailProps) {
         {vuelo.comentarios && (
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-amber-800">{tr.notes}: {vuelo.comentarios}</p>
+            <p className="text-sm text-amber-800">
+              {tr.notes}: {vuelo.comentarios}
+            </p>
           </div>
         )}
       </div>
@@ -148,7 +154,7 @@ export default function FlightCard({ item, lang = "es" }: FlightCardProps) {
   };
 
   return (
-    <div className="w-full h-full p-4">
+    <div className="w-full h-full p-4 my-12">
       <div className="w-full max-w-7xl bg-white mx-auto rounded-xl mt-6">
         <div className="mb-4">
           <div className="flex flex-col md:flex-row items-center justify-between bg-blue-50 backdrop-blur-sm rounded-xl p-6 gap-4">
@@ -157,13 +163,13 @@ export default function FlightCard({ item, lang = "es" }: FlightCardProps) {
               <p className="text-2xl font-bold text-gray-900">{item.origen}</p>
             </div>
             <div className="flex-shrink-0 px-6 flex flex-col items-center gap-2">
-              <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 hidden md:inline-block">
+              <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 ">
                 {tr.code}: {item.codigo_confirmacion}
               </span>
               <div className="text-4xl text-gray-900/80">
                 {getTripTypeIcon()}
               </div>
-              <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 hidden md:inline-block">
+              <span className="p-1 px-3 bg-gray-200 rounded-full text-xs font-semibold border border-gray-300 ">
                 {item.tipo}
               </span>
             </div>
