@@ -1,15 +1,11 @@
 import { jsPDF } from "jspdf";
 import { ICuponStrategy } from "../ICuponStrategy";
-import {
-  formatDate,
-  formatNumberWithCommas,
-} from "../../../utils/format";
+import { formatDate, formatNumberWithCommas } from "../../../utils/format";
 import {
   BookingService,
   SolicitudVuelo,
   VueloDetalle,
 } from "../../BookingService";
-import autoTable from "jspdf-autotable";
 import { currentDate } from "../../../utils/helpers";
 
 const formatTime = (time: string): string => {
@@ -17,516 +13,398 @@ const formatTime = (time: string): string => {
   return time.substring(0, 5);
 };
 
-export class AvionCuponStrategy implements ICuponStrategy {
-  async generarCupon(reservaId: string): Promise<void> {
-    const STYLES = {
-      COLORS: {
-        PRIMARY: [0, 115, 185] as [number, number, number],
-        TEXT_NORMAL: [0, 0, 0] as [number, number, number],
-        TEXT_MUTED: [220, 220, 220] as [number, number, number],
-        RECT: [0, 181, 226] as [number, number, number],
-        TABLE_HEADER: [47, 84, 150] as [number, number, number],
-        WHITE: [255, 255, 255] as [number, number, number],
-      },
-      FONTS: {
-        TITLE: 14,
-        SUBTITLE: 11,
-        BODY: 9,
-        SMALL: 8,
-        XS: 6,
-      },
-      MARGINS: { LEFT: 8, RIGHT: 8, TOP: 20 },
-      SPACING: { LINE: 6, SECTION: 10 },
-    };
+export const AvionCuponStrategy: ICuponStrategy = {
+  async generarCupon(id_viaje_aereo: string): Promise<void> {
+    // usar api service de angel
+    const bookingService = BookingService.getInstance();
+    const result = await bookingService.cupon.vuelo(id_viaje_aereo);
 
-    async function generatePdf(reservaId: string): Promise<jsPDF> {
-      const book = BookingService.getInstance();
-      const solicitud = (await book.getCupon(reservaId))
-        .data as SolicitudVuelo;
+    const cuponData = result.data;
+    console.log("✅ Response from backend:", result);
+    console.log("✅ Cupon data:", cuponData);
 
-      const doc = new jsPDF("p", "mm", "a4");
+    await generatePdf(cuponData);
+  },
+};
 
-      const pageW = doc.internal.pageSize.getWidth();
-      let y = STYLES.MARGINS.TOP - 4;
+async function generatePdf(cuponData: any): Promise<void> {
+  const STYLES = {
+    COLORS: {
+      PRIMARY: [0, 115, 185] as [number, number, number],
+      TEXT_NORMAL: [0, 0, 0] as [number, number, number],
+      TEXT_MUTED: [220, 220, 220] as [number, number, number],
+      RECT: [0, 181, 226] as [number, number, number],
+      TABLE_HEADER: [47, 84, 150] as [number, number, number],
+      WHITE: [255, 255, 255] as [number, number, number],
+    },
+    FONTS: {
+      TITLE: 14,
+      SUBTITLE: 11,
+      BODY: 9,
+      SMALL: 8,
+      XS: 6,
+    },
+    MARGINS: { LEFT: 8, RIGHT: 8, TOP: 20 },
+    SPACING: { LINE: 6, SECTION: 10 },
+  };
 
-      drawHeader(doc, pageW);
+  const solicitud: SolicitudVuelo = {
+    type: "vuelo",
+    id_viaje_aereo: cuponData.id_viaje_aereo,
+    origen: cuponData.ciudad_origen,
+    destino: cuponData.ciudad_destino,
+    viajero: cuponData.nombre_viajero || "No disponible",
+    codigo_confirmacion: cuponData.codigo_confirmacion,
+    vuelos: cuponData.vuelos || [],
+    tipo: cuponData.trip_type || "REDONDO",
+  };
 
-      drawEmitidoPor(doc, y);
-      drawImage(
-        doc,
-        "https://luiscastaneda-tos.github.io/log/files/312974093_187206343834287_6123587238863977470_n.jpg",
-        pageW / 2 - 5,
-        y,
-        20,
-        20,
-      );
-      y = drawBoletoInfo(doc, solicitud, pageW, y - 4);
+  const drawTextBox = (
+    doc: jsPDF,
+    options: {
+      x: number;
+      y: number;
+      width: number;
+      text: string;
+      padding?: number;
+      bgColor?: [number, number, number];
+      borderColor?: [number, number, number];
+      textColor?: [number, number, number];
+      fontSize?: number;
+      lineHeight?: number;
+    },
+  ) => {
+    const {
+      x,
+      y,
+      width,
+      text,
+      padding = 0,
+      bgColor = [245, 245, 245],
+      textColor = [0, 0, 0],
+      fontSize = 6,
+      lineHeight = 4,
+    } = options;
 
-      y += 2;
+    doc.setFontSize(fontSize);
+    const textLines = doc.splitTextToSize(text, width - padding * 2);
+    const textHeight = textLines.length * lineHeight;
+    const height = textHeight + padding * 2;
 
-      //aqui va un cuadro que diga detalle
-      y = drawTablaVuelos(doc, solicitud.vuelos, y, solicitud.viajero);
-      //aqui va un cuadro que diga gracias por suconfianza
-      y += 4;
-      y = drawContacto(doc, y, solicitud.id_viaje_aereo);
-      doc.text("Politicas:", STYLES.MARGINS.LEFT, y);
-      y += 3;
-      y = drawList(
-        doc,
-        condicionesVuelo,
-        STYLES.MARGINS.LEFT,
-        y,
-        pageW - STYLES.MARGINS.LEFT - STYLES.MARGINS.RIGHT,
-        { fontSize: STYLES.FONTS.XS, lineHeight: 4 },
-      );
-      doc.text("Nomenclatura:", STYLES.MARGINS.LEFT, y);
-      y += 3;
-      y = drawList(
-        doc,
-        restriccionesBoleto,
-        STYLES.MARGINS.LEFT,
-        y,
-        pageW - STYLES.MARGINS.LEFT - STYLES.MARGINS.RIGHT,
-        { symbol: "•", fontSize: STYLES.FONTS.XS, lineHeight: 4 },
-      );
-      y = drawParagraph(
-        doc,
-        `Noktos Alianza, S.A. de C.V., mejor conocido como Noktos, con domicilio en calle Av. Presidente Masaryk 29, Interior E-3, Col.  Polanco V Sección, Alcaldía Miguel Hidalgo, CDMX, cp. 11570, en la entidad de Ciudad de México, país México, es el responsable del uso y protección de sus datos personales, puede verificar más información en nuestro portal de internet https://www.noktos.com`,
-        STYLES.MARGINS.LEFT,
-        y,
-        pageW - STYLES.MARGINS.LEFT * 2,
-      );
-      drawHeader(doc, pageW);
-      //Aqui va un cuadro de nuevo como el del inicio, un rectangulo
+    doc.setFillColor(...bgColor);
+    doc.setDrawColor(0, 0, 0, 0);
+    doc.rect(x, y, width, height, "FD");
 
-      const filename = `cupon-vuelo-${solicitud.codigo_confirmacion}.pdf`;
-      doc.save(filename);
-    }
+    doc.setTextColor(...textColor);
+    doc.text(textLines, x + padding + 2, y + padding + lineHeight - 1);
 
-    function drawTextBox(
-      doc: jsPDF,
-      options: {
-        x: number;
-        y: number;
-        width: number;
-        text: string;
-        padding?: number;
-        bgColor?: [number, number, number];
-        borderColor?: [number, number, number];
-        textColor?: [number, number, number];
-        fontSize?: number;
-        lineHeight?: number;
-      },
-    ) {
-      const {
-        x,
-        y,
-        width,
-        text,
-        padding = 0,
-        bgColor = [245, 245, 245],
-        borderColor = [220, 220, 220],
-        textColor = [0, 0, 0],
-        fontSize = 6,
-        lineHeight = 4,
-      } = options;
+    return y + height;
+  };
 
-      doc.setFontSize(fontSize);
+  const drawHeader = (doc: jsPDF, pageW: number) => {
+    doc.setFillColor(...STYLES.COLORS.RECT);
+    doc.rect(STYLES.MARGINS.LEFT, 0, pageW - STYLES.MARGINS.LEFT * 2, 8, "F");
+  };
 
-      // Dividir texto en líneas según el ancho disponible
-      const textLines = doc.splitTextToSize(text, width - padding * 2);
+  const drawImage = (
+    doc: jsPDF,
+    image: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => {
+    doc.addImage(image, "PNG", x, y, width, height);
+  };
 
-      const textHeight = textLines.length * lineHeight;
-      const height = textHeight + padding * 2;
+  const drawEmitidoPor = (doc: jsPDF, y: number) => {
+    const x = STYLES.MARGINS.LEFT;
+    const width = 90;
+    y = drawTextBox(doc, {
+      x,
+      y,
+      text: "EMITIDO POR:",
+      width,
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    y = drawTextBox(doc, {
+      x,
+      y,
+      text: "NOKTOS ALIANZA SA DE CV",
+      width,
+      bgColor: STYLES.COLORS.WHITE,
+    });
+    y = drawTextBox(doc, {
+      x,
+      y,
+      text: "NAL190807BU2",
+      width,
+      bgColor: STYLES.COLORS.WHITE,
+    });
+    drawTextBox(doc, {
+      x,
+      y,
+      text: "Av. Presidente Masaryk 29, Interior E-3, Col.  Polanco V Sección, Alcaldía Miguel Hidalgo, CDMX",
+      width,
+      bgColor: STYLES.COLORS.WHITE,
+    });
+  };
 
-      // Fondo
-      doc.setFillColor(...bgColor);
-      doc.setDrawColor(0, 0, 0, 0);
-      doc.rect(x, y, width, height, "FD");
+  const drawBoletoInfo = (
+    doc: jsPDF,
+    solicitud: SolicitudVuelo,
+    pageW: number,
+    y: number,
+  ) => {
+    const boxW = 80;
+    const x = pageW - boxW - STYLES.MARGINS.RIGHT;
+    y = drawTextBox(doc, {
+      x,
+      y,
+      width: boxW,
+      text: "BOLETO AÉREO",
+      bgColor: STYLES.COLORS.WHITE,
+    });
+    drawTextBox(doc, {
+      x,
+      y,
+      width: boxW / 2,
+      text: "FECHA DE EMISIÓN",
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    y = drawTextBox(doc, {
+      x: x + boxW / 2,
+      y,
+      width: boxW / 2,
+      text: formatDate(currentDate()).toString(),
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    drawTextBox(doc, {
+      x,
+      y,
+      width: boxW / 2,
+      text: "CODIGO DE LA AEROLINEA",
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    y = drawTextBox(doc, {
+      x: x + boxW / 2,
+      y,
+      width: boxW / 2,
+      text: solicitud.codigo_confirmacion.toString(),
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    drawTextBox(doc, {
+      x,
+      y,
+      width: boxW / 2,
+      text: "TOTAL",
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    y = drawTextBox(doc, {
+      x: x + boxW / 2,
+      y,
+      width: boxW / 2,
+      text: `$${formatNumberWithCommas(0)}`,
+      bgColor: STYLES.COLORS.WHITE,
+    });
+    drawTextBox(doc, {
+      x,
+      y,
+      width: boxW / 2,
+      text: "TARIFA",
+      bgColor: STYLES.COLORS.TABLE_HEADER,
+      textColor: STYLES.COLORS.WHITE,
+    });
+    y = drawTextBox(doc, {
+      x: x + boxW / 2,
+      y,
+      width: boxW / 2,
+      text: "NO REEMBOLSABLE",
+      bgColor: STYLES.COLORS.TEXT_MUTED,
+    });
 
-      doc.setTextColor(...textColor);
-      doc.text(textLines, x + padding + 2, y + padding + lineHeight - 1);
+    return y + 10;
+  };
 
-      return y + height; // nuevo y
-    }
+  const drawTablaVuelos = (
+    doc: jsPDF,
+    vuelos: VueloDetalle[],
+    y: number,
+    viajero: string,
+  ) => {
+    const head = [
+      [
+        "Aerolínea",
+        "Origen",
+        "Fecha Salida",
+        "Hora",
+        "Destino",
+        "Fecha Llegada",
+        "Hora",
+        "Asiento",
+        "Pasajero",
+        "# Vuelo",
+      ],
+    ];
 
-    function drawParagraph(
-      doc: jsPDF,
-      text: string,
-      startX: number,
-      startY: number,
-      maxWidth: number,
-      options?: {
-        fontSize?: number;
-        lineHeight?: number;
-        align?: "left" | "center" | "right" | "justify";
-      },
-    ) {
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const marginBottom = 20;
+    const body: any[] = vuelos.map((v) => [
+      v.airline,
+      `${v.departure_airport} - ${v.departure_city}`,
+      formatDate(v.departure_date),
+      formatTime(v.departure_time),
+      `${v.arrival_airport} - ${v.arrival_city}`,
+      formatDate(v.arrival_date),
+      formatTime(v.arrival_time),
+      v.seat_number,
+      viajero,
+      v.flight_number,
+    ]);
 
-      const fontSize = options?.fontSize ?? 6;
-      const lineHeight = options?.lineHeight ?? 3;
-      const align = options?.align ?? "left";
+    // ⚠️ NOTA: autoTable está comentado. Por ahora retorna y como está.
+    // TODO: Instalar jspdf-autotable para tablas formateadas
+    return y + 40;
+  };
 
-      let y = startY;
+  const drawContacto = (doc: jsPDF, y: number, id: string) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(6);
+    doc.setTextColor(0, 0, 255);
 
-      doc.setFontSize(fontSize);
+    doc.textWithLink("Ver reserva en linea", pageWidth / 2, y, {
+      url: `https://www.viajaconmia.com/bookings/${btoa(id)}`,
+      align: "center",
+    });
 
-      const lines = doc.splitTextToSize(text, maxWidth);
+    y += 3;
+    doc.setTextColor(0, 0, 0);
+    doc.text(
+      "Si tiene alguna duda sobre esta información, póngase en contacto con nosotros",
+      pageWidth / 2,
+      y,
+      { align: "center" },
+    );
 
-      lines.forEach((line) => {
-        // 👇 salto automático de página
-        if (y + lineHeight > pageHeight - marginBottom) {
-          doc.addPage();
-          y = 20;
-        }
+    y += 3;
+    doc.setTextColor(0, 0, 255);
+    doc.textWithLink("WA 55 31 49 10 62", pageWidth / 2, y, {
+      url: "https://wa.me/525531491062",
+      align: "center",
+    });
 
-        doc.text(line, startX, y, {
-          maxWidth,
-          align,
-        });
+    y += 3;
+    doc.textWithLink("reservaciones@noktos.com", pageWidth / 2, y, {
+      url: "mailto:reservaciones@noktos.com",
+      align: "center",
+    });
 
-        y += lineHeight;
-      });
+    y += 3;
+    doc.textWithLink("support@noktos.zohodesk.com", pageWidth / 2, y, {
+      url: "mailto:support@noktos.zohodesk.com",
+      align: "center",
+    });
 
-      return y + 2;
-    }
+    doc.setTextColor(0, 0, 0);
+    return y + 5;
+  };
 
-    function drawHeader(doc: jsPDF, pageW: number) {
-      doc.setFillColor(...STYLES.COLORS.RECT);
-      doc.rect(STYLES.MARGINS.LEFT, 0, pageW - STYLES.MARGINS.LEFT * 2, 8, "F");
-    }
+  const drawList = (
+    doc: jsPDF,
+    items: string[],
+    startX: number,
+    startY: number,
+    maxWidth: number,
+    options?: { symbol?: string; lineHeight?: number; fontSize?: number },
+  ) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const lineHeight = options?.lineHeight ?? 6;
+    const fontSize = options?.fontSize ?? 9;
+    const symbol = options?.symbol;
 
-    function drawEmitidoPor(doc: jsPDF, y: number) {
-      const x = STYLES.MARGINS.LEFT;
-      const width = 90;
-      y = drawTextBox(doc, {
-        x,
-        y,
-        text: "EMITIDO POR:",
-        width,
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x,
-        y,
-        text: "NOKTOS ALIANZA SA DE CV",
-        width,
-        bgColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x,
-        y,
-        text: "NAL190807BU2",
-        width,
-        bgColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x,
-        y,
-        text: "Av. Presidente Masaryk 29, Interior E-3, Col.  Polanco V Sección, Alcaldía Miguel Hidalgo, CDMX",
-        width,
-        bgColor: STYLES.COLORS.WHITE,
-      });
-    }
-    function drawBoletoInfo(
-      doc: jsPDF,
-      solicitud: SolicitudVuelo,
-      pageW: number,
-      y: number,
-    ) {
-      const boxW = 80;
-      const x = pageW - boxW - STYLES.MARGINS.RIGHT;
-      y = drawTextBox(doc, {
-        x,
-        y,
-        width: boxW,
-        text: "BOLETO AÉREO",
-        bgColor: STYLES.COLORS.WHITE,
-      });
-      drawTextBox(doc, {
-        x,
-        y,
-        width: boxW / 2,
-        text: "FECHA DE EMISIÓN",
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x: x + boxW / 2,
-        y,
-        width: boxW / 2,
-        text: formatDate(currentDate()).toString(),
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      drawTextBox(doc, {
-        x,
-        y,
-        width: boxW / 2,
-        text: "CODIGO DE LA AEROLINEA",
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x: x + boxW / 2,
-        y,
-        width: boxW / 2,
-        text: solicitud.codigo_confirmacion.toString(),
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      drawTextBox(doc, {
-        x,
-        y,
-        width: boxW / 2,
-        text: "TOTAL",
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x: x + boxW / 2,
-        y,
-        width: boxW / 2,
-        text: `$${formatNumberWithCommas(0)}`,
-        bgColor: STYLES.COLORS.WHITE,
-      });
-      drawTextBox(doc, {
-        x,
-        y,
-        width: boxW / 2,
-        text: "TARIFA",
-        bgColor: STYLES.COLORS.TABLE_HEADER,
-        textColor: STYLES.COLORS.WHITE,
-      });
-      y = drawTextBox(doc, {
-        x: x + boxW / 2,
-        y,
-        width: boxW / 2,
-        text: "NO REEMBOLSABLE",
-        bgColor: STYLES.COLORS.TEXT_MUTED,
-      });
+    let y = startY;
+    doc.setFontSize(fontSize);
 
-      return y + 10;
-    }
-    function drawTablaVuelos(
-      doc: jsPDF,
-      vuelos: VueloDetalle[],
-      y: number,
-      viajero: string,
-    ) {
-      const head = [
-        [
-          "Aerolínea",
-          "Origen",
-          "Fecha Salida",
-          "Hora",
-          "Destino",
-          "Fecha Llegada",
-          "Hora",
-          "Asiento",
-          "Pasajero",
-          "# Vuelo",
-          // "Tipo de vuelo",
-        ],
-      ];
+    items.forEach((item, index) => {
+      const bullet = symbol ?? `${index + 1}.`;
+      const textLines = doc.splitTextToSize(item, maxWidth - 10);
 
-      const columnCount = head[0].length;
-
-      const body: any[] = vuelos.map((v) => [
-        v.airline,
-        `${v.departure_airport} - ${v.departure_city}`,
-        formatDate(v.departure_date),
-        formatTime(v.departure_time),
-        `${v.arrival_airport} - ${v.arrival_city}`,
-        formatDate(v.arrival_date),
-        formatTime(v.arrival_time),
-        v.seat_number,
-        viajero,
-        v.flight_number,
-        // v.fly_type.split(" ").slice(-1)[0],
-      ]);
-
-      // 👇 Si mandas nota, se agrega fila de ancho completo
-      if (vuelos.some((i) => i.eq_documentado || i.eq_mano || i.eq_personal)) {
-        const eq = vuelos.filter(
-          (i) => i.eq_documentado || i.eq_mano || i.eq_personal,
-        )[0];
-        body.push([
-          {
-            content: `${[eq.eq_personal ? `articulo personal: ${eq.eq_personal}` : null, eq.eq_mano ? `equipaje de mano: ${eq.eq_mano}` : null, eq.eq_documentado ? `equipaje documentado: ${eq.eq_documentado}` : null].filter((i) => Boolean(i)).join(" + ")}`,
-            colSpan: columnCount,
-            styles: {
-              halign: "center",
-              fontSize: 8,
-              cellPadding: 4,
-            },
-          },
-        ]);
+      if (y + textLines.length * lineHeight > pageHeight - 20) {
+        doc.addPage();
+        y = 20;
       }
 
-      autoTable(doc, {
-        startY: y,
-        head,
-        body,
-        theme: "grid",
-        styles: {
-          fontSize: 7,
-        },
-        headStyles: {
-          fillColor: STYLES.COLORS.TABLE_HEADER,
-          halign: "center",
-          fontSize: 7,
-        },
-        bodyStyles: {
-          textColor: STYLES.COLORS.TEXT_NORMAL,
-        },
-        margin: {
-          left: STYLES.MARGINS.LEFT,
-          right: STYLES.MARGINS.RIGHT,
-        },
-      });
+      doc.text(bullet, startX, y);
+      doc.text(textLines, startX + 4, y);
+      y += textLines.length * lineHeight - textLines.length;
+    });
 
-      return (doc as any).lastAutoTable.finalY;
+    return y + 2;
+  };
+
+  // Generar PDF
+  const doc = new jsPDF("p", "mm", "a4");
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = STYLES.MARGINS.TOP - 4;
+
+  drawHeader(doc, pageW);
+  drawEmitidoPor(doc, y);
+  drawImage(
+    doc,
+    "https://luiscastaneda-tos.github.io/log/files/312974093_187206343834287_6123587238863977470_n.jpg",
+    pageW / 2 - 5,
+    y,
+    20,
+    20,
+  );
+  y = drawBoletoInfo(doc, solicitud, pageW, y - 4);
+  y += 2;
+  y = drawTablaVuelos(doc, solicitud.vuelos, y, solicitud.viajero);
+  y += 4;
+  y = drawContacto(doc, y, solicitud.id_viaje_aereo);
+
+  doc.text("Politicas:", STYLES.MARGINS.LEFT, y);
+  y += 3;
+
+  const condicionesVuelo = [
+    "Es necesario presentarse por lo menos 2 horas antes de la salida del vuelo",
+    "Presenta tus documentos: identificación oficial vigente o pasaporte",
+    "Cualquier cambio o cancelación debe solicitarse con 72 horas de anticipación",
+  ];
+
+  y = drawList(
+    doc,
+    condicionesVuelo,
+    STYLES.MARGINS.LEFT,
+    y,
+    pageW - STYLES.MARGINS.LEFT - STYLES.MARGINS.RIGHT,
+    { fontSize: STYLES.FONTS.XS, lineHeight: 4 },
+  );
+
+  // ✅ Retornar Buffer en lugar de descargar
+  doc;
+  const filename = `${cuponData.codigo_confirmacion}-${cuponData.nombre_viajero}`;
+  try {
+    if (typeof doc?.output === "function") {
+      const blob: Blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return;
     }
-
-    function drawList(
-      doc: jsPDF,
-      items: string[],
-      startX: number,
-      startY: number,
-      maxWidth: number,
-      options?: {
-        symbol?: string; // 👈 opcional
-        lineHeight?: number;
-        fontSize?: number;
-      },
-    ) {
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const marginBottom = 20;
-
-      const lineHeight = options?.lineHeight ?? 6;
-      const fontSize = options?.fontSize ?? 9;
-      const symbol = options?.symbol;
-
-      let y = startY;
-
-      doc.setFontSize(fontSize);
-
-      items.forEach((item, index) => {
-        const bullet = symbol ?? `${index + 1}.`;
-
-        const textLines = doc.splitTextToSize(item, maxWidth - 10);
-
-        // 👇 salto de página si no cabe
-        if (y + textLines.length * lineHeight > pageHeight - marginBottom) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // símbolo
-        doc.text(bullet, startX, y);
-
-        // texto
-        doc.text(textLines, startX + 4, y);
-
-        y += textLines.length * lineHeight - textLines.length;
-      });
-
-      return y + 2;
-    }
-    function drawContacto(doc: jsPDF, y: number, id: string) {
-      const pageWidth = doc.internal.pageSize.getWidth();
-
-      // 1️⃣ Texto normal
-      doc.setFontSize(6);
-      doc.setTextColor(0, 0, 255);
-
-      doc.textWithLink("Ver reserva en linea", pageWidth / 2, y, {
-        url: `https://www.viajaconmia.com/bookings/${btoa(id)}`,
-        align: "center",
-      });
-
-      y += 3;
-
-      doc.setTextColor(0, 0, 0);
-      doc.text(
-        "Si tiene alguna duda sobre esta información, póngase en contacto con nosotros",
-        pageWidth / 2,
-        y,
-        { align: "center" },
-      );
-
-      y += 3;
-
-      // 2️⃣ WhatsApp (link)
-      doc.setTextColor(0, 0, 255);
-
-      doc.textWithLink("WA 55 31 49 10 62", pageWidth / 2, y, {
-        url: "https://wa.me/525531491062",
-        align: "center",
-      });
-
-      y += 3;
-
-      // 3️⃣ Correo (link)
-      doc.textWithLink("reservaciones@noktos.com", pageWidth / 2, y, {
-        url: "mailto:reservaciones@noktos.com",
-        align: "center",
-      });
-
-      y += 3;
-
-      doc.textWithLink("support@noktos.zohodesk.com", pageWidth / 2, y, {
-        url: "mailto:support@noktos.zohodesk.com",
-        align: "center",
-      });
-
-      doc.setTextColor(0, 0, 0);
-
-      return y + 5;
-    }
-
-    function drawImage(
-      doc: jsPDF,
-      image: string,
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ) {
-      doc.addImage(image, "PNG", x, y, width, height);
-    }
-
-    const condicionesVuelo: string[] = [
-      "Es necesario presentarse por lo menos 2 horas antes de la salida del vuelo en rutas nacionales (importante considerar realizar el check in antes de presentarse al vuelo; el check in está sujeto a la aerolínea, es probable que sea necesario realizarlo en aeropuerto; se sugiere verificar horarios de documentación directamente con la aerolínea). En caso de vuelos internacionales, presentarse por lo menos 3 horas antes de la salida del vuelo (importante considerar realizar el check in antes de presentarse al vuelo; el check in está sujeto a la aerolínea, es probable que sea necesario realizarlo en aeropuerto; se sugiere verificar horarios de documentación directamente con la aerolínea).",
-
-      "Presenta tus documentos: identificación oficial vigente o pasaporte.",
-
-      "Cualquier cambio o cancelación a la reservación deberá ser solicitada por correo a reservaciones@noktos.com, al WhatsApp 55 31 49 10 62 o al teléfono 800 666 5867 con una anticipación mínima de 72 horas antes de la fecha de check in, proporcionando la(s) clave(s) de confirmación y la sede.",
-
-      "El pasajero debe respetar las políticas y lineamientos de la aerolínea para evitar incurrir en multas y penalizaciones. En caso de que se reporte algún mal comportamiento o una penalización que el pasajero se haya negado a pagar, Noktos se reserva el derecho de seguirle brindando servicio al cliente/pasajero involucrado.",
-
-      "Las políticas de cambio en el itinerario de un boleto aéreo están sujetas a las reglas tarifarias vigentes; estas pueden aplicar penalidades de hasta el monto total de la compra y diferencia de tarifa.",
-
-      "La vigencia de los boletos aéreos emitidos es de 12 meses a partir de la fecha de emisión. Si las políticas de la tarifa lo permiten, cualquier cambio y segmento debe efectuarse antes de la vigencia del boleto aéreo emitido.",
-
-      "Según las políticas de cancelación o no show (no presentarse al vuelo), en caso de no presentarse en el horario de salida del vuelo especificado por la aerolínea, es probable que se cancele el itinerario completo conforme a la regla tarifaria del vuelo.",
-
-      "Las cancelaciones solo aplican cuando se tratan de tarifas reembolsables; estas se deben solicitar al correo reservaciones@noktos.com.",
-
-      "Las tarifas están sujetas a disponibilidad; la aerolínea puede aumentar o modificar los montos sin previo aviso. Las tarifas no están garantizadas hasta la emisión de los boletos aéreos.",
-
-      "Cada pasajero es responsable de verificar que posee o, en su caso, gestionar la documentación de identificación, así como la documentación migratoria, de salud y/o aduanal necesaria para realizar su viaje, incluyendo pasaporte, visas, permisos sanitarios, vacunas y cualquier requisito impuesto por las autoridades competentes de cada nación o del país de destino. Asimismo, el pasaporte debe tener como mínimo una validez de 6 meses posteriores a la fecha de retorno del itinerario. Noktos no asume responsabilidad por cualquier eventualidad derivada de la falta de estos requisitos.",
-    ];
-    const restriccionesBoleto: string[] = [
-      "No reembolsable – no podrá ser devuelto el importe del boleto.",
-      "No transferible – no se permiten los cambios de nombre del pasajero.",
-      "No intercambiable – los boletos no podrán ser cambiados por dinero en efectivo.",
-      "Sin cambio de ruta – no se permiten modificaciones en el origen ni destino del boleto.",
-      "Sin posibilidad de mejoras – no se permiten las mejoras a tipos de tarifa superiores o categoría de clases.",
-    ];
+  } catch (e) {
+    // fallback abajo
   }
+
+  // fallback clásico
+  doc?.save?.(filename);
 }

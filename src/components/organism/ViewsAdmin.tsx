@@ -5,6 +5,8 @@ import ROUTES from "../../constants/routes";
 import { Payment } from "../../services/PagosService";
 import Button from "../atom/Button";
 import { FacturamaService } from "../../services/FacturamaService";
+import { AvionCuponStrategy } from "../../services/cupon/strategies/AvionCuponStrategy";
+
 import { fetchFullDetalles } from "../../services/detalles";
 import {
   downloadXMLBase64,
@@ -37,10 +39,11 @@ import { BookingCard } from "../molecule/Cards/CardBooking";
 import { PaymentCard } from "../molecule/Cards/CardPayment";
 import { InvoiceCard } from "../molecule/Cards/CardInvoice";
 import { Booking } from "../../services/BookingService";
+
 import {
   CuponDispatcher,
   ReservaType,
-} from "../../services/cupon/CuponDispacher";
+} from "../../services/cupon/CuponDispatcher";
 
 const typesModal: ModalType[] = ["payment", "invoice", "booking"];
 
@@ -359,24 +362,16 @@ const ExpandedContentRenderer = ({
     />
   );
 };
-const cuponDispatcher = new CuponDispatcher();
 
-const obtenerTipoCupon = (tipo?: string): ReservaType => {
-  switch (tipo) {
-    case "hotel":
-      return "hotel";
-
-    case "car_rental":
-      return "auto";
-
-    case "flyght":
-    case "flight":
-      return "avion";
-
-    default:
-      throw new Error(`Tipo de reserva no reconocido: ${tipo}`);
+const handleDescargarButton = async (id: string, tipo: ReservaType) => {
+  try {
+    await CuponDispatcher(tipo, id);
+  } catch (error: any) {
+    console.error("Error descargando cupón:", error);
+    alert(`Error: ${error.message}`);
   }
 };
+
 export const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();
@@ -444,21 +439,13 @@ export const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
             <Button
               size="sm"
               onClick={async () => {
-                try {
-                  const tipoCupon = obtenerTipoCupon(item.type);
-                  const reservaId = item.id_relacion || item.id_booking;
-
-                  if (!reservaId) {
-                    throw new Error("La reserva no tiene un identificador");
-                  }
-
-                  await cuponDispatcher.generar(tipoCupon, reservaId);
-                } catch (error) {
-                  console.error("Error al generar el cupón:", error);
-                }
+                await handleDescargarButton(
+                  item.id_relacion,
+                  item.type as ReservaType,
+                );
               }}
             >
-              DESCARGAR CUPÓN
+              DESCARGAR
             </Button>
           </div>
         ),
