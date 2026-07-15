@@ -51,12 +51,12 @@ async function generatePdf(cuponData: any): Promise<void> {
   const solicitud: SolicitudVuelo = {
     type: "vuelo",
     id_viaje_aereo: cuponData.id_viaje_aereo,
-    origen: cuponData.ciudad_origen,
-    destino: cuponData.ciudad_destino,
-    viajero: cuponData.nombre_viajero || "No disponible",
+    origen: cuponData.origen,
+    destino: cuponData.destino,
+    viajero: cuponData.viajero || "no disponible",
     codigo_confirmacion: cuponData.codigo_confirmacion,
     vuelos: cuponData.vuelos || [],
-    tipo: cuponData.trip_type || "REDONDO",
+    tipo: cuponData.tipo || "REDONDO",
   };
 
   const drawTextBox = (
@@ -282,22 +282,6 @@ async function generatePdf(cuponData: any): Promise<void> {
     });
 
     y += 3;
-    doc.setTextColor(0, 0, 0);
-    doc.text(
-      "Si tiene alguna duda sobre esta información, póngase en contacto con nosotros",
-      pageWidth / 2,
-      y,
-      { align: "center" },
-    );
-
-    y += 3;
-    doc.setTextColor(0, 0, 255);
-    doc.textWithLink("WA 55 31 49 10 62", pageWidth / 2, y, {
-      url: "https://wa.me/525531491062",
-      align: "center",
-    });
-
-    y += 3;
     doc.textWithLink("reservaciones@noktos.com", pageWidth / 2, y, {
       url: "mailto:reservaciones@noktos.com",
       align: "center",
@@ -373,7 +357,6 @@ async function generatePdf(cuponData: any): Promise<void> {
   const condicionesVuelo = [
     "Es necesario presentarse por lo menos 2 horas antes de la salida del vuelo",
     "Presenta tus documentos: identificación oficial vigente o pasaporte",
-    "Cualquier cambio o cancelación debe solicitarse con 72 horas de anticipación",
   ];
 
   y = drawList(
@@ -387,7 +370,7 @@ async function generatePdf(cuponData: any): Promise<void> {
 
   // ✅ Retornar Buffer en lugar de descargar
   doc;
-  const filename = `${cuponData.codigo_confirmacion}-${cuponData.nombre_viajero}`;
+  const filename = `${cuponData.codigo_confirmacion}-${cuponData.viajero}`;
   try {
     if (typeof doc?.output === "function") {
       const blob: Blob = doc.output("blob");

@@ -440,7 +440,7 @@ export const BookingsView = ({ bookings }: { bookings: Booking[] }) => {
               size="sm"
               onClick={async () => {
                 await handleDescargarButton(
-                  item.id_relacion,
+                  item.id_solicitud,
                   item.type as ReservaType,
                 );
               }}
