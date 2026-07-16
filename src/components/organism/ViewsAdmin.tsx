@@ -5,7 +5,6 @@ import ROUTES from "../../constants/routes";
 import { Payment } from "../../services/PagosService";
 import Button from "../atom/Button";
 import { FacturamaService } from "../../services/FacturamaService";
-import { AvionCuponStrategy } from "../../services/cupon/strategies/AvionCuponStrategy";
 
 import { fetchFullDetalles } from "../../services/detalles";
 import {

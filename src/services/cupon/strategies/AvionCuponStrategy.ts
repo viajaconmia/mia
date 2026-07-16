@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { ICuponStrategy } from "../ICuponStrategy";
 import { formatDate, formatNumberWithCommas } from "../../../utils/format";
 import {
@@ -15,7 +16,6 @@ const formatTime = (time: string): string => {
 
 export const AvionCuponStrategy: ICuponStrategy = {
   async generarCupon(id_viaje_aereo: string): Promise<void> {
-    // usar api service de angel
     const bookingService = BookingService.getInstance();
     const result = await bookingService.cupon.vuelo(id_viaje_aereo);
 
@@ -48,12 +48,17 @@ async function generatePdf(cuponData: any): Promise<void> {
     SPACING: { LINE: 6, SECTION: 10 },
   };
 
+  const condicionesVuelo: string[] = [
+    "Es necesario presentarse por lo menos 2 horas antes de la salida del vuelo",
+    "Presenta tus documentos: identificación oficial vigente o pasaporte",
+  ];
+
   const solicitud: SolicitudVuelo = {
     type: "vuelo",
     id_viaje_aereo: cuponData.id_viaje_aereo,
     origen: cuponData.origen,
     destino: cuponData.destino,
-    viajero: cuponData.viajero || "no disponible",
+    viajero: cuponData.viajero,
     codigo_confirmacion: cuponData.codigo_confirmacion,
     vuelos: cuponData.vuelos || [],
     tipo: cuponData.tipo || "REDONDO",
@@ -68,7 +73,6 @@ async function generatePdf(cuponData: any): Promise<void> {
       text: string;
       padding?: number;
       bgColor?: [number, number, number];
-      borderColor?: [number, number, number];
       textColor?: [number, number, number];
       fontSize?: number;
       lineHeight?: number;
@@ -104,17 +108,6 @@ async function generatePdf(cuponData: any): Promise<void> {
   const drawHeader = (doc: jsPDF, pageW: number) => {
     doc.setFillColor(...STYLES.COLORS.RECT);
     doc.rect(STYLES.MARGINS.LEFT, 0, pageW - STYLES.MARGINS.LEFT * 2, 8, "F");
-  };
-
-  const drawImage = (
-    doc: jsPDF,
-    image: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ) => {
-    doc.addImage(image, "PNG", x, y, width, height);
   };
 
   const drawEmitidoPor = (doc: jsPDF, y: number) => {
@@ -210,7 +203,7 @@ async function generatePdf(cuponData: any): Promise<void> {
       x: x + boxW / 2,
       y,
       width: boxW / 2,
-      text: `$${formatNumberWithCommas(0)}`,
+      text: `$${formatNumberWithCommas(cuponData.total ?? 0)}`,
       bgColor: STYLES.COLORS.WHITE,
     });
     drawTextBox(doc, {
@@ -253,6 +246,8 @@ async function generatePdf(cuponData: any): Promise<void> {
       ],
     ];
 
+    const columnCount = head[0].length;
+
     const body: any[] = vuelos.map((v) => [
       v.airline,
       `${v.departure_airport} - ${v.departure_city}`,
@@ -266,35 +261,46 @@ async function generatePdf(cuponData: any): Promise<void> {
       v.flight_number,
     ]);
 
-    // ⚠️ NOTA: autoTable está comentado. Por ahora retorna y como está.
-    // TODO: Instalar jspdf-autotable para tablas formateadas
-    return y + 40;
-  };
+    if (vuelos.some((i) => i.eq_documentado || i.eq_mano || i.eq_personal)) {
+      const eq = vuelos.filter(
+        (i) => i.eq_documentado || i.eq_mano || i.eq_personal,
+      )[0];
+      body.push([
+        {
+          content: `${[eq.eq_personal ? `articulo personal: ${eq.eq_personal}` : null, eq.eq_mano ? `equipaje de mano: ${eq.eq_mano}` : null, eq.eq_documentado ? `equipaje documentado: ${eq.eq_documentado}` : null].filter((i) => Boolean(i)).join(" + ")}`,
+          colSpan: columnCount,
+          styles: {
+            halign: "center",
+            fontSize: 8,
+            cellPadding: 4,
+          },
+        },
+      ]);
+    }
 
-  const drawContacto = (doc: jsPDF, y: number, id: string) => {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    doc.setFontSize(6);
-    doc.setTextColor(0, 0, 255);
-
-    doc.textWithLink("Ver reserva en linea", pageWidth / 2, y, {
-      url: `https://www.viajaconmia.com/bookings/${btoa(id)}`,
-      align: "center",
+    autoTable(doc, {
+      startY: y,
+      head,
+      body,
+      theme: "grid",
+      styles: {
+        fontSize: 7,
+      },
+      headStyles: {
+        fillColor: STYLES.COLORS.TABLE_HEADER,
+        halign: "center",
+        fontSize: 7,
+      },
+      bodyStyles: {
+        textColor: STYLES.COLORS.TEXT_NORMAL,
+      },
+      margin: {
+        left: STYLES.MARGINS.LEFT,
+        right: STYLES.MARGINS.RIGHT,
+      },
     });
 
-    y += 3;
-    doc.textWithLink("reservaciones@noktos.com", pageWidth / 2, y, {
-      url: "mailto:reservaciones@noktos.com",
-      align: "center",
-    });
-
-    y += 3;
-    doc.textWithLink("support@noktos.zohodesk.com", pageWidth / 2, y, {
-      url: "mailto:support@noktos.zohodesk.com",
-      align: "center",
-    });
-
-    doc.setTextColor(0, 0, 0);
-    return y + 5;
+    return (doc as any).lastAutoTable.finalY;
   };
 
   const drawList = (
@@ -330,6 +336,31 @@ async function generatePdf(cuponData: any): Promise<void> {
     return y + 2;
   };
 
+  const drawContacto = (doc: jsPDF, y: number, id: string) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(6);
+    doc.setTextColor(0, 0, 255);
+
+    doc.textWithLink("Ver reserva en linea", pageWidth / 2, y, {
+      url: `https://www.viajaconmia.com/bookings/${btoa(id)}`,
+      align: "center",
+    });
+
+    doc.setTextColor(0, 0, 0);
+    return y + 5;
+  };
+
+  const drawImage = (
+    doc: jsPDF,
+    image: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => {
+    doc.addImage(image, "PNG", x, y, width, height);
+  };
+
   // Generar PDF
   const doc = new jsPDF("p", "mm", "a4");
   const pageW = doc.internal.pageSize.getWidth();
@@ -337,14 +368,7 @@ async function generatePdf(cuponData: any): Promise<void> {
 
   drawHeader(doc, pageW);
   drawEmitidoPor(doc, y);
-  drawImage(
-    doc,
-    "https://luiscastaneda-tos.github.io/log/files/312974093_187206343834287_6123587238863977470_n.jpg",
-    pageW / 2 - 5,
-    y,
-    20,
-    20,
-  );
+
   y = drawBoletoInfo(doc, solicitud, pageW, y - 4);
   y += 2;
   y = drawTablaVuelos(doc, solicitud.vuelos, y, solicitud.viajero);
@@ -353,11 +377,6 @@ async function generatePdf(cuponData: any): Promise<void> {
 
   doc.text("Politicas:", STYLES.MARGINS.LEFT, y);
   y += 3;
-
-  const condicionesVuelo = [
-    "Es necesario presentarse por lo menos 2 horas antes de la salida del vuelo",
-    "Presenta tus documentos: identificación oficial vigente o pasaporte",
-  ];
 
   y = drawList(
     doc,
@@ -368,9 +387,7 @@ async function generatePdf(cuponData: any): Promise<void> {
     { fontSize: STYLES.FONTS.XS, lineHeight: 4 },
   );
 
-  // ✅ Retornar Buffer en lugar de descargar
-  doc;
-  const filename = `${cuponData.codigo_confirmacion}-${cuponData.viajero}`;
+  const filename = `cupon-vuelo-${solicitud.codigo_confirmacion}.pdf`;
   try {
     if (typeof doc?.output === "function") {
       const blob: Blob = doc.output("blob");
@@ -385,9 +402,8 @@ async function generatePdf(cuponData: any): Promise<void> {
       return;
     }
   } catch (e) {
-    // fallback abajo
+    // fallback
   }
 
-  // fallback clásico
   doc?.save?.(filename);
 }
