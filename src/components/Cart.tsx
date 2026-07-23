@@ -53,19 +53,22 @@ import { SolicitudService } from "../services/SolicitudService";
 const FIFA_WC_2026_START = new Date("2026-06-01");
 const FIFA_WC_2026_END = new Date("2026-07-31");
 
-function isBlocked(item: CartItem): boolean {
-  const overlaps = (start: string, end: string) =>
-    new Date(start) <= FIFA_WC_2026_END && new Date(end) >= FIFA_WC_2026_START;
+// function isBlocked(item: CartItem): boolean {
+//   const overlaps = (start: string, end: string) =>
+//     new Date(start) <= FIFA_WC_2026_END && new Date(end) >= FIFA_WC_2026_START;
 
-  if (item.type === "hotel")
-    return overlaps(item.details.check_in, item.details.check_out);
-  if (item.type === "car_rental")
-    return overlaps(item.details.pickup_date, item.details.dropoff_date);
-  if (item.type === "flight")
-    return overlaps(
-      item.details.departure_date,
-      item.details.return_date ?? item.details.departure_date,
-    );
+//   if (item.type === "hotel")
+//     return overlaps(item.details.check_in, item.details.check_out);
+//   if (item.type === "car_rental")
+//     return overlaps(item.details.pickup_date, item.details.dropoff_date);
+//   if (item.type === "flight")
+//     return overlaps(
+//       item.details.departure_date,
+//       item.details.return_date ?? item.details.departure_date,
+//     );
+//   return false;
+// }
+function isBlocked(item: CartItem): boolean {
   return false;
 }
 
