@@ -50,8 +50,8 @@ import { PagosService } from "../services/PagosService";
 import { ProtectedComponent } from "../middleware/ProtectedComponent";
 import { SolicitudService } from "../services/SolicitudService";
 
-const FIFA_WC_2026_START = new Date("2026-06-01");
-const FIFA_WC_2026_END = new Date("2026-07-31");
+// const FIFA_WC_2026_START = new Date("2026-06-01");
+// const FIFA_WC_2026_END = new Date("2026-07-31");
 
 // function isBlocked(item: CartItem): boolean {
 //   const overlaps = (start: string, end: string) =>
