@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Loader2,
 } from "lucide-react";
 import { DataInvoice, DescargaFactura, Root } from "../../types/billing";
 import { URL, API_KEY, HEADERS_API } from "../../constants/apiConstant";
@@ -321,6 +322,7 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pagoData2, setPagoData2] = useState<Pago | null>(null);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
 
   const [selectedPaymentForm, setSelectedPaymentForm] = useState("03");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("PUE");
@@ -592,6 +594,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
   };
 
   const handleGenerateInvoice = async () => {
+    if (isGeneratingInvoice) return;
+
     if (customAmount > saldoMonto) {
       showNotification(
         "error",
@@ -604,6 +608,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     }
 
     if (!validateInvoiceData()) return;
+
+    setIsGeneratingInvoice(true);
 
     // Fecha actual (zona MX). Ya restabas 6 horas: lo mantengo.
     const now = new Date();
@@ -938,6 +944,8 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     } catch (error: any) {
       console.error("Error:", error);
       alert(error?.message || "Ocurrió un error al generar la(s) factura(s)");
+    } finally {
+      setIsGeneratingInvoice(false);
     }
   };
 
@@ -1161,14 +1169,26 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </>
                 ) : (
                   <button
-                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={handleGenerateInvoice}
+                    disabled={isGeneratingInvoice}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                      Confirmar y Generar
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
+                    {isGeneratingInvoice ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm font-medium">
+                          Generando...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Confirmar y Generar
+                        </span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>

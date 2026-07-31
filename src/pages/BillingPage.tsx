@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   AlertCircle,
   Divide,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/format";
 import { DataInvoice, DescargaFactura, ProductInvoice } from "../types/billing";
@@ -150,6 +151,7 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
   const [isInvoiceGenerated, setIsInvoiceGenerated] = useState<Root | null>(
     null
   );
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const { showNotification } = useNotification();
   const { crearCfdi, descargarFactura, mandarCorreo } = useApi();
   const [cfdi, setCfdi] = useState({
@@ -396,7 +398,9 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
   };
 
   const handleGenerateInvoice = async () => {
+    if (isGeneratingInvoice) return;
     if (validateInvoiceData()) {
+      setIsGeneratingInvoice(true);
       const invoiceData = {
         ...cfdi,
         Receiver: {
@@ -461,6 +465,8 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
         setIsInvoiceGenerated(response.data);
       } catch (error: any) {
         showNotification("error", error.message);
+      } finally {
+        setIsGeneratingInvoice(false);
       }
     }
   };
@@ -681,14 +687,26 @@ const BillingPage: React.FC<BillingPageProps> = ({ onBack, invoiceData }) => {
                   </>
                 ) : (
                   <button
-                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={handleGenerateInvoice}
+                    disabled={isGeneratingInvoice}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                      Confirmar y Generar
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
+                    {isGeneratingInvoice ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm font-medium">
+                          Generando...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Confirmar y Generar
+                        </span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>
