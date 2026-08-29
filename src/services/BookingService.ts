@@ -10,6 +10,7 @@ export class BookingService extends ApiService {
       RESERVAS: "/reservasClient/get_reservasClient_by_id_agente",
       SERVICES: "/reservas/services/cliente",
       CUPON: "/reservas/v2/cupon",
+      CUPON_VUELO: "/reservas/cupon/vuelo",
     },
   };
   private constructor() {
@@ -37,10 +38,36 @@ export class BookingService extends ApiService {
     });
   }
 
+  cupon = {
+    vuelo: async (id_viaje_aereo: string) =>
+      this.get({
+        path: this.formatPath("/reservas/cupon/vuelo"),
+        params: { id_viaje_aereo },
+      }),
+
+    auto: async (id_renta_autos: string) =>
+      this.get({
+        path: this.formatPath("/reservas/cupon/auto"),
+        params: { id_renta_autos },
+      }),
+
+    hotel: async (id_solicitud: string) =>
+      this.get({
+        path: this.formatPath("/reservas/cupon/hotel"),
+        params: { id_solicitud },
+      }),
+  };
+
   getCupon = async (id: string) =>
     this.get({
       path: this.formatPath(this.ENDPOINTS.GET.CUPON),
       params: { id },
+    });
+
+  getCuponVuelo = async (id_viaje_aereo: string) =>
+    this.get({
+      path: this.formatPath("/reservas/cupon/vuelo"),
+      params: { id_viaje_aereo },
     });
 
   async getByService(body: any): Promise<ApiResponse<Booking[]>> {
@@ -233,4 +260,9 @@ export type SolicitudRentaCarros = {
 
   seguro_incluido: string | null;
   additional_driver: number; // 0 | 1
+  nombre_sucursal_recoger?: string | null;
+  direccion_recoger?: string | null;
+
+  nombre_sucursal_dejar?: string | null;
+  direccion_dejar?: string | null;
 };
