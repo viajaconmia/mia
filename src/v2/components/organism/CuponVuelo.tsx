@@ -1,4 +1,10 @@
-import { AlertCircle, Armchair, BaggageClaim, User } from "lucide-react";
+import {
+  AlertCircle,
+  Armchair,
+  BaggageClaim,
+  MapPin,
+  User,
+} from "lucide-react";
 import { SolicitudVuelo, VueloDetalle } from "../../../services/BookingService";
 import { formatLargeDate } from "../../../utils/format";
 import { Lang, t, Translations } from "../../../constants/translations";
@@ -19,6 +25,14 @@ function FlightDetail({ vuelo, tr, lang }: FlightDetailProps) {
   const extractAirportCode = (airportString: string) => {
     const match = airportString.match(/\(([A-Z]{3})\//);
     return match ? match[1] : "";
+  };
+
+  const formatSeatLocation = (seatLocation?: string | null) => {
+    const key = (seatLocation || "").trim().toLowerCase();
+    if (key === "pasillo") return tr.aisle;
+    if (key === "ventana") return tr.window;
+    if (key === "en medio" || key === "medio") return tr.middle;
+    return seatLocation || "";
   };
 
   return (
@@ -109,6 +123,17 @@ function FlightDetail({ vuelo, tr, lang }: FlightDetailProps) {
               </span>
             </span>
           </div>
+          {vuelo.seat_location && (
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-slate-500" />
+              <span className="text-sm text-slate-600">
+                {tr.seatLocation}:{" "}
+                <span className="font-semibold text-slate-800">
+                  {formatSeatLocation(vuelo.seat_location)}
+                </span>
+              </span>
+            </div>
+          )}
         </div>
 
         {(vuelo.eq_mano || vuelo.eq_personal || vuelo.eq_documentado) && (

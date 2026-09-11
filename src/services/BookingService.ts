@@ -152,6 +152,7 @@ export type VueloDetalle = {
 
   parada: number;
   seat_number: string;
+  seat_location: string | null;
   fly_type: "ida" | "ida escala" | "vuelta" | "vuelta escala" | string;
 
   comentarios: string | null;
