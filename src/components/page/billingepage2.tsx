@@ -458,6 +458,14 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
     }));
   }, [pagoData2]);
 
+  const handlePaymentFormChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const forma = e.target.value;
+    setSelectedPaymentForm(forma);
+    setCfdi((prev) => ({ ...prev, PaymentForm: forma }));
+  };
+
   const updateInvoiceAmounts = (totalAmount: number) => {
     // Convertir el totalAmount a número por si acaso
     const total = Number(totalAmount);
@@ -1103,24 +1111,24 @@ export const BillingPage2: React.FC<BillingPageProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 mb-4">
                   <label className="block text-xs font-medium text-gray-700">
                     Forma de Pago
                   </label>
-                  <div className="block w-full text-sm rounded-md border-gray-300 shadow-sm bg-gray-100 p-2">
-                    {selectedPaymentForm ? (
-                      // Encuentra la opción correspondiente al valor seleccionado
-                      <span className="text-gray-900">
-                        {
-                          paymentFormOptions.find(
-                            (option) => option.value === selectedPaymentForm
-                          )?.label
-                        }
-                      </span>
-                    ) : (
-                      <span className="text-gray-500">No disponible</span>
-                    )}
-                  </div>
+                  <select
+                    value={selectedPaymentForm}
+                    onChange={handlePaymentFormChange}
+                    className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    {paymentFormOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    Selecciona con qué se realizó el pago
+                  </p>
                 </div>
 
                 {/* Payment Method */}
