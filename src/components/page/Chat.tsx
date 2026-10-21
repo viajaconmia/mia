@@ -8,6 +8,7 @@ import {
   Send,
   Plus,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import { ReservationPanel } from "../ReservationPanel";
 import { Loader } from "../Loader";
@@ -42,15 +43,26 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ activeChat, onToggleChat }) => 
         )}
       </Button>
       {activeChat && (
-        <NavigationLink
-          className="text-blue-600"
-          href={ROUTES.HOTELS.SEARCH}
-          variant="secondary"
-          size="md"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Crear Reserva Manualmente</span>
-        </NavigationLink>
+        <div className="flex flex-wrap items-center gap-2">
+          <NavigationLink
+            className="text-blue-600"
+            href={ROUTES.HOTELS.SEARCH}
+            variant="secondary"
+            size="md"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Crear Reserva Manualmente</span>
+          </NavigationLink>
+          <NavigationLink
+            className="text-blue-700"
+            href={ROUTES.MIA.STUDIO}
+            variant="secondary"
+            size="md"
+          >
+            <Sparkles className="w-5 h-5" />
+            <span>Probar MIA AI Studio (Multi-Agente)</span>
+          </NavigationLink>
+        </div>
       )}
     </div>
   );

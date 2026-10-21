@@ -17,6 +17,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 import Loader from "./components/atom/Loader";
 import { Impersonado } from "./components/page/Impersonado";
 import Chat from "./components/page/Chat";
+import MiaAiStudio from "./components/page/MiaAiStudio";
 import { BillingPage2 } from "./components/page/billingepage2";
 import { PagoExitoso } from "./pages/PagoExitoso";
 import { PagoCancelado } from "./pages/PagoCancelado";
@@ -28,6 +29,7 @@ const App = () => {
       <NavigationBar />
       <Switch>
         <RouteSecure component={Chat} path={ROUTES.MIA.HOME} />
+        <RouteSecure component={MiaAiStudio} path={ROUTES.MIA.STUDIO} />
         <RouteSecure component={Impersonado} path={ROUTES.IMPERSONADO} />
         <RouteSecure component={Reserva} path={ROUTES.BOOKINGS.ID} />
         <RouteSecure component={FAQPage} path={ROUTES.FAQ} />

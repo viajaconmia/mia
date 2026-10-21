@@ -2,6 +2,7 @@ const ROUTES = {
   HOME: "/",
   MIA: {
     HOME: "/mia",
+    STUDIO: "/mia-ai",
   },
   LOGIN: "/login",
   AUTH: {
