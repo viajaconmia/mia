@@ -97,11 +97,11 @@ export const QUICK_STARTERS: Array<{
   },
 ];
 
-const INITIAL_SUGGESTED_ACTIONS = [
-  "Buscar vuelos de CDMX a Cancún mañana",
-  "Ver autobuses de Monterrey a Saltillo",
-  "Rentar un auto en Guadalajara por 3 días",
-];
+// const INITIAL_SUGGESTED_ACTIONS = [
+//   "Buscar vuelos de CDMX a Cancún mañana",
+//   "Ver autobuses de Monterrey a Saltillo",
+//   "Rentar un auto en Guadalajara por 3 días",
+// ];
 
 const INITIAL_QUOTA: SessionQuotaState = {
   messagesUsed: 0,
@@ -151,9 +151,7 @@ export function useMiaAiStudio() {
   >([]);
   const [lastIngestedDoc, setLastIngestedDoc] =
     useState<IngestDocumentResponse | null>(null);
-  const [suggestedActions, setSuggestedActions] = useState<string[]>(
-    INITIAL_SUGGESTED_ACTIONS
-  );
+  const [suggestedActions, setSuggestedActions] = useState<string[]>([]);
 
   const [selectedOptions, setSelectedOptions] = useState<
     SelectedItineraryItem[]
@@ -175,7 +173,7 @@ export function useMiaAiStudio() {
     setActivePayload(null);
     setActiveSources([]);
     setActiveWebSources([]);
-    setSuggestedActions(INITIAL_SUGGESTED_ACTIONS);
+    setSuggestedActions([]);
     setQuota(INITIAL_QUOTA);
   }, []);
 

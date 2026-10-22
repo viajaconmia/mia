@@ -1,7 +1,9 @@
 import React, { useRef, useEffect } from "react";
 import {
   ArrowLeft,
+  ArrowUp,
   Paperclip,
+  Plus,
   RefreshCw,
   Send,
   ShieldAlert,
@@ -84,7 +86,8 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
         visibleOnMobile ? "flex" : "hidden"
       } md:flex w-full md:w-[380px] lg:w-[420px] shrink-0 border-r border-slate-200 bg-slate-50 flex-col h-full`}
     >
-      {/* Header del Chat */}
+      {/* === SECCIÓN SUPERIOR COMENTADA: Header y Pruebas Rápidas === */}
+      {/*
       <div className="p-3.5 bg-gradient-to-r from-blue-900 via-blue-800 to-sky-800 text-white shadow-sm space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -115,7 +118,6 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
           </button>
         </div>
 
-        {/* Selector Strategy Provider (Gemini vs OpenAI) & Cuota */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 text-xs">
           <ProviderStrategySelector
             provider={provider}
@@ -125,7 +127,6 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
           <QuotaIndicator quota={quota} />
         </div>
 
-        {/* Enlace para volver al Chat Clásico */}
         <div className="pt-0.5">
           <NavigationLink
             href={ROUTES.MIA.HOME}
@@ -139,7 +140,6 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
         </div>
       </div>
 
-      {/* Chips de inicio rápido 1-click */}
       <div className="px-3 py-2 bg-white border-b border-slate-200">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
           Pruebas rápidas multi-transporte (1 clic):
@@ -156,6 +156,7 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
           ))}
         </div>
       </div>
+      */}
 
       {/* Banner de reintento si errorState?.retryable */}
       {errorState?.retryable && errorState.lastPrompt && (
@@ -181,6 +182,7 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
         ref={chatEndRef}
         className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50"
       >
+        {/* Mensaje de bienvenida inicial comentado para mantener interfaz minimalista
         {messages.length === 0 && (
           <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-sm text-slate-600 text-xs space-y-2">
             <p className="font-semibold text-blue-950 text-sm">
@@ -200,6 +202,7 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
             </p>
           </div>
         )}
+        */}
 
         {messages.map((msg) => (
           <CompactChatMessageItem
@@ -224,7 +227,7 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
         )}
       </div>
 
-      {/* Acciones sugeridas clicables */}
+      {/* Acciones sugeridas clicables comentadas para interfaz minimalista
       {suggestedActions.length > 0 && (
         <div className="px-3 py-2 bg-slate-100 border-t border-slate-200">
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -240,9 +243,10 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
           </div>
         </div>
       )}
+      */}
 
-      {/* Barra Inferior de Entrada (Estilo Azul Chat.tsx) */}
-      <div className="p-3 bg-blue-700 border-t border-white/10">
+      {/* Barra Inferior de Entrada estilo Notion AI */}
+      <div className="p-3 bg-white border-t border-slate-200/80">
         <input
           ref={fileInputRef}
           type="file"
@@ -250,43 +254,50 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
           className="hidden"
           onChange={handleFileChange}
         />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={isUploading || isLoading}
-            onClick={() => fileInputRef.current?.click()}
-            title="Adjuntar y tokenizar PDF o CSV (máx 4 MB)"
-            className="p-2.5 rounded-lg bg-blue-800 hover:bg-blue-900 text-blue-100 border border-blue-500/40 transition disabled:opacity-50 shrink-0"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
 
-          <input
-            type="text"
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs focus-within:ring-0 focus-within:outline-none transition">
+          <textarea
+            rows={2}
             value={inputMessage}
             onChange={(e) => onChangeInputMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                onSendMessage(inputMessage);
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (inputMessage.trim() && !isLoading && !isUploading) {
+                  onSendMessage(inputMessage);
+                }
               }
             }}
-            placeholder="Escribe ruta o pregunta sobre tu PDF/CSV..."
-            className="flex-1 rounded-lg bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300"
+            placeholder="Pregúntale a MIA..."
+            className="w-full bg-transparent text-[13px] text-slate-800 placeholder:text-slate-400 border-0 border-transparent outline-none ring-0 focus:ring-0 focus:outline-none focus:border-transparent focus-visible:outline-none focus-visible:ring-0 resize-none px-1 shadow-none focus:shadow-none"
           />
 
-          <button
-            type="button"
-            disabled={isLoading || isUploading || !inputMessage.trim()}
-            onClick={() => onSendMessage(inputMessage)}
-            className="px-3.5 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-50 shrink-0"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Enviar</span>
-          </button>
+          <div className="flex items-center justify-between pt-1 mt-1">
+            <button
+              type="button"
+              disabled={isUploading || isLoading}
+              onClick={() => fileInputRef.current?.click()}
+              title="Adjuntar PDF o CSV (máx 4 MB)"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition disabled:opacity-40"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              disabled={isLoading || isUploading || !inputMessage.trim()}
+              onClick={() => onSendMessage(inputMessage)}
+              title="Enviar mensaje"
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition shrink-0 ${
+                inputMessage.trim() && !isLoading && !isUploading
+                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
+              }`}
+            >
+              <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
-        <p className="text-[10px] text-blue-100/80 text-center mt-1.5">
-          Soporta PDF y CSV (TokenTextSplitter) • Guardrails y Cuota Activos
-        </p>
       </div>
     </aside>
   );
