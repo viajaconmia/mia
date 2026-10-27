@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useUser } from "../context/userContext";
 import {
   AgentExecutionResult,
@@ -8,6 +8,7 @@ import {
   IngestDocumentResponse,
   LLMProviderType,
   MiaAiApiError,
+  QuoteDraft,
   SessionQuotaState,
   TransportOptionItem,
   TransportServiceType,
@@ -15,6 +16,22 @@ import {
   UIPayload,
   miaAiService,
 } from "../services/miaAiService";
+import { describeSubmitError } from "../utils/quoteSubmitError";
+import { CotizacionIaService } from "../services/CotizacionIaService";
+import {
+  buildQuoteSubmission,
+  isDraftComplete,
+  resolveQuoteMessage,
+  validateQuoteFiles,
+  withRecomputedMissing,
+} from "../utils/quoteDraft";
+
+export type QuoteSubmitState =
+  | { status: "idle" }
+  | { status: "submitting" }
+  | { status: "success"; folio: string }
+  // uncertain: el POST no recibió respuesta, no sabemos si bacl guardó la cotización.
+  | { status: "error"; message: string; uncertain?: boolean };
 
 export interface StudioChatMessage {
   id: string;
@@ -118,6 +135,63 @@ const createSessionId = (): string => {
   return `mia-session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 };
 
+// El sessionId se guarda por usuario para retomar la conversación al recargar
+// sin que otra cuenta del mismo navegador vea el historial.
+const SESSION_STORAGE_PREFIX = "mia-ai:session:";
+
+const readStoredSessionId = (userId: string): string | null => {
+  try {
+    return localStorage.getItem(`${SESSION_STORAGE_PREFIX}${userId}`);
+  } catch {
+    return null;
+  }
+};
+
+const storeSessionId = (userId: string, sessionId: string): void => {
+  try {
+    localStorage.setItem(`${SESSION_STORAGE_PREFIX}${userId}`, sessionId);
+  } catch {
+    // Sin localStorage la sesión simplemente no sobrevive a la recarga.
+  }
+};
+
+// Marca de cotización ya enviada: evita reenviar el mismo borrador al recargar.
+const QUOTE_SENT_PREFIX = "mia-ai:quote-sent:";
+
+interface QuoteSentMarker {
+  folio: string;
+  messageCount: number;
+}
+
+const readQuoteSent = (sessionId: string): QuoteSentMarker | null => {
+  try {
+    const raw = localStorage.getItem(`${QUOTE_SENT_PREFIX}${sessionId}`);
+    return raw ? (JSON.parse(raw) as QuoteSentMarker) : null;
+  } catch {
+    return null;
+  }
+};
+
+const storeQuoteSent = (sessionId: string, marker: QuoteSentMarker): void => {
+  try {
+    localStorage.setItem(
+      `${QUOTE_SENT_PREFIX}${sessionId}`,
+      JSON.stringify(marker)
+    );
+  } catch {
+    // Sin localStorage el borrador podría mostrarse de nuevo tras recargar.
+  }
+};
+
+// Mensajes que sí existen en el servidor (los locales de aviso/archivo no se guardan allá).
+const countPersistedMessages = (msgs: StudioChatMessage[]): number =>
+  msgs.filter(
+    (m) =>
+      !m.id.startsWith("err-") &&
+      !m.id.startsWith("doc-") &&
+      !m.id.startsWith("sent-")
+  ).length;
+
 const formatNowTime = (): string =>
   new Date().toLocaleTimeString("es-MX", {
     hour: "2-digit",
@@ -128,7 +202,9 @@ export function useMiaAiStudio() {
   const { authState } = useUser();
   const userId = authState?.user?.id || "demo-user";
 
-  const [sessionId, setSessionId] = useState<string>(() => createSessionId());
+  const [sessionId, setSessionId] = useState<string>(
+    () => readStoredSessionId(userId) ?? createSessionId()
+  );
   const [provider, setProvider] = useState<LLMProviderType>("gemini");
   const [messages, setMessages] = useState<StudioChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState<string>("");
@@ -161,8 +237,19 @@ export function useMiaAiStudio() {
   );
   const [mobileView, setMobileView] = useState<"chat" | "canvas">("chat");
 
-  const handleResetSession = useCallback(() => {
-    setSessionId(createSessionId());
+  // Modo cotización: adjuntos del siguiente mensaje y borrador vigente.
+  const [quoteMode, setQuoteMode] = useState<boolean>(false);
+  const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
+  const [quoteFileErrors, setQuoteFileErrors] = useState<string[]>([]);
+  const [quoteDraft, setQuoteDraft] = useState<QuoteDraft | null>(null);
+  const [quoteSubmit, setQuoteSubmit] = useState<QuoteSubmitState>({
+    status: "idle",
+  });
+
+  // Sesión vigente: evita que una restauración lenta pise una conversación nueva.
+  const activeSessionRef = useRef<string>(sessionId);
+
+  const clearConversationState = useCallback(() => {
     setMessages([]);
     setInputMessage("");
     setPendingFile(null);
@@ -175,7 +262,101 @@ export function useMiaAiStudio() {
     setActiveWebSources([]);
     setSuggestedActions([]);
     setQuota(INITIAL_QUOTA);
+    setQuoteMode(false);
+    setQuoteFiles([]);
+    setQuoteFileErrors([]);
+    setQuoteDraft(null);
+    setQuoteSubmit({ status: "idle" });
   }, []);
+
+  const handleResetSession = useCallback(() => {
+    const newSessionId = createSessionId();
+    storeSessionId(userId, newSessionId);
+    activeSessionRef.current = newSessionId;
+    setSessionId(newSessionId);
+    clearConversationState();
+    setActiveViewTab("explorer");
+  }, [userId, clearConversationState]);
+
+  // Al cargar (o al cambiar de usuario) retoma la sesión guardada desde el backend.
+  useEffect(() => {
+    const stored = readStoredSessionId(userId);
+    if (!stored) {
+      const fresh = createSessionId();
+      storeSessionId(userId, fresh);
+      activeSessionRef.current = fresh;
+      setSessionId(fresh);
+      clearConversationState();
+      return;
+    }
+
+    activeSessionRef.current = stored;
+    setSessionId(stored);
+    let cancelled = false;
+
+    miaAiService
+      .getSession(stored, userId)
+      .then(({ session, messages: history }) => {
+        if (cancelled || activeSessionRef.current !== stored) return;
+        if (history.length === 0) return;
+
+        const restored: StudioChatMessage[] = history.map((m, idx) => ({
+          id: m.id ?? `restored-${idx}`,
+          role: m.role === "user" ? "user" : "assistant",
+          content: m.content,
+          timestamp: new Date(m.createdAt).toLocaleTimeString("es-MX", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          uiPayload: m.uiPayload,
+          metadata: m.metadata as ChatResponseMetadata | undefined,
+        }));
+
+        const lastPayload = [...history]
+          .reverse()
+          .find((m) => m.uiPayload && m.uiPayload.type !== "none")?.uiPayload;
+
+        // Si la conversación terminó con un borrador de cotización, se retoma.
+        const lastQuoteDraft = [...history]
+          .reverse()
+          .find((m) => m.uiPayload?.type === "quote_draft")?.uiPayload
+          ?.quoteDraft;
+        if (lastQuoteDraft) {
+          const sent = readQuoteSent(stored);
+          if (sent && history.length <= sent.messageCount) {
+            setQuoteDraft(null);
+            setQuoteMode(false);
+            setQuoteSubmit({ status: "success", folio: sent.folio });
+          } else {
+            setQuoteDraft(withRecomputedMissing(lastQuoteDraft));
+            setQuoteMode(true);
+            setQuoteSubmit({ status: "idle" });
+          }
+        }
+
+        setMessages(restored);
+        setTravelState(session.travelState ?? {});
+        setAttachedDocuments(session.attachedDocuments ?? []);
+        setActivePayload(lastPayload ?? null);
+        setQuota({
+          messagesUsed: session.messagesUsed,
+          maxMessages: session.maxMessages,
+          messagesRemaining: Math.max(
+            0,
+            session.maxMessages - session.messagesUsed
+          ),
+          filesUploaded: session.filesUploaded,
+          maxFiles: session.maxFiles,
+        });
+      })
+      .catch(() => {
+        // Si el backend no responde se queda el chat vacío con el mismo sessionId.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, clearConversationState]);
 
   const handleFileUpload = useCallback(
     async (file: File) => {
@@ -264,13 +445,19 @@ export function useMiaAiStudio() {
 
   const executeMessage = useCallback(
     async (promptText: string) => {
-      const trimmed = promptText.trim();
+      const outgoingFiles = quoteMode ? quoteFiles : [];
+      const trimmed = quoteMode
+        ? resolveQuoteMessage(promptText, outgoingFiles.length)
+        : promptText.trim();
       if (!trimmed || isLoading) return;
 
       const userMsg: StudioChatMessage = {
         id: `u-${Date.now()}`,
         role: "user",
-        content: trimmed,
+        content:
+          outgoingFiles.length > 0
+            ? `${trimmed}\n\n📎 ${outgoingFiles.map((f) => f.name).join(", ")}`
+            : trimmed,
         timestamp: formatNowTime(),
       };
 
@@ -285,6 +472,9 @@ export function useMiaAiStudio() {
           userId,
           message: trimmed,
           provider,
+          ...(quoteMode
+            ? { mode: "quote" as const, currentDraft: quoteDraft, files: outgoingFiles }
+            : {}),
         });
 
         const assistantMsg: StudioChatMessage = {
@@ -309,6 +499,15 @@ export function useMiaAiStudio() {
         if (result.uiPayload && result.uiPayload.type !== "none") {
           setActivePayload(result.uiPayload);
           setActiveViewTab("explorer");
+        }
+
+        if (result.uiPayload?.type === "quote_draft" && result.uiPayload.quoteDraft) {
+          setQuoteDraft(withRecomputedMissing(result.uiPayload.quoteDraft));
+          setQuoteSubmit({ status: "idle" });
+        }
+        if (outgoingFiles.length > 0) {
+          setQuoteFiles([]);
+          setQuoteFileErrors([]);
         }
 
         setActiveSources(result.metadata.sources || []);
@@ -353,7 +552,7 @@ export function useMiaAiStudio() {
         setIsLoading(false);
       }
     },
-    [isLoading, provider, sessionId, userId]
+    [isLoading, provider, sessionId, userId, quoteMode, quoteFiles, quoteDraft]
   );
 
   const handleSendMessage = useCallback(
@@ -442,6 +641,14 @@ export function useMiaAiStudio() {
       if (msg.uiPayload && msg.uiPayload.type !== "none") {
         setActivePayload(msg.uiPayload);
       }
+      if (
+        msg.uiPayload?.type === "quote_draft" &&
+        msg.uiPayload.quoteDraft &&
+        !quoteDraft &&
+        quoteSubmit.status !== "success"
+      ) {
+        setQuoteDraft(withRecomputedMissing(msg.uiPayload.quoteDraft));
+      }
       if (msg.metadata?.sources) {
         setActiveSources(msg.metadata.sources);
       }
@@ -451,8 +658,97 @@ export function useMiaAiStudio() {
       setActiveViewTab("explorer");
       setMobileView("canvas");
     },
-    []
+    [quoteDraft, quoteSubmit.status]
   );
+
+  const handleToggleQuoteMode = useCallback(() => {
+    if (quoteMode) {
+      setQuoteFiles([]);
+      setQuoteFileErrors([]);
+    }
+    setQuoteMode(!quoteMode);
+  }, [quoteMode]);
+
+  const handleAddQuoteFiles = useCallback(
+    (files: File[]) => {
+      const { accepted, errors } = validateQuoteFiles(quoteFiles, files);
+      if (accepted.length > 0) {
+        setQuoteFiles((prev) => [...prev, ...accepted]);
+      }
+      setQuoteFileErrors(errors);
+    },
+    [quoteFiles]
+  );
+
+  const handleRemoveQuoteFile = useCallback((index: number) => {
+    setQuoteFiles((prev) => prev.filter((_, i) => i !== index));
+    setQuoteFileErrors([]);
+  }, []);
+
+  const handleUpdateQuoteDraft = useCallback((draft: QuoteDraft) => {
+    setQuoteDraft(withRecomputedMissing(draft));
+    // El aviso de envío incierto se conserva hasta que haya un envío confirmado.
+    setQuoteSubmit((prev) =>
+      prev.status === "error" && !prev.uncertain ? { status: "idle" } : prev
+    );
+  }, []);
+
+  const handleConfirmQuote = useCallback(async () => {
+    if (!quoteDraft || quoteSubmit.status === "submitting") return;
+
+    if (!isDraftComplete(quoteDraft)) {
+      setQuoteSubmit({
+        status: "error",
+        message: "Completa los campos requeridos antes de enviar.",
+      });
+      return;
+    }
+
+    const user = authState?.user;
+    if (!user?.id) {
+      setQuoteSubmit({
+        status: "error",
+        message: "Inicia sesión para enviar la cotización a Operaciones.",
+      });
+      return;
+    }
+
+    setQuoteSubmit({ status: "submitting" });
+    try {
+      const body = buildQuoteSubmission(quoteDraft, {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        idAgente: user.info?.id_agente,
+      });
+      const res = await CotizacionIaService.getInstance().crear(body);
+      const folio = res.data?.id_cotizacion ?? "";
+
+      storeQuoteSent(sessionId, {
+        folio,
+        messageCount: countPersistedMessages(messages),
+      });
+      setQuoteSubmit({ status: "success", folio });
+      setQuoteDraft(null);
+      setQuoteFiles([]);
+      setQuoteFileErrors([]);
+      setQuoteMode(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `sent-${Date.now()}`,
+          role: "assistant",
+          content: `✅ **Cotización enviada a Operaciones.**${
+            folio ? `\n\nFolio: \`${folio}\`` : ""
+          }\n\nEl equipo se pondrá en contacto contigo con las opciones y precios.`,
+          timestamp: formatNowTime(),
+        },
+      ]);
+    } catch (err) {
+      const { message, uncertain } = describeSubmitError(err);
+      setQuoteSubmit({ status: "error", message, uncertain });
+    }
+  }, [authState?.user, messages, quoteDraft, quoteSubmit.status, sessionId]);
 
   return {
     sessionId,
@@ -489,5 +785,15 @@ export function useMiaAiStudio() {
     handleClearSelectedOptions,
     handleResetSession,
     handleInspectMessagePayload,
+    quoteMode,
+    quoteFiles,
+    quoteFileErrors,
+    quoteDraft,
+    quoteSubmit,
+    handleToggleQuoteMode,
+    handleAddQuoteFiles,
+    handleRemoveQuoteFile,
+    handleUpdateQuoteDraft,
+    handleConfirmQuote,
   };
 }

@@ -8,6 +8,7 @@ import {
   UserCheck,
   FileText,
   FileSpreadsheet,
+  ClipboardList,
   Sparkles,
 } from "lucide-react";
 import {
@@ -58,6 +59,11 @@ export const AGENT_LABELS: Record<
     name: "CsvAnalyst",
     color: "bg-teal-100 text-teal-800 border-teal-200",
     icon: FileSpreadsheet,
+  },
+  quote_agent: {
+    name: "QuoteAgent",
+    color: "bg-violet-100 text-violet-800 border-violet-200",
+    icon: ClipboardList,
   },
   general_assistant: {
     name: "GeneralAssistant",

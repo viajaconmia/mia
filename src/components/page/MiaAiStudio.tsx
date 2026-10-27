@@ -16,12 +16,8 @@ export const MiaAiStudio: React.FC = () => {
     isLoading,
     isUploading,
     errorState,
-    travelState,
-    attachedDocuments,
     quota,
     activePayload,
-    activeSources,
-    activeWebSources,
     lastIngestedDoc,
     suggestedActions,
     selectedOptions,
@@ -39,6 +35,16 @@ export const MiaAiStudio: React.FC = () => {
     handleClearSelectedOptions,
     handleResetSession,
     handleInspectMessagePayload,
+    quoteMode,
+    quoteFiles,
+    quoteFileErrors,
+    quoteDraft,
+    quoteSubmit,
+    handleToggleQuoteMode,
+    handleAddQuoteFiles,
+    handleRemoveQuoteFile,
+    handleUpdateQuoteDraft,
+    handleConfirmQuote,
   } = useMiaAiStudio();
 
   return (
@@ -94,6 +100,12 @@ export const MiaAiStudio: React.FC = () => {
         onRetry={handleRetry}
         onResetSession={handleResetSession}
         onInspectMessagePayload={handleInspectMessagePayload}
+        quoteMode={quoteMode}
+        quoteFiles={quoteFiles}
+        quoteFileErrors={quoteFileErrors}
+        onToggleQuoteMode={handleToggleQuoteMode}
+        onAddQuoteFiles={handleAddQuoteFiles}
+        onRemoveQuoteFile={handleRemoveQuoteFile}
       />
 
       {/* COLUMNA DERECHA: LIENZO INTERACTIVO GRANDE */}
@@ -103,8 +115,6 @@ export const MiaAiStudio: React.FC = () => {
         } md:flex flex-1 h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-white p-4 md:p-6 flex-col gap-5`}
       >
         <MiaStudioStatusBar
-          travelState={travelState}
-          attachedDocuments={attachedDocuments}
           activeViewTab={activeViewTab}
           onChangeViewTab={setActiveViewTab}
           selectedOptionsCount={selectedOptions.length}
@@ -113,12 +123,13 @@ export const MiaAiStudio: React.FC = () => {
         {activeViewTab === "explorer" ? (
           <MiaWorkspaceExplorer
             activePayload={activePayload}
-            activeSources={activeSources}
-            activeWebSources={activeWebSources}
             lastIngestedDoc={lastIngestedDoc}
             isOptionSelected={isOptionSelected}
             onToggleSelectOption={handleToggleSelectOption}
-            onQuickPrompt={handleQuickPrompt}
+            quoteDraft={quoteDraft}
+            quoteSubmit={quoteSubmit}
+            onUpdateQuoteDraft={handleUpdateQuoteDraft}
+            onConfirmQuote={handleConfirmQuote}
           />
         ) : (
           <MiaSelectedItineraryPanel

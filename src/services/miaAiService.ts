@@ -16,6 +16,7 @@ export type AgentSpecialtyType =
   | TransportServiceType
   | "pdf_specialist"
   | "csv_analyst"
+  | "quote_agent"
   | "general_assistant";
 
 export interface TravelState {
@@ -60,6 +61,7 @@ export interface TransportOptionItem {
   arrivalPoint?: string;
   estimatedDuration?: string;
   frequencyOrSchedule?: string;
+  departureTimes?: string[];
   serviceClass?: string;
   vehicleCategory?: string;
   highlights: string[];
@@ -71,7 +73,8 @@ export type UIPayloadType =
   | "transport_options"
   | "table"
   | "summary_cards"
-  | "extracted_fields";
+  | "extracted_fields"
+  | "quote_draft";
 
 export interface UIPayload {
   type: UIPayloadType;
@@ -93,6 +96,91 @@ export interface UIPayload {
     value: string | number;
     description?: string;
   }>;
+  quoteDraft?: QuoteDraft;
+}
+
+// ---- Cotizaciones (contrato compartido con mia_ai y bacl). Sin precios. ----
+export type QuoteServiceType = "flight" | "car_rental" | "hotel" | "bus";
+
+export interface QuoteItemBase {
+  id: string;
+  type: QuoteServiceType;
+  travelers?: number;
+  travelerNames?: string[];
+  notes?: string;
+}
+
+export interface FlightQuoteItem extends QuoteItemBase {
+  type: "flight";
+  tripType?: "oneway" | "roundtrip" | "multicity";
+  origin?: string;
+  destination?: string;
+  departureDate?: string;
+  returnDate?: string;
+  airline?: string;
+  cabin?: string;
+  flightNumber?: string;
+}
+
+export interface CarRentalQuoteItem extends QuoteItemBase {
+  type: "car_rental";
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  pickupDate?: string;
+  dropoffDate?: string;
+  pickupTime?: string;
+  dropoffTime?: string;
+  carCategory?: string;
+  withDriver?: boolean;
+}
+
+export interface HotelQuoteItem extends QuoteItemBase {
+  type: "hotel";
+  city?: string;
+  hotelName?: string;
+  checkIn?: string;
+  checkOut?: string;
+  rooms?: number;
+  roomType?: string;
+  guests?: number;
+}
+
+export interface BusQuoteItem extends QuoteItemBase {
+  type: "bus";
+  origin?: string;
+  destination?: string;
+  departureDate?: string;
+  returnDate?: string;
+  busLine?: string;
+  serviceClass?: string;
+}
+
+export type QuoteItem =
+  | FlightQuoteItem
+  | CarRentalQuoteItem
+  | HotelQuoteItem
+  | BusQuoteItem;
+
+export interface QuoteFileRef {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string | null;
+  uploadError?: string;
+}
+
+export interface QuoteMissingField {
+  itemId: string;
+  field: string;
+  label: string;
+}
+
+export interface QuoteDraft {
+  resumen: string;
+  items: QuoteItem[];
+  notes?: string;
+  files: QuoteFileRef[];
+  missingFields: QuoteMissingField[];
 }
 
 export interface DocumentSourceCitation {
@@ -210,7 +298,43 @@ export class MiaAiService extends MiaAiApiClient {
     message: string;
     provider?: LLMProviderType;
     file?: File;
+    mode?: "quote";
+    currentDraft?: QuoteDraft | null;
+    files?: File[];
   }): Promise<AgentExecutionResult> {
+    if (params.mode === "quote") {
+      const hasFiles = Boolean(params.files && params.files.length > 0);
+      if (hasFiles) {
+        const formData = new FormData();
+        params.files!.forEach((f) => formData.append("files", f));
+        formData.append("sessionId", params.sessionId);
+        formData.append("message", params.message);
+        formData.append("mode", "quote");
+        if (params.currentDraft) {
+          formData.append("currentDraft", JSON.stringify(params.currentDraft));
+        }
+        if (params.userId) formData.append("userId", params.userId);
+        if (params.provider) formData.append("provider", params.provider);
+
+        return this.postFormData<AgentExecutionResult>({
+          path: "/chat",
+          formData,
+        });
+      }
+
+      return this.post<AgentExecutionResult>({
+        path: "/chat",
+        body: {
+          sessionId: params.sessionId,
+          userId: params.userId || "anonymous",
+          message: params.message,
+          provider: params.provider,
+          mode: "quote",
+          currentDraft: params.currentDraft ?? undefined,
+        },
+      });
+    }
+
     if (params.file) {
       const formData = new FormData();
       formData.append("file", params.file);

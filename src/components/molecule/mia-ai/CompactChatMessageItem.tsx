@@ -80,7 +80,11 @@ export const CompactChatMessageItem: React.FC<CompactChatMessageItemProps> = ({
             onClick={() => onInspectPayload(message)}
             className="w-full mt-1 py-1 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-[10.5px] flex items-center justify-between transition"
           >
-            <span>Ver resultados detallados en el lienzo</span>
+            <span>
+              {message.uiPayload.type === "quote_draft"
+                ? "Ver borrador de cotización en el lienzo"
+                : "Ver resultados detallados en el lienzo"}
+            </span>
             <ChevronRight className="w-3 h-3" />
           </button>
         )}

@@ -3,7 +3,6 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  ExternalLink,
   Plus,
 } from "lucide-react";
 import {
@@ -87,6 +86,26 @@ export const TransportOptionCard: React.FC<TransportOptionCardProps> = ({
           )}
         </div>
 
+        {option.departureTimes && option.departureTimes.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-slate-400">Salidas:</span>
+            {option.departureTimes.map((time, tIdx) => (
+              <span
+                key={tIdx}
+                className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[11px] font-semibold border border-emerald-100"
+              >
+                {time}
+              </span>
+            ))}
+          </div>
+        ) : (
+          serviceType === "bus" && (
+            <p className="text-[11px] text-slate-400">
+              Horarios por confirmar en terminal o sitio oficial
+            </p>
+          )
+        )}
+
         {option.highlights && option.highlights.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {option.highlights.map((hl, hIdx) => (
@@ -101,23 +120,7 @@ export const TransportOptionCard: React.FC<TransportOptionCardProps> = ({
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-3">
-        {option.sourceUrl ? (
-          <a
-            href={option.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Sitio oficial / Fuente
-          </a>
-        ) : (
-          <span className="text-[11px] text-slate-400">
-            Ruta verificada por agente
-          </span>
-        )}
-
+      <div className="flex items-center justify-end pt-3 border-t border-slate-100 gap-3">
         <button
           type="button"
           onClick={() => onToggleSelect(option, serviceType)}
