@@ -3,16 +3,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
-  FileSpreadsheet,
-  FileText,
-  Image as ImageIcon,
   Loader2,
   Plus,
   Send,
 } from "lucide-react";
 import {
   QuoteDraft,
-  QuoteFileRef,
   QuoteItem,
   QuoteServiceType,
 } from "../../../services/miaAiService";
@@ -22,8 +18,6 @@ import {
   QUOTE_TYPE_LABELS,
   computeMissingFields,
   createBlankQuoteItem,
-  formatBytes,
-  quoteFileKind,
 } from "../../../utils/quoteDraft";
 
 export interface QuoteDraftPanelProps {
@@ -34,28 +28,6 @@ export interface QuoteDraftPanelProps {
 }
 
 const ADDABLE_TYPES: QuoteServiceType[] = ["flight", "hotel", "car_rental", "bus"];
-
-const FileRow: React.FC<{ file: QuoteFileRef }> = ({ file }) => {
-  const kind = quoteFileKind(file.fileName);
-  const Icon =
-    kind === "imagen" ? ImageIcon : kind === "pdf" ? FileText : FileSpreadsheet;
-  return (
-    <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs">
-      <Icon className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-      <div className="min-w-0">
-        <p className="font-medium text-slate-800 truncate">{file.fileName}</p>
-        <p className="text-[11px] text-slate-400">{formatBytes(file.sizeBytes)}</p>
-        {file.storagePath === null && (
-          <p className="text-[11px] text-amber-700 mt-0.5">
-            No se guardó el original
-            {file.uploadError ? ` (${file.uploadError})` : ""}. Operaciones verá
-            solo los datos extraídos.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export const QuoteDraftPanel: React.FC<QuoteDraftPanelProps> = ({
   draft,
@@ -185,17 +157,6 @@ export const QuoteDraftPanel: React.FC<QuoteDraftPanelProps> = ({
             className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 resize-none"
           />
         </div>
-
-        {draft.files.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[11px] text-slate-500">Archivos adjuntos</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {draft.files.map((file, idx) => (
-                <FileRow key={`${file.fileName}-${idx}`} file={file} />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {missing.length > 0 && (

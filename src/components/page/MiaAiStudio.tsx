@@ -2,37 +2,23 @@ import React from "react";
 import { Sparkles } from "lucide-react";
 import { useMiaAiStudio } from "../../hooks/useMiaAiStudio";
 import { MiaCompactChatSidebar } from "../organism/mia-ai/MiaCompactChatSidebar";
-import { MiaStudioStatusBar } from "../organism/mia-ai/MiaStudioStatusBar";
 import { MiaWorkspaceExplorer } from "../organism/mia-ai/MiaWorkspaceExplorer";
-import { MiaSelectedItineraryPanel } from "../organism/mia-ai/MiaSelectedItineraryPanel";
 
 export const MiaAiStudio: React.FC = () => {
   const {
-    provider,
-    setProvider,
     messages,
     inputMessage,
     setInputMessage,
     isLoading,
     isUploading,
-    errorState,
-    quota,
     activePayload,
     lastIngestedDoc,
-    suggestedActions,
-    selectedOptions,
-    activeViewTab,
-    setActiveViewTab,
     mobileView,
     setMobileView,
-    isOptionSelected,
     handleSendMessage,
     handleQuickPrompt,
     handleFileUpload,
     handleRetry,
-    handleToggleSelectOption,
-    handleRemoveSelectedOption,
-    handleClearSelectedOptions,
     handleResetSession,
     handleInspectMessagePayload,
     quoteMode,
@@ -40,11 +26,11 @@ export const MiaAiStudio: React.FC = () => {
     quoteFileErrors,
     quoteDraft,
     quoteSubmit,
-    handleToggleQuoteMode,
     handleAddQuoteFiles,
     handleRemoveQuoteFile,
     handleUpdateQuoteDraft,
     handleConfirmQuote,
+    userId,
   } = useMiaAiStudio();
 
   return (
@@ -76,7 +62,7 @@ export const MiaAiStudio: React.FC = () => {
                 : "bg-blue-800 text-blue-100"
             }`}
           >
-            Lienzo ({selectedOptions.length})
+            Lienzo ({quoteDraft?.items.length ?? 0})
           </button>
         </div>
       </div>
@@ -84,16 +70,11 @@ export const MiaAiStudio: React.FC = () => {
       {/* COLUMNA IZQUIERDA: ORGANISMO DE CHAT COMPACTO MULTI-AGENTE */}
       <MiaCompactChatSidebar
         visibleOnMobile={mobileView === "chat"}
-        provider={provider}
-        onChangeProvider={setProvider}
-        quota={quota}
         messages={messages}
         inputMessage={inputMessage}
         onChangeInputMessage={setInputMessage}
         isLoading={isLoading}
         isUploading={isUploading}
-        errorState={errorState}
-        suggestedActions={suggestedActions}
         onSendMessage={handleSendMessage}
         onQuickPrompt={handleQuickPrompt}
         onFileUpload={handleFileUpload}
@@ -103,9 +84,10 @@ export const MiaAiStudio: React.FC = () => {
         quoteMode={quoteMode}
         quoteFiles={quoteFiles}
         quoteFileErrors={quoteFileErrors}
-        onToggleQuoteMode={handleToggleQuoteMode}
         onAddQuoteFiles={handleAddQuoteFiles}
         onRemoveQuoteFile={handleRemoveQuoteFile}
+        quoteDraft={quoteDraft}
+        userId={userId}
       />
 
       {/* COLUMNA DERECHA: LIENZO INTERACTIVO GRANDE */}
@@ -114,30 +96,14 @@ export const MiaAiStudio: React.FC = () => {
           mobileView === "canvas" ? "flex" : "hidden"
         } md:flex flex-1 h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-white p-4 md:p-6 flex-col gap-5`}
       >
-        <MiaStudioStatusBar
-          activeViewTab={activeViewTab}
-          onChangeViewTab={setActiveViewTab}
-          selectedOptionsCount={selectedOptions.length}
+        <MiaWorkspaceExplorer
+          activePayload={activePayload}
+          lastIngestedDoc={lastIngestedDoc}
+          quoteDraft={quoteDraft}
+          quoteSubmit={quoteSubmit}
+          onUpdateQuoteDraft={handleUpdateQuoteDraft}
+          onConfirmQuote={handleConfirmQuote}
         />
-
-        {activeViewTab === "explorer" ? (
-          <MiaWorkspaceExplorer
-            activePayload={activePayload}
-            lastIngestedDoc={lastIngestedDoc}
-            isOptionSelected={isOptionSelected}
-            onToggleSelectOption={handleToggleSelectOption}
-            quoteDraft={quoteDraft}
-            quoteSubmit={quoteSubmit}
-            onUpdateQuoteDraft={handleUpdateQuoteDraft}
-            onConfirmQuote={handleConfirmQuote}
-          />
-        ) : (
-          <MiaSelectedItineraryPanel
-            selectedOptions={selectedOptions}
-            onRemoveOption={handleRemoveSelectedOption}
-            onClearAll={handleClearSelectedOptions}
-          />
-        )}
       </main>
     </div>
   );

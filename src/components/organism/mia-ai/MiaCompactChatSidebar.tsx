@@ -1,36 +1,26 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   ArrowUp,
-  ClipboardList,
+  FileText,
+  Loader2,
   MessageSquarePlus,
   Plus,
   RefreshCw,
-  ShieldAlert,
   X,
 } from "lucide-react";
-import {
-  LLMProviderType,
-  SessionQuotaState,
-} from "../../../services/miaAiService";
-import {
-  StudioChatMessage,
-  StudioErrorState,
-} from "../../../hooks/useMiaAiStudio";
+import { QuoteDraft } from "../../../services/miaAiService";
+import { StudioChatMessage } from "../../../hooks/useMiaAiStudio";
 import { CompactChatMessageItem } from "../../molecule/mia-ai/CompactChatMessageItem";
 import { QUOTE_ACCEPT, QUOTE_MAX_FILES, formatBytes } from "../../../utils/quoteDraft";
+import { CotizacionIaService } from "../../../services/CotizacionIaService";
 
 export interface MiaCompactChatSidebarProps {
   visibleOnMobile: boolean;
-  provider: LLMProviderType;
-  onChangeProvider: (provider: LLMProviderType) => void;
-  quota: SessionQuotaState;
   messages: StudioChatMessage[];
   inputMessage: string;
   onChangeInputMessage: (value: string) => void;
   isLoading: boolean;
   isUploading: boolean;
-  errorState: StudioErrorState | null;
-  suggestedActions: string[];
   onSendMessage: (customMessage?: string) => void;
   onQuickPrompt: (promptText: string) => void;
   onFileUpload: (file: File) => void;
@@ -40,23 +30,19 @@ export interface MiaCompactChatSidebarProps {
   quoteMode: boolean;
   quoteFiles: File[];
   quoteFileErrors: string[];
-  onToggleQuoteMode: () => void;
   onAddQuoteFiles: (files: File[]) => void;
   onRemoveQuoteFile: (index: number) => void;
+  quoteDraft: QuoteDraft | null;
+  userId: string;
 }
 
 export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
   visibleOnMobile,
-  provider,
-  onChangeProvider,
-  quota,
   messages,
   inputMessage,
   onChangeInputMessage,
   isLoading,
   isUploading,
-  errorState,
-  suggestedActions,
   onSendMessage,
   onQuickPrompt,
   onFileUpload,
@@ -66,12 +52,39 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
   quoteMode,
   quoteFiles,
   quoteFileErrors,
-  onToggleQuoteMode,
   onAddQuoteFiles,
   onRemoveQuoteFile,
+  quoteDraft,
+  userId,
 }) => {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [openingFile, setOpeningFile] = useState<string | null>(null);
+  const [openFileError, setOpenFileError] = useState<string | null>(null);
+
+  const handleOpenFile = async (file: {
+    fileName: string;
+    storagePath: string | null;
+  }) => {
+    if (!file.storagePath) return;
+    setOpenFileError(null);
+    setOpeningFile(file.fileName);
+    try {
+      const res = await CotizacionIaService.getInstance().abrirArchivoPorRuta(
+        file.storagePath,
+        userId
+      );
+      if (res.data?.url) {
+        window.open(res.data.url, "_blank", "noopener,noreferrer");
+      } else {
+        setOpenFileError("No se pudo abrir el archivo.");
+      }
+    } catch {
+      setOpenFileError("No se pudo abrir el archivo.");
+    } finally {
+      setOpeningFile(null);
+    }
+  };
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -208,25 +221,6 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
         </div>
       )}
 
-      {/* Banner de reintento si errorState?.retryable */}
-      {errorState?.retryable && errorState.lastPrompt && (
-        <div className="mx-3 mt-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2 text-xs text-amber-900">
-          <span className="inline-flex items-center gap-1.5 truncate">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="truncate">Conexión interrumpida temporalmente</span>
-          </span>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => onRetry(errorState.lastPrompt)}
-            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[11px] transition disabled:opacity-50"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Reintentar
-          </button>
-        </div>
-      )}
-
       {/* Lista de Mensajes del Chat Compacto */}
       <div
         ref={chatEndRef}
@@ -277,6 +271,42 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
         )}
       </div>
 
+      {/* Archivos adjuntos a esta cotización (ya subidos, con acceso para abrirlos) */}
+      {quoteDraft && quoteDraft.files.length > 0 && (
+        <div className="px-3 py-2 bg-white border-t border-slate-100 space-y-1.5">
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            Archivos de esta cotización
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {quoteDraft.files.map((file, idx) => (
+              <button
+                key={`${file.fileName}-${idx}`}
+                type="button"
+                disabled={!file.storagePath || openingFile === file.fileName}
+                onClick={() => handleOpenFile(file)}
+                title={
+                  file.storagePath
+                    ? "Abrir archivo original"
+                    : "No se guardó el original"
+                }
+                className="inline-flex items-center gap-1.5 max-w-full pl-2 pr-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-700 hover:border-blue-300 hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {openingFile === file.fileName ? (
+                  <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                ) : (
+                  <FileText className="w-3 h-3 shrink-0 text-slate-400" />
+                )}
+                <span className="truncate max-w-[160px]">{file.fileName}</span>
+                <span className="text-slate-400">{formatBytes(file.sizeBytes)}</span>
+              </button>
+            ))}
+          </div>
+          {openFileError && (
+            <p className="text-[11px] text-rose-600">{openFileError}</p>
+          )}
+        </div>
+      )}
+
       {/* Acciones sugeridas clicables comentadas para interfaz minimalista
       {suggestedActions.length > 0 && (
         <div className="px-3 py-2 bg-slate-100 border-t border-slate-200">
@@ -305,36 +335,6 @@ export const MiaCompactChatSidebar: React.FC<MiaCompactChatSidebarProps> = ({
           className="hidden"
           onChange={handleFileChange}
         />
-
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <button
-            type="button"
-            disabled={isLoading || isUploading}
-            onClick={onToggleQuoteMode}
-            aria-pressed={quoteMode}
-            title={
-              quoteMode
-                ? "Salir del modo cotización"
-                : "Pedir una cotización a Operaciones con texto, PDF, imagen, CSV o Excel"
-            }
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed ${
-              quoteMode
-                ? "bg-blue-700 border-blue-700 text-white"
-                : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-800"
-            }`}
-          >
-            <ClipboardList className="w-3.5 h-3.5" />
-            <span>Solicitar cotización</span>
-          </button>
-        </div>
-
-        {quoteMode && (
-          <p className="mb-2 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-[11px] text-blue-900 leading-snug">
-            Modo cotización: cuéntale a MIA qué necesitas o adjunta un archivo.
-            Revisarás un borrador antes de enviarlo a Operaciones, y ellos
-            agregan los precios.
-          </p>
-        )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs focus-within:ring-0 focus-within:outline-none transition">
           <textarea

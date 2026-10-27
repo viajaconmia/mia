@@ -10,7 +10,6 @@ import {
   MiaAiApiError,
   QuoteDraft,
   SessionQuotaState,
-  TransportOptionItem,
   TransportServiceType,
   TravelState,
   UIPayload,
@@ -45,31 +44,12 @@ export interface StudioChatMessage {
   retryPrompt?: string;
 }
 
-export interface SelectedItineraryItem {
-  id: string;
-  serviceType: TransportServiceType;
-  origin?: string;
-  destination?: string;
-  date?: string;
-  option: TransportOptionItem;
-  addedAt: string;
-}
-
 export interface StudioErrorState {
   message: string;
   code: string;
   retryable: boolean;
   lastPrompt?: string;
 }
-
-export const SERVICE_NAMES_ES: Record<TransportServiceType, string> = {
-  flight: "Vuelos Comerciales",
-  bus: "Autobuses Foráneos",
-  train: "Trenes de Pasajeros",
-  ferry: "Ferry / Navieras",
-  car_rental: "Renta de Autos (Sin Chofer)",
-  chauffeur: "Transporte Ejecutivo con Chofer",
-};
 
 export const QUICK_STARTERS: Array<{
   label: string;
@@ -229,16 +209,10 @@ export function useMiaAiStudio() {
     useState<IngestDocumentResponse | null>(null);
   const [suggestedActions, setSuggestedActions] = useState<string[]>([]);
 
-  const [selectedOptions, setSelectedOptions] = useState<
-    SelectedItineraryItem[]
-  >([]);
-  const [activeViewTab, setActiveViewTab] = useState<"explorer" | "selection">(
-    "explorer"
-  );
   const [mobileView, setMobileView] = useState<"chat" | "canvas">("chat");
 
-  // Modo cotización: adjuntos del siguiente mensaje y borrador vigente.
-  const [quoteMode, setQuoteMode] = useState<boolean>(false);
+  // Este chat siempre opera en modo cotización: adjuntos del siguiente mensaje y borrador vigente.
+  const [quoteMode] = useState<boolean>(true);
   const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
   const [quoteFileErrors, setQuoteFileErrors] = useState<string[]>([]);
   const [quoteDraft, setQuoteDraft] = useState<QuoteDraft | null>(null);
@@ -262,7 +236,6 @@ export function useMiaAiStudio() {
     setActiveWebSources([]);
     setSuggestedActions([]);
     setQuota(INITIAL_QUOTA);
-    setQuoteMode(false);
     setQuoteFiles([]);
     setQuoteFileErrors([]);
     setQuoteDraft(null);
@@ -275,7 +248,6 @@ export function useMiaAiStudio() {
     activeSessionRef.current = newSessionId;
     setSessionId(newSessionId);
     clearConversationState();
-    setActiveViewTab("explorer");
   }, [userId, clearConversationState]);
 
   // Al cargar (o al cambiar de usuario) retoma la sesión guardada desde el backend.
@@ -325,11 +297,9 @@ export function useMiaAiStudio() {
           const sent = readQuoteSent(stored);
           if (sent && history.length <= sent.messageCount) {
             setQuoteDraft(null);
-            setQuoteMode(false);
             setQuoteSubmit({ status: "success", folio: sent.folio });
           } else {
             setQuoteDraft(withRecomputedMissing(lastQuoteDraft));
-            setQuoteMode(true);
             setQuoteSubmit({ status: "idle" });
           }
         }
@@ -380,7 +350,6 @@ export function useMiaAiStudio() {
           filesUploaded: res.quota.filesUploaded,
           maxFiles: res.quota.maxFiles,
         }));
-        setActiveViewTab("explorer");
 
         const docTypeLabel = res.document.fileType.toUpperCase();
         const followUpActions =
@@ -498,7 +467,6 @@ export function useMiaAiStudio() {
 
         if (result.uiPayload && result.uiPayload.type !== "none") {
           setActivePayload(result.uiPayload);
-          setActiveViewTab("explorer");
         }
 
         if (result.uiPayload?.type === "quote_draft" && result.uiPayload.quoteDraft) {
@@ -581,61 +549,6 @@ export function useMiaAiStudio() {
     [errorState?.lastPrompt, executeMessage]
   );
 
-  const isOptionSelected = useCallback(
-    (option: TransportOptionItem): boolean => {
-      return selectedOptions.some(
-        (item) =>
-          item.option.provider === option.provider &&
-          item.option.serviceName === option.serviceName &&
-          item.option.frequencyOrSchedule === option.frequencyOrSchedule
-      );
-    },
-    [selectedOptions]
-  );
-
-  const handleToggleSelectOption = useCallback(
-    (option: TransportOptionItem, serviceType?: TransportServiceType) => {
-      const existing = selectedOptions.find(
-        (item) =>
-          item.option.provider === option.provider &&
-          item.option.serviceName === option.serviceName &&
-          item.option.frequencyOrSchedule === option.frequencyOrSchedule
-      );
-
-      if (existing) {
-        setSelectedOptions((prev) =>
-          prev.filter((item) => item.id !== existing.id)
-        );
-        return;
-      }
-
-      const resolvedService: TransportServiceType =
-        serviceType || travelState.activeService || "flight";
-
-      const newItem: SelectedItineraryItem = {
-        id: `${resolvedService}-${option.provider}-${Date.now()}`,
-        serviceType: resolvedService,
-        origin: activePayload?.route?.origin || travelState.origin,
-        destination:
-          activePayload?.route?.destination || travelState.destination,
-        date: activePayload?.route?.date || travelState.departureDate,
-        option,
-        addedAt: formatNowTime(),
-      };
-
-      setSelectedOptions((prev) => [...prev, newItem]);
-    },
-    [activePayload?.route, selectedOptions, travelState]
-  );
-
-  const handleRemoveSelectedOption = useCallback((id: string) => {
-    setSelectedOptions((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const handleClearSelectedOptions = useCallback(() => {
-    setSelectedOptions([]);
-  }, []);
-
   const handleInspectMessagePayload = useCallback(
     (msg: StudioChatMessage) => {
       if (msg.uiPayload && msg.uiPayload.type !== "none") {
@@ -655,19 +568,10 @@ export function useMiaAiStudio() {
       if (msg.metadata?.webSourcesUsed) {
         setActiveWebSources(msg.metadata.webSourcesUsed);
       }
-      setActiveViewTab("explorer");
       setMobileView("canvas");
     },
     [quoteDraft, quoteSubmit.status]
   );
-
-  const handleToggleQuoteMode = useCallback(() => {
-    if (quoteMode) {
-      setQuoteFiles([]);
-      setQuoteFileErrors([]);
-    }
-    setQuoteMode(!quoteMode);
-  }, [quoteMode]);
 
   const handleAddQuoteFiles = useCallback(
     (files: File[]) => {
@@ -732,7 +636,6 @@ export function useMiaAiStudio() {
       setQuoteDraft(null);
       setQuoteFiles([]);
       setQuoteFileErrors([]);
-      setQuoteMode(false);
       setMessages((prev) => [
         ...prev,
         {
@@ -760,7 +663,6 @@ export function useMiaAiStudio() {
     pendingFile,
     isLoading,
     isUploading,
-    errorState,
     travelState,
     attachedDocuments,
     quota,
@@ -770,19 +672,12 @@ export function useMiaAiStudio() {
     activeWebSources,
     lastIngestedDoc,
     suggestedActions,
-    selectedOptions,
-    activeViewTab,
-    setActiveViewTab,
     mobileView,
     setMobileView,
-    isOptionSelected,
     handleSendMessage,
     handleQuickPrompt,
     handleFileUpload,
     handleRetry,
-    handleToggleSelectOption,
-    handleRemoveSelectedOption,
-    handleClearSelectedOptions,
     handleResetSession,
     handleInspectMessagePayload,
     quoteMode,
@@ -790,10 +685,10 @@ export function useMiaAiStudio() {
     quoteFileErrors,
     quoteDraft,
     quoteSubmit,
-    handleToggleQuoteMode,
     handleAddQuoteFiles,
     handleRemoveQuoteFile,
     handleUpdateQuoteDraft,
     handleConfirmQuote,
+    userId,
   };
 }

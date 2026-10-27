@@ -3,11 +3,8 @@ import { FileSpreadsheet } from "lucide-react";
 import {
   IngestDocumentResponse,
   QuoteDraft,
-  TransportOptionItem,
-  TransportServiceType,
   UIPayload,
 } from "../../../services/miaAiService";
-import { TransportOptionCard } from "../../molecule/mia-ai/TransportOptionCard";
 import { DocumentChunkCard } from "../../molecule/mia-ai/DocumentChunkCard";
 import { QuoteDraftPanel } from "./QuoteDraftPanel";
 import type { QuoteSubmitState } from "../../../hooks/useMiaAiStudio";
@@ -15,11 +12,6 @@ import type { QuoteSubmitState } from "../../../hooks/useMiaAiStudio";
 export interface MiaWorkspaceExplorerProps {
   activePayload: UIPayload | null;
   lastIngestedDoc: IngestDocumentResponse | null;
-  isOptionSelected: (option: TransportOptionItem) => boolean;
-  onToggleSelectOption: (
-    option: TransportOptionItem,
-    serviceType?: TransportServiceType
-  ) => void;
   quoteDraft: QuoteDraft | null;
   quoteSubmit: QuoteSubmitState;
   onUpdateQuoteDraft: (draft: QuoteDraft) => void;
@@ -29,8 +21,6 @@ export interface MiaWorkspaceExplorerProps {
 export const MiaWorkspaceExplorer: React.FC<MiaWorkspaceExplorerProps> = ({
   activePayload,
   lastIngestedDoc,
-  isOptionSelected,
-  onToggleSelectOption,
   quoteDraft,
   quoteSubmit,
   onUpdateQuoteDraft,
@@ -46,25 +36,6 @@ export const MiaWorkspaceExplorer: React.FC<MiaWorkspaceExplorerProps> = ({
           onChange={onUpdateQuoteDraft}
           onConfirm={onConfirmQuote}
         />
-      )}
-
-      {/* A) OPCIONES DE TRANSPORTE (VUELO, AUTOBÚS, TREN, FERRY, RENTA AUTO, CHOFER) */}
-      {activePayload?.type === "transport_options" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {(activePayload.options || []).map((opt, idx) => (
-              <TransportOptionCard
-                key={idx}
-                option={opt}
-                serviceType={activePayload.serviceType}
-                fallbackOrigin={activePayload.route?.origin}
-                fallbackDestination={activePayload.route?.destination}
-                isSelected={isOptionSelected(opt)}
-                onToggleSelect={onToggleSelectOption}
-              />
-            ))}
-          </div>
-        </div>
       )}
 
       {/* B) TABLA DE DATOS Y TARJETAS (CSV ANALYST / PDF SPECIALIST) */}

@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, Building2, Bus, Car, Plane, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  Bus,
+  Car,
+  ListChecks,
+  Plane,
+  Trash2,
+} from "lucide-react";
 import {
   QuoteItem,
   QuoteMissingField,
@@ -10,10 +18,13 @@ import {
   QUOTE_TYPE_LABELS,
   QuoteFieldDef,
   getItemField,
+  isEligibleForFoundOptions,
   isFieldMissing,
   isRequiredField,
   setItemField,
 } from "../../../utils/quoteDraft";
+import { TransportOptionCard } from "./TransportOptionCard";
+import Modal from "../Modal";
 
 const TYPE_ICONS: Record<QuoteServiceType, React.ComponentType<{ className?: string }>> = {
   flight: Plane,
@@ -79,6 +90,19 @@ export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({
 }) => {
   const Icon = TYPE_ICONS[item.type];
   const itemMissing = missingFields.filter((m) => m.itemId === item.id);
+  const [showOptions, setShowOptions] = useState(false);
+  const fallbackOrigin =
+    item.type === "car_rental"
+      ? item.pickupLocation
+      : (getItemField(item, "origin") as string | undefined);
+  const fallbackDestination =
+    item.type === "car_rental"
+      ? item.dropoffLocation
+      : (getItemField(item, "destination") as string | undefined);
+  const preferredOption =
+    item.type !== "hotel"
+      ? item.foundOptions?.find((o) => o.id === item.preferredOptionId)
+      : undefined;
 
   const renderControl = (def: QuoteFieldDef, missing: boolean) => {
     const raw = getItemField(item, def.key);
@@ -199,6 +223,63 @@ export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({
           );
         })}
       </div>
+
+      {item.type !== "hotel" && item.foundOptions && item.foundOptions.length > 0 && (
+        <div className="pt-1 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => setShowOptions(true)}
+            className="w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 transition text-left"
+          >
+            <span className="flex items-center gap-1.5 text-slate-600">
+              <ListChecks className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              {preferredOption ? (
+                <span>
+                  Preferida: <strong className="text-slate-800">{preferredOption.provider}</strong>
+                </span>
+              ) : (
+                <span>{item.foundOptions.length} opciones encontradas</span>
+              )}
+            </span>
+            <span className="text-blue-700 font-semibold shrink-0">
+              {preferredOption ? "Cambiar" : "Elegir"}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {!getItemField(item, "foundOptions") && isEligibleForFoundOptions(item) && (
+        <p className="pt-1 border-t border-slate-100 text-[11px] text-slate-400">
+          No se pudieron buscar opciones por ahora. Puedes confirmar igual: Operaciones
+          valida la disponibilidad real.
+        </p>
+      )}
+
+      {item.type !== "hotel" && (
+        <Modal
+          open={showOptions}
+          onClose={() => setShowOptions(false)}
+          title="Opciones encontradas"
+          subtitle="Orientativo: Operaciones confirma disponibilidad y precio final."
+        >
+          <div className="p-4 overflow-y-auto max-h-[calc(100vh-14rem)] grid grid-cols-1 gap-3">
+            {item.foundOptions?.map((option) => (
+              <TransportOptionCard
+                key={option.id}
+                option={option}
+                serviceType={item.type}
+                fallbackOrigin={fallbackOrigin}
+                fallbackDestination={fallbackDestination}
+                isSelected={item.preferredOptionId === option.id}
+                onToggleSelect={() => {
+                  onChange(setItemField(item, "preferredOptionId", option.id));
+                  setShowOptions(false);
+                }}
+              />
+            ))}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

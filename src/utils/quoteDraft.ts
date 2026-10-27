@@ -139,11 +139,40 @@ const isFilled = (value: unknown): boolean => {
 export const getItemField = (item: QuoteItem, key: string): unknown =>
   (item as unknown as Record<string, unknown>)[key];
 
+// Campos cuyo cambio invalida las opciones encontradas por los agentes (ver foundOptions):
+// si el cliente edita el origen/destino/lugar de recolección a mano, las opciones que
+// había ya no corresponden a la ruta nueva.
+const SEARCH_RELEVANT_FIELDS: Record<QuoteServiceType, string[]> = {
+  flight: ["origin", "destination"],
+  car_rental: ["pickupLocation"],
+  hotel: [],
+  bus: ["origin", "destination"],
+};
+
 export const setItemField = (
   item: QuoteItem,
   key: string,
   value: unknown
-): QuoteItem => ({ ...item, [key]: value } as QuoteItem);
+): QuoteItem => {
+  const next = { ...item, [key]: value } as QuoteItem;
+  if (SEARCH_RELEVANT_FIELDS[item.type].includes(key)) {
+    delete (next as unknown as Record<string, unknown>).foundOptions;
+    delete (next as unknown as Record<string, unknown>).preferredOptionId;
+  }
+  return next;
+};
+
+// El backend solo intenta buscar opciones si el ítem ya trae estos campos (ver
+// agente_servicios/src/agents/quote/quote-options.enricher.ts). Si ya los tiene y aun así
+// no hay foundOptions, es porque la búsqueda falló o no encontró nada — no porque falte info.
+export const isEligibleForFoundOptions = (item: QuoteItem): boolean => {
+  const fields = SEARCH_RELEVANT_FIELDS[item.type];
+  if (fields.length === 0) return false;
+  return fields.every((key) => {
+    const value = getItemField(item, key);
+    return typeof value === "string" && value.trim().length > 0;
+  });
+};
 
 export function computeMissingFields(items: QuoteItem[]): QuoteMissingField[] {
   const missing: QuoteMissingField[] = [];
