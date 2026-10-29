@@ -17,6 +17,8 @@ import {
 } from "../services/miaAiService";
 import { describeSubmitError } from "../utils/quoteSubmitError";
 import { CotizacionIaService } from "../services/CotizacionIaService";
+import { fetchViajerosCompanies } from "./useFetch";
+import type { Employee } from "../types";
 import {
   buildQuoteSubmission,
   isDraftComplete,
@@ -220,6 +222,11 @@ export function useMiaAiStudio() {
     status: "idle",
   });
 
+  // Lista de viajeros de la cuenta (para el selector de "Titular" en habitaciones de hotel).
+  // Se trae una sola vez al montar el studio y se reutiliza en todo el árbol de la cotización
+  // en lugar de volver a pedirla por cada item/habitación.
+  const [travelers, setTravelers] = useState<Employee[]>([]);
+
   // Sesión vigente: evita que una restauración lenta pise una conversación nueva.
   const activeSessionRef = useRef<string>(sessionId);
 
@@ -327,6 +334,22 @@ export function useMiaAiStudio() {
       cancelled = true;
     };
   }, [userId, clearConversationState]);
+
+  // Carga única de la lista de viajeros de la cuenta, al montar el studio. Si falla, el
+  // selector de "Titular" simplemente queda vacío (fail-soft, no bloquea el resto del studio).
+  useEffect(() => {
+    let cancelled = false;
+    fetchViajerosCompanies()
+      .then((data) => {
+        if (!cancelled) setTravelers(data);
+      })
+      .catch(() => {
+        // fetchViajerosCompanies ya atrapa sus errores y devuelve [], pero por si acaso.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleFileUpload = useCallback(
     async (file: File) => {
@@ -690,5 +713,6 @@ export function useMiaAiStudio() {
     handleUpdateQuoteDraft,
     handleConfirmQuote,
     userId,
+    travelers,
   };
 }

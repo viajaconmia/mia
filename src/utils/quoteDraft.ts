@@ -1,4 +1,6 @@
 import type {
+  HotelQuoteItem,
+  HotelRoomDetail,
   QuoteDraft,
   QuoteItem,
   QuoteMissingField,
@@ -145,7 +147,7 @@ export const getItemField = (item: QuoteItem, key: string): unknown =>
 const SEARCH_RELEVANT_FIELDS: Record<QuoteServiceType, string[]> = {
   flight: ["origin", "destination"],
   car_rental: ["pickupLocation"],
-  hotel: [],
+  hotel: ["city", "checkIn", "checkOut"],
   bus: ["origin", "destination"],
 };
 
@@ -161,6 +163,30 @@ export const setItemField = (
   }
   return next;
 };
+
+export const setRoomField = (
+  item: HotelQuoteItem,
+  roomIndex: number,
+  key: keyof HotelRoomDetail,
+  value: unknown
+): HotelQuoteItem => {
+  const rooms = [...(item.rooms ?? [])];
+  rooms[roomIndex] = { ...rooms[roomIndex], [key]: value };
+  return { ...item, rooms };
+};
+
+export const addRoom = (item: HotelQuoteItem): HotelQuoteItem => ({
+  ...item,
+  rooms: [...(item.rooms ?? []), {}],
+});
+
+export const removeRoom = (
+  item: HotelQuoteItem,
+  roomIndex: number
+): HotelQuoteItem => ({
+  ...item,
+  rooms: (item.rooms ?? []).filter((_, i) => i !== roomIndex),
+});
 
 // El backend solo intenta buscar opciones si el ítem ya trae estos campos (ver
 // agente_servicios/src/agents/quote/quote-options.enricher.ts). Si ya los tiene y aun así
@@ -181,6 +207,16 @@ export function computeMissingFields(items: QuoteItem[]): QuoteMissingField[] {
       const keys = rule.anyOf ?? [rule.field];
       if (!keys.some((k) => isFilled(getItemField(item, k)))) {
         missing.push({ itemId: item.id, field: rule.field, label: rule.label });
+      }
+    }
+
+    if (item.type === "hotel") {
+      const rooms = (item as HotelQuoteItem).rooms ?? [];
+      const incomplete =
+        rooms.length === 0 ||
+        rooms.some((r) => !isFilled(r.roomType) || !isFilled(r.leadGuest));
+      if (incomplete) {
+        missing.push({ itemId: item.id, field: "rooms", label: "Habitaciones" });
       }
     }
   }
@@ -227,6 +263,9 @@ export const createBlankQuoteItem = (type: QuoteServiceType): QuoteItem => {
   const id = `item-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 7)}`;
+  if (type === "hotel") {
+    return { id, type, rooms: [{}] } as HotelQuoteItem;
+  }
   return { id, type } as QuoteItem;
 };
 
@@ -282,10 +321,6 @@ export const QUOTE_ITEM_FIELDS: Record<QuoteServiceType, QuoteFieldDef[]> = {
     { key: "hotelName", label: "Hotel", kind: "text" },
     { key: "checkIn", label: "Check-in", kind: "date" },
     { key: "checkOut", label: "Check-out", kind: "date" },
-    { key: "rooms", label: "Habitaciones", kind: "number" },
-    { key: "roomType", label: "Tipo de habitación", kind: "text" },
-    { key: "guests", label: "Huéspedes", kind: "number" },
-    { key: "travelerNames", label: "Nombres de huéspedes (separados por coma)", kind: "list", wide: true },
     { key: "notes", label: "Notas", kind: "text", wide: true },
   ],
   bus: [

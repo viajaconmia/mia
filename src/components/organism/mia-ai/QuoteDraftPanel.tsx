@@ -2,7 +2,6 @@ import React from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  ClipboardList,
   Loader2,
   Plus,
   Send,
@@ -14,6 +13,7 @@ import {
 } from "../../../services/miaAiService";
 import { QuoteSubmitState } from "../../../hooks/useMiaAiStudio";
 import { QuoteItemCard } from "../../molecule/mia-ai/QuoteItemCard";
+import type { Employee } from "../../../types";
 import {
   QUOTE_TYPE_LABELS,
   computeMissingFields,
@@ -25,6 +25,7 @@ export interface QuoteDraftPanelProps {
   submitState: QuoteSubmitState;
   onChange: (draft: QuoteDraft) => void;
   onConfirm: () => void;
+  travelers: Employee[];
 }
 
 const ADDABLE_TYPES: QuoteServiceType[] = ["flight", "hotel", "car_rental", "bus"];
@@ -34,6 +35,7 @@ export const QuoteDraftPanel: React.FC<QuoteDraftPanelProps> = ({
   submitState,
   onChange,
   onConfirm,
+  travelers,
 }) => {
   if (submitState.status === "success") {
     return (
@@ -82,31 +84,19 @@ export const QuoteDraftPanel: React.FC<QuoteDraftPanelProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs space-y-3">
-        <div className="flex items-start gap-2">
-          <span className="p-1.5 rounded-lg bg-blue-50 text-blue-700 mt-0.5">
-            <ClipboardList className="w-4 h-4" />
-          </span>
-          <div>
-            <h2 className="text-base font-bold text-blue-950">
-              Borrador de cotización
-            </h2>
-            <p className="text-xs text-slate-500">
-              Revisa y corrige lo que entendió MIA. No incluye precios: los
-              agrega Operaciones.
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-[11px] text-slate-500 mb-1">Resumen</label>
-          <textarea
-            rows={2}
-            value={draft.resumen}
-            onChange={(e) => onChange({ ...draft, resumen: e.target.value })}
-            className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 resize-none"
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-slate-500">Agregar servicio:</span>
+        {ADDABLE_TYPES.map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => addItem(type)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-xs font-medium text-slate-700 transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {QUOTE_TYPE_LABELS[type]}
+          </button>
+        ))}
       </div>
 
       {draft.items.length === 0 ? (
@@ -123,25 +113,11 @@ export const QuoteDraftPanel: React.FC<QuoteDraftPanelProps> = ({
               missingFields={missing}
               onChange={(next) => updateItem(idx, next)}
               onRemove={() => removeItem(idx)}
+              travelers={travelers}
             />
           ))}
         </div>
       )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-slate-500">Agregar servicio:</span>
-        {ADDABLE_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => addItem(type)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-xs font-medium text-slate-700 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {QUOTE_TYPE_LABELS[type]}
-          </button>
-        ))}
-      </div>
 
       <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs space-y-3">
         <div>

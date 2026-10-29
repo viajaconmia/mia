@@ -31,6 +31,7 @@ export const MiaAiStudio: React.FC = () => {
     handleUpdateQuoteDraft,
     handleConfirmQuote,
     userId,
+    travelers,
   } = useMiaAiStudio();
 
   return (
@@ -103,6 +104,7 @@ export const MiaAiStudio: React.FC = () => {
           quoteSubmit={quoteSubmit}
           onUpdateQuoteDraft={handleUpdateQuoteDraft}
           onConfirmQuote={handleConfirmQuote}
+          travelers={travelers}
         />
       </main>
     </div>

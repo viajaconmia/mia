@@ -73,6 +73,19 @@ export interface QuoteFoundOption extends TransportOptionItem {
   id: string;
 }
 
+// Opción de hotel encontrada (fuente ya estructurada, sin paso de LLM). No extiende
+// TransportOptionItem: los campos de hotel no tienen equivalente en transporte.
+export interface HotelFoundOption {
+  id: string;
+  hotelName: string;
+  city?: string;
+  address?: string;
+  rating?: number;
+  roomVariants?: { roomType: string; boardDescription: string }[];
+  cancellationNote?: string;
+  thumbnailUrl?: string;
+}
+
 export type UIPayloadType =
   | "none"
   | "transport_options"
@@ -143,15 +156,21 @@ export interface CarRentalQuoteItem extends QuoteItemBase {
   preferredOptionId?: string | null;
 }
 
+export interface HotelRoomDetail {
+  roomType?: string; // required in practice, enforced via missing-fields UI (red border), not a hard schema constraint
+  leadGuest?: string; // required in practice — "Titular" in the UI, the lead/primary guest for that room
+  additionalGuests?: string[]; // optional extra guest names in that same room
+}
+
 export interface HotelQuoteItem extends QuoteItemBase {
   type: "hotel";
   city?: string;
   hotelName?: string;
   checkIn?: string;
   checkOut?: string;
-  rooms?: number;
-  roomType?: string;
-  guests?: number;
+  rooms?: HotelRoomDetail[];
+  foundOptions?: HotelFoundOption[];
+  preferredOptionId?: string | null;
 }
 
 export interface BusQuoteItem extends QuoteItemBase {

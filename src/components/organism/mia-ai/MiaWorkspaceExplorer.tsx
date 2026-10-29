@@ -8,6 +8,7 @@ import {
 import { DocumentChunkCard } from "../../molecule/mia-ai/DocumentChunkCard";
 import { QuoteDraftPanel } from "./QuoteDraftPanel";
 import type { QuoteSubmitState } from "../../../hooks/useMiaAiStudio";
+import type { Employee } from "../../../types";
 
 export interface MiaWorkspaceExplorerProps {
   activePayload: UIPayload | null;
@@ -16,6 +17,7 @@ export interface MiaWorkspaceExplorerProps {
   quoteSubmit: QuoteSubmitState;
   onUpdateQuoteDraft: (draft: QuoteDraft) => void;
   onConfirmQuote: () => void;
+  travelers: Employee[];
 }
 
 export const MiaWorkspaceExplorer: React.FC<MiaWorkspaceExplorerProps> = ({
@@ -25,6 +27,7 @@ export const MiaWorkspaceExplorer: React.FC<MiaWorkspaceExplorerProps> = ({
   quoteSubmit,
   onUpdateQuoteDraft,
   onConfirmQuote,
+  travelers,
 }) => {
   return (
     <div className="space-y-6">
@@ -35,6 +38,7 @@ export const MiaWorkspaceExplorer: React.FC<MiaWorkspaceExplorerProps> = ({
           submitState={quoteSubmit}
           onChange={onUpdateQuoteDraft}
           onConfirm={onConfirmQuote}
+          travelers={travelers}
         />
       )}
 
