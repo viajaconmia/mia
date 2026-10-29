@@ -1,29 +1,36 @@
-import { Route, Switch } from "wouter";
-import { NavigationBar } from "./components/organism/NavigationBar";
-import { RouteSecure } from "./middleware/RouteSecure";
-import { Reserva } from "./pages/Reserva";
-import { FAQPage } from "./pages/FAQPage";
-import { NewRegistrationPage } from "./pages/NewRegistrationPage";
-import ROUTES from "./constants/routes";
-import Inicio from "./components/page/Inicio";
-import { HotelSearchPage } from "./pages/HotelSearchPage";
-import BillingPage from "./pages/BillingPage";
-import { ManualReservationPage } from "./pages/ManualReservationPage";
-import { Configuration } from "./pages/Configuration";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { ProfilePage } from "./pages/ProfilePage";
-import BookingsReportPage from "./pages/BookingsReportPage";
-import { ResetPassword } from "./pages/ResetPassword";
-import Loader from "./components/atom/Loader";
-import { Impersonado } from "./components/page/Impersonado";
-import Chat from "./components/page/Chat";
-import MiaAiStudio from "./components/page/MiaAiStudio";
-import { BillingPage2 } from "./components/page/billingepage2";
-import { PagoExitoso } from "./pages/PagoExitoso";
-import { PagoCancelado } from "./pages/PagoCancelado";
+// import { Route, Switch } from "wouter";
+// import { NavigationBar } from "./components/organism/NavigationBar";
+// import { RouteSecure } from "./middleware/RouteSecure";
+// import { Reserva } from "./pages/Reserva";
+// import { FAQPage } from "./pages/FAQPage";
+// import { NewRegistrationPage } from "./pages/NewRegistrationPage";
+// import ROUTES from "./constants/routes";
+// import Inicio from "./components/page/Inicio";
+// import { HotelSearchPage } from "./pages/HotelSearchPage";
+// import BillingPage from "./pages/BillingPage";
+// import { ManualReservationPage } from "./pages/ManualReservationPage";
+// import { Configuration } from "./pages/Configuration";
+// import { AdminDashboard } from "./pages/AdminDashboard";
+// import { ProfilePage } from "./pages/ProfilePage";
+// import BookingsReportPage from "./pages/BookingsReportPage";
+// import { ResetPassword } from "./pages/ResetPassword";
+// import Loader from "./components/atom/Loader";
+// import { Impersonado } from "./components/page/Impersonado";
+// import Chat from "./components/page/Chat";
+// import MiaAiStudio from "./components/page/MiaAiStudio";
+// import { BillingPage2 } from "./components/page/billingepage2";
+// import { PagoExitoso } from "./pages/PagoExitoso";
+// import { PagoCancelado } from "./pages/PagoCancelado";
 // import { facturas_pagos } from "./pages/facturas_pagos";
+import { MaintenancePage } from "./components/page/MaintenancePage";
 
+// MANTENIMIENTO: todas las rutas de abajo quedan comentadas a propósito -- se
+// muestra únicamente la pantalla de mantenimiento. Para reactivar la app,
+// descomentar los imports y el bloque de rutas, y quitar este return temprano.
 const App = () => {
+  return <MaintenancePage />;
+
+  /*
   return (
     <>
       <NavigationBar />
@@ -96,5 +103,6 @@ const App = () => {
       </Switch>
     </>
   );
+  */
 };
 export default App;
