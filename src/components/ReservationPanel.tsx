@@ -8,7 +8,9 @@ import {
   ArrowRight,
   Clock,
   ShoppingCartIcon,
+  Megaphone,
 } from "lucide-react";
+import { MaintenanceModal } from "./MaintenanceModal";
 import { useSolicitud } from "../hooks/useSolicitud";
 import { Reservation } from "../types/chat";
 import { Hotel } from "../types/hotel";
@@ -83,6 +85,7 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   booking,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [idSolicitud, setIdSolicitud] = useState<string | null>(null);
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -304,21 +307,27 @@ export const ReservationPanel: React.FC<ReservationPanelProps> = ({
   return (
     <div className="h-full p-6 space-y-10 overflow-y-auto">
       {idSolicitud && (
-        <Button
-          icon={ShoppingCartIcon}
-          variant="primary"
-          size="full"
-          disabled={loading}
-          onClick={() =>
-            handleAddToCart(
-              (bookingData.room?.totalPrice || 0).toFixed(2),
-              "hotel"
-            ).then(() => handleActualizarCarrito())
-          }
-        >
-          Agregar al carrito
-        </Button>
+        <div className="space-y-2">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-center gap-2">
+            <Megaphone className="w-4 h-4 shrink-0 text-amber-600" />
+            <span>Compras y cotizaciones en línea suspendidas por mantenimiento.</span>
+          </div>
+          <Button
+            icon={ShoppingCartIcon}
+            variant="primary"
+            size="full"
+            disabled={loading}
+            onClick={() => setIsMaintenanceModalOpen(true)}
+          >
+            Agregar al carrito
+          </Button>
+        </div>
       )}
+
+      <MaintenanceModal
+        isOpen={isMaintenanceModalOpen}
+        onClose={() => setIsMaintenanceModalOpen(false)}
+      />
 
       <div id="reservation-content" className="space-y-8">
         {bookingData.hotel?.name && (

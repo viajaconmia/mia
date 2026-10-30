@@ -16,6 +16,7 @@ import {
   ArrowBigLeft,
   Plus,
   Wifi,
+  Megaphone,
 } from "lucide-react";
 import Button from "./atom/Button";
 import { useCart } from "../context/cartContext";
@@ -264,30 +265,22 @@ export const Cart = () => {
 
   console.log(cart);
 
-  if (cart.length == 0) {
-    return (
-      <div className="w-full h-full flex justify-center items-center flex-col">
-        <div className="flex gap-2 items-center">
-          <ShoppingCart className="text-gray-500"></ShoppingCart>
-          <h1 className="text-xl text-gray-500 font-bold">
-            Parece que tu carrito esta vacio
-          </h1>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <ProtectedComponent
-      admit={{
-        administrador: true,
-        reservante: true,
-        viajero: false,
-        consultor: false,
-        "no-rol": false,
-      }}
-    >
-      <div
+    <div className="w-full h-full flex justify-center items-center flex-col p-6 text-center">
+      <div className="max-w-md space-y-4">
+        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+          <Megaphone className="w-6 h-6 text-blue-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Módulo de compras en mantenimiento</h2>
+        <p className="text-gray-600 text-sm">
+          Por el momento, nuestros canales de cotización, compra y pago se encuentran suspendidos.
+        </p>
+        <p className="text-gray-500 text-xs">
+          Durante este periodo, únicamente se está dando seguimiento a las reservas previamente realizadas.
+        </p>
+      </div>
+    </div>
+  );
         ref={refContainer}
         className="mx-auto relative h-full flex flex-col @container w-full bg-gray-100" // 👈 Cambios: flex flex-col
       >

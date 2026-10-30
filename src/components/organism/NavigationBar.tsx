@@ -72,19 +72,7 @@ export const NavigationBar = () => {
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       {user && (
         <>
-          <Modal
-            open={openCart}
-            onClose={() => {
-              setOpenCart(false);
-            }}
-            icon={ShoppingCart}
-            title="Carrito"
-            subtitle="Selecciona los items que deseas pagar"
-          >
-            <div className="w-[90vw] lg:max-w-4xl h-[calc(100vh-11rem)]">
-              <Cart></Cart>
-            </div>
-          </Modal>
+          {/* Carrito modal oculto por mantenimiento: compras/pagos suspendidos */}
           <div className="md:hidden bg-white shadow-2xl squad-t-lg border-t border-gray-100 fixed bottom-0 z-50 w-full">
             <AuthLinks
               onCart={() => setOpenCart(true)}
@@ -185,20 +173,7 @@ export const AuthLinks: React.FC<AuthLinksProps> = ({
           >
             Soporte
           </Button>
-          <Button
-            variant="ghost"
-            size={
-              setSize([
-                { size: "base", obj: "squad" },
-                { size: "sm", obj: "md" },
-              ]) as unknown as "squad" | "md"
-            }
-            icon={ShoppingCart}
-            className="w-full text-gray-700"
-            onClick={onCart}
-          >
-            {formatNumberWithCommas(totalCart)}
-          </Button>
+          {/* Carrito oculto por mantenimiento: compras/pagos suspendidos */}
         </div>
       </div>
     </>

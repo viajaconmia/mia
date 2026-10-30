@@ -6,7 +6,9 @@ import {
   ShoppingCart,
   User,
   Users,
+  Megaphone,
 } from "lucide-react";
+import { MaintenanceModal } from "../components/MaintenanceModal";
 import { useParams } from "wouter";
 import { useSolicitud } from "../hooks/useSolicitud";
 import { fetchViajerosCompanies } from "../hooks/useFetch";
@@ -44,6 +46,7 @@ export const ManualReservationPage = () => {
   const { handleActualizarCarrito } = useCart();
   const [hotel, setHotel] = useState<HotelWithTarifas | null>(null);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [reservationData, setReservationData] = useState<ReservationData>({
     checkIn: "",
     checkOut: "",
@@ -593,20 +596,30 @@ export const ManualReservationPage = () => {
               </div>
             )}
           </div>
-          <Button
-            size="full"
-            icon={ShoppingCart}
-            onClick={handleAddCart}
-            disabled={
-              Object.values(reservationData)
-                .map((item) => !!item)
-                .some((value) => value === false) || loading
-            }
-          >
-            Agregar a carrito
-          </Button>
+          <div className="space-y-2">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-center gap-2">
+              <Megaphone className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>Compras y cotizaciones en línea suspendidas por mantenimiento.</span>
+            </div>
+            <Button
+              size="full"
+              icon={ShoppingCart}
+              onClick={() => setIsMaintenanceModalOpen(true)}
+              disabled={
+                Object.values(reservationData)
+                  .map((item) => !!item)
+                  .some((value) => value === false) || loading
+              }
+            >
+              Agregar a carrito
+            </Button>
+          </div>
         </div>
       </div>
+      <MaintenanceModal
+        isOpen={isMaintenanceModalOpen}
+        onClose={() => setIsMaintenanceModalOpen(false)}
+      />
       <SupportModal
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}

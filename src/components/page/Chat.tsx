@@ -153,24 +153,12 @@ type ReservationCartPanelProps = {
 };
 
 const ReservationCartPanel: React.FC<ReservationCartPanelProps> = ({
-  activeTab,
-  onTabChange,
   bookingData,
 }) => {
   return (
     <div className="bg-white h-full rounded-lg shadow-lg border overflow-hidden w-full flex flex-col">
-      <TabsList
-        activeTab={activeTab}
-        onChange={(tab) => onTabChange(tab as "reserva" | "carrito")}
-        tabs={[
-          { tab: "reserva", icon: Building2 },
-          { tab: "carrito", icon: ShoppingCart },
-        ]}
-      />
-      {activeTab === "reserva" && (
-        <ReservationPanel booking={bookingData || null} />
-      )}
-      {activeTab === "carrito" && <Cart />}
+      {/* Carrito oculto por mantenimiento de compras: solo se muestra la información de la reserva */}
+      <ReservationPanel booking={bookingData || null} />
     </div>
   );
 };

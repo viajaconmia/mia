@@ -42,20 +42,16 @@ export class CartService extends ApiService {
       },
     });
 
-  public createCartItem = async (body: {
+  public createCartItem = async (_body: {
     id_solicitud: string;
     total: string;
     type: "hotel" | "car_rental" | "flight";
     selected: boolean;
-  }) =>
-    this.post({
-      path: this.formatPath(this.ENDPOINTS.POST.crear_item),
-      body: {
-        ...body,
-        id_agente: this.user.getUser()?.info?.id_agente,
-        usuario_generador: this.user.getUser()?.info?.id_viajero,
-      },
-    });
+  }) => {
+    throw new Error(
+      "Por el momento, nuestros canales de cotización y reservación se encuentran suspendidos por mantenimiento."
+    );
+  };
 
   public updateSelected = async (id: string, selected: boolean) =>
     this.patch({
